@@ -1,7 +1,14 @@
+import type {Metadata,Viewport} from 'next'
 import './globals.css'
 import './premium.css'
 import './game3d.css'
 import './dashboard-premium.css'
 import './modules-premium.css'
-export const metadata={title:'YOYOLETRASAI',description:'Plataforma educativa inteligente para docentes'}
-export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="es"><body>{children}</body></html>}
+import './premium-v2.css'
+
+export const metadata:Metadata={title:'YOYOLETRASAI',description:'Plataforma educativa inteligente, inclusiva e interactiva para Chile y Latinoamérica'}
+export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:1,viewportFit:'cover',themeColor:'#6d3df2'}
+
+export default function RootLayout({children}:{children:React.ReactNode}){
+ return <html lang="es"><body>{children}</body></html>
+}
