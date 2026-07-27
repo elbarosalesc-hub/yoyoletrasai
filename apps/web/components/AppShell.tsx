@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import {BookOpen,Home,Sparkles,Users,Gamepad2,Accessibility,BarChart3,Settings,Search,PenTool,Bot,Images,ShieldCheck,ClipboardList,FlaskConical,FileText,Family,Menu,Wrench,Bell,Mail} from 'lucide-react'
+import {BookOpen,Home,Sparkles,Users,Gamepad2,Accessibility,BarChart3,Settings,Search,PenTool,Images,ShieldCheck,ClipboardList,FlaskConical,FileText,UsersRound,Menu,Wrench,Bell,Mail} from 'lucide-react'
 
 const items=[
- ['Inicio','/app',Home],['Biblioteca','/biblioteca',BookOpen],['Crear con IA','/crear',Sparkles],['Cursos y grupos','/cursos',Users],['Juegos inmersivos','/juegos',Gamepad2],['Caligrafía y trazos','/caligrafia',PenTool],['Pictogramas y apoyos','/inclusion',Accessibility],['Evaluaciones','/evaluaciones',ClipboardList],['Simuladores y ciencias','/simuladores',FlaskConical],['Herramientas docentes','/herramientas',Wrench],['Seguimiento','/seguimiento',BarChart3],['Familias','/familias',Family],['Informes','/informes',FileText],['Centro multimedia','/multimedia',Images],['QA y publicación','/qa',ShieldCheck],['Configuración','/qa',Settings]
+ ['Inicio','/app',Home],['Biblioteca','/biblioteca',BookOpen],['Crear con IA','/crear',Sparkles],['Cursos y grupos','/cursos',Users],['Juegos inmersivos','/juegos',Gamepad2],['Caligrafía y trazos','/caligrafia',PenTool],['Pictogramas y apoyos','/inclusion',Accessibility],['Evaluaciones','/evaluaciones',ClipboardList],['Simuladores y ciencias','/simuladores',FlaskConical],['Herramientas docentes','/herramientas',Wrench],['Seguimiento','/seguimiento',BarChart3],['Familias','/familias',UsersRound],['Informes','/informes',FileText],['Centro multimedia','/multimedia',Images],['QA y publicación','/qa',ShieldCheck],['Configuración','/qa',Settings]
 ] as const
 const mobile=items.slice(0,7)
 
