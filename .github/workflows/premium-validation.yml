@@ -23,10 +23,10 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm install --no-audit --no-fund --loglevel=error
 
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck -- --pretty false
 
       - name: Build Next.js
         run: npm run build
