@@ -15,10 +15,10 @@ function Tree({x,z,scale=1}:{x:number;z:number;scale?:number}){
 
 function Marker({id,label,color,position,onSelect,active,reducedMotion}:{id:string;label:string;color:string;position:[number,number,number];onSelect:(id:string)=>void;active:boolean;reducedMotion?:boolean}){
  const ref=useRef<THREE.Mesh>(null)
- useFrame((state)=>{if(ref.current&&!reducedMotion){ref.current.rotation.y+=.01;ref.current.position.y=position[1]+Math.sin(state.clock.elapsedTime*2+position[0])*.08}})
+ useFrame((state)=>{if(ref.current&&!reducedMotion){ref.current.rotation.y+=.01;ref.current.position.y=Math.sin(state.clock.elapsedTime*2+position[0])*.08}})
  return <group position={position} onClick={(e)=>{e.stopPropagation();onSelect(id)}}>
   <mesh ref={ref} castShadow scale={active?1.18:1}>
-   <dodecahedronGeometry args={[.42,0]}/><meshStandardMaterial color={active?'#f38b73':color} emissive={active?'#5b1e16':'#000000'} emissiveIntensity={active?.25:0}/>
+   <dodecahedronGeometry args={[.42,0]}/><meshStandardMaterial color={active?'#f38b73':color} emissive={active?'#5b1e16':'#000000'} emissiveIntensity={active?0.25:0}/>
   </mesh>
   <mesh position={[0,-.62,0]}><boxGeometry args={[1.25,.34,.08]}/><meshStandardMaterial color="#ffffff"/></mesh>
  </group>
@@ -36,7 +36,7 @@ function Guide(){
 }
 
 function Scene({onSelect,active,reducedMotion}:Props){
- const stars=useMemo(()=>Array.from({length:50},(_,i)=>[(Math.random()-.5)*18,4+Math.random()*6,-4-Math.random()*12] as [number,number,number]),[])
+ const stars=useMemo(()=>Array.from({length:50},()=>[(Math.random()-.5)*18,4+Math.random()*6,-4-Math.random()*12] as [number,number,number]),[])
  return <>
   <color attach="background" args={['#a7d8f0']}/>
   <fog attach="fog" args={['#b8d9df',8,24]}/>
