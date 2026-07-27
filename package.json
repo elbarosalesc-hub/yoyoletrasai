@@ -1,10 +1,17 @@
 {
   "name": "yoyoletrasai",
+  "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
-    "typecheck": "pnpm --filter web typecheck"
+    "dev": "npm run dev --workspace=web",
+    "build": "npm run build --workspace=web",
+    "start": "npm run start --workspace=web",
+    "typecheck": "npm run typecheck --workspace=web"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   }
 }
