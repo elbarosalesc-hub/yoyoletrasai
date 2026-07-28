@@ -1,4 +1,4 @@
-name: Publicar revisión en Pages
+name: Vista funcional YOYO
 
 on:
   push:
@@ -10,13 +10,15 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
+  pull-requests: write
 
 concurrency:
-  group: yoyo-pages-push
+  group: yoyo-functional-pages
   cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -27,6 +29,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+
+      - name: Enable and configure GitHub Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
@@ -95,8 +104,10 @@ jobs:
       - name: Build static review
         run: npm run build
 
-      - name: Prepare Pages artifact
+      - name: Verify and prepare static output
         run: |
+          test -s apps/web/out/app/index.html
+          grep -q "La aventura del Bosque" apps/web/out/app/index.html
           touch apps/web/out/.nojekyll
           cp apps/web/out/app/index.html apps/web/out/index.html
 
@@ -105,6 +116,56 @@ jobs:
         with:
           path: apps/web/out
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  report:
+    if: always()
+    needs:
+      - build
+      - deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report deployment status in PR 3
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- yoyo-functional-pages-status -->'
+            const build = '${{ needs.build.result }}'
+            const deploy = '${{ needs.deploy.result }}'
+            const baseUrl = '${{ needs.deploy.outputs.page_url }}'
+            const appUrl = baseUrl ? `${baseUrl}app/` : 'not-available'
+            const body = `${marker}\nVista funcional para \`${context.sha}\`\n- build: **${build}**\n- deploy: **${deploy}**\n- url: ${appUrl}`
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 3,
+              per_page: 100
+            })
+            const previous = comments.find(comment => comment.body && comment.body.includes(marker))
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: 3,
+                body
+              })
+            }
