@@ -13,6 +13,7 @@ import './deploy-ready.css'
 import './integrations-3d.css'
 import './platform-complete.css'
 import './mobile-reference.css'
+import './creator-functional.css'
 
 export const metadata:Metadata={
  title:'YOYOLETRASAI | Plataforma educativa premium con IA',
