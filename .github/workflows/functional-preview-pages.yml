@@ -1,0 +1,78 @@
+name: Publicar vista funcional
+
+on:
+  push:
+    branches:
+      - functional-preview
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: functional-preview-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Preparar sitio
+        run: |
+          mkdir -p site
+          cp preview/index.html site/index.html
+          touch site/.nojekyll
+          test -s site/index.html
+
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+
+      - name: Subir artefacto
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Informar enlace en PR 3
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- functional-preview-status -->'
+            const result = '${{ job.status }}'
+            const url = '${{ steps.deployment.outputs.page_url }}' || 'not-available'
+            const body = `${marker}\nVista funcional: **${result}**\nURL: ${url}`
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 3,
+              per_page: 100
+            })
+            const previous = comments.find(comment => comment.body && comment.body.includes(marker))
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: 3,
+                body
+              })
+            }
