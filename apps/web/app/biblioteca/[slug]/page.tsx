@@ -1,9 +1,38 @@
 'use client'
+
 import {useMemo,useState} from 'react'
-import Link from 'next/link'
 import {useParams} from 'next/navigation'
 import {AppShell} from '@/components/AppShell'
 import {getPremiumActivity,premiumActivities} from '@/lib/premiumActivities'
-import {PremiumIllustration} from '@/components/PremiumIllustration'
+import {BookOpen,Eye,Headphones,ImageIcon,Lightbulb,Mic,PenLine,Save,Send,ShieldCheck,Sparkles,Star,Users} from 'lucide-react'
 
-export default function Recurso(){const params=useParams();const slug=String(params.slug);const activity=getPremiumActivity(slug)||premiumActivities[0];const[selected,setSelected]=useState<number|null>(null);const[done,setDone]=useState(false);const items=activity.content.items||[];const options=useMemo(()=>items.slice(0,4),[items]);return <AppShell active="Biblioteca"><section className="premium-hero resource-premium-hero"><span className="eyebrow">{activity.subject} · {activity.level} · {activity.oa}</span><h1>{activity.title}</h1><p>{activity.summary}</p><div className="hero-cta"><button className="btn btn-coral" onClick={()=>setDone(true)}>Aplicar al curso</button><Link className="btn btn-soft" href="/crear">Crear versión adaptada</Link></div></section><div className="resource-premium-layout"><section className="activity-preview premium-activity-sheet"><div className="activity-sheet-head"><span className="tag">{activity.format}</span><span>{activity.duration}</span></div><h2>{activity.content.title}</h2><p className="activity-body">{activity.content.body}</p><PremiumIllustration kind={activity.illustration} title={activity.title}/><h3>Actividad</h3>{options.length>0&&options.map((o,i)=><button key={o} className={`question-option ${selected===i?'selected':''}`} onClick={()=>setSelected(i)}>{String.fromCharCode(65+i)}. {o}</button>)}<div className="feedback-box">{selected===null?'Selecciona una opción o elemento para recibir retroalimentación.':selected===0?'¡Buen comienzo! Explica por qué elegiste esta respuesta.':'Revisa la información principal y vuelve a intentarlo usando una pista.'}</div><h3>Respuesta y evidencia</h3><textarea rows={5} placeholder="Escribe, dicta o registra la respuesta del estudiante..."/><button className="btn btn-primary" onClick={()=>setDone(true)}>Guardar evidencia</button></section><aside className="resource-side-stack"><section className="panel"><h2>Objetivo</h2><p>{activity.goal}</p><h3>Secuencia</h3><ol className="pedagogical-list">{activity.steps.map(s=><li key={s}>{s}</li>)}</ol></section><section className="panel"><h2>Apoyos disponibles</h2><div className="support-chips">{activity.supports.map(s=><span key={s}>{s}</span>)}</div><h3>Criterios de logro</h3><ul className="success-list">{activity.success.map(s=><li key={s}>✓ {s}</li>)}</ul></section><section className="panel insight-card"><b>Estado</b><p>{done?'Evidencia guardada. YOYO puede preparar el siguiente paso pedagógico.':'Lista para aplicar al curso, grupo flexible o estudiante.'}</p><Link className="btn btn-soft" href="/biblioteca">Volver a biblioteca</Link></section></aside></div></AppShell>}
+const choiceArt=['🔑','🗺️','🧰','🎵']
+const choiceTone=['violet','green','orange','blue']
+
+export default function Recurso(){
+ const params=useParams();const slug=String(params.slug)
+ const activity=getPremiumActivity(slug)||premiumActivities[0]
+ const options=useMemo(()=>{const source=activity.content.items||[];return source.length>=4?source.slice(0,4):['Una llave brillante','Un mapa secreto','Un cofre cerrado','Una piedra que canta']},[activity])
+ const[selected,setSelected]=useState<number|null>(null)
+ const[hint,setHint]=useState(false)
+ const[listening,setListening]=useState(false)
+ const[recording,setRecording]=useState(false)
+ const[answer,setAnswer]=useState('')
+ const[saved,setSaved]=useState(false)
+ const[assigned,setAssigned]=useState(false)
+ const save=()=>{setSaved(true);localStorage.setItem(`yoyo-evidence-${activity.slug}`,JSON.stringify({selected,answer,updatedAt:new Date().toISOString()}))}
+ return <AppShell active="Biblioteca"><div className="approved-activity-page">
+  <header className="approved-activity-status"><div><span>🌳</span><b>{activity.title}</b></div><div><Star size={16}/><b>120 pts</b><span className="approved-mini-progress"><i/></span><strong>2 / 4</strong></div></header>
+  <section className="approved-activity-hero"><div className="approved-hero-copy"><span>Misión lectora</span><h1>{activity.content.title||'El Bosque Mágico'}</h1><p>Lee con atención, descubre pistas y elige la mejor respuesta.</p><div><Star size={16}/> Tu racha de hoy <b>🔥 3 días</b></div></div><div className="approved-hero-scene" aria-hidden="true"><span className="approved-glow-book">📖</span><span className="approved-hero-girl">👧🏻</span><span className="approved-hero-owl">🦉</span></div></section>
+  <section className="approved-stepper"><div><Headphones/><b>1</b><span><strong>Escucha</strong><small>El texto</small></span></div><div className="active"><Eye/><b>2</b><span><strong>Observa</strong><small>Con atención</small></span></div><div><PenLine/><b>3</b><span><strong>Responde</strong><small>Y demuestra</small></span></div></section>
+  <section className="approved-question-card"><div className="approved-question-head"><div><BookOpen/><span><small>Lee con atención</small><h2>¿Qué encontró Luma escondido entre las raíces del árbol antiguo?</h2></span></div><b>Pregunta 2/4</b></div>
+   <div className="approved-options">{options.map((option,index)=><button key={`${option}-${index}`} className={`${choiceTone[index]} ${selected===index?'selected':''}`} onClick={()=>setSelected(index)}><span>{String.fromCharCode(65+index)}</span><strong>{option}</strong><em>{choiceArt[index]}</em></button>)}</div>
+   <p className="approved-motivation"><Star/> Piensa bien, la respuesta está en el texto. <Sparkles/></p>
+   {hint&&<div className="approved-hint">Pista: busca en el texto una palabra relacionada con caminos, rutas o direcciones.</div>}
+   <div className="approved-support-tools"><h3><Star/> Herramientas de apoyo</h3><div><button className={listening?'active':''} onClick={()=>setListening(!listening)}><Headphones/><span><b>Escuchar</b><small>{listening?'Reproduciendo…':'Texto'}</small></span></button><button onClick={()=>setHint(!hint)}><Lightbulb/><span><b>Pista</b><small>Dame una pista</small></span></button><button><ImageIcon/><span><b>Pictogramas</b><small>Ver apoyo visual</small></span></button><button className={recording?'active':''} onClick={()=>setRecording(!recording)}><Mic/><span><b>Respuesta oral</b><small>{recording?'Grabando…':'Grabar respuesta'}</small></span></button></div></div>
+   <label className="approved-answer"><span><Users/> Tu respuesta</span><div><textarea value={answer} onChange={event=>setAnswer(event.target.value)} placeholder="Escribe tu respuesta aquí… o utiliza el micrófono para responder"/><button type="button" onClick={()=>setRecording(!recording)} aria-label="Grabar respuesta"><Mic/></button></div></label>
+  </section>
+  <section className="approved-inclusive"><div className="approved-inclusive-head"><h2><ShieldCheck/> Apoyos para todos los estudiantes</h2><button>Ver más ›</button></div><div><article><Sparkles/><h3>DUA</h3><p>Múltiples formas de representación y expresión.</p></article><article><Users/><h3>TEA</h3><p>Estructura clara, apoyos visuales y anticipación.</p></article><article><BookOpen/><h3>Lectura guiada</h3><p>Apoyo en vocabulario, comprensión y secuencias.</p></article><article><ShieldCheck/><h3>Acompañamiento</h3><p>Sugerencias para familias y docentes.</p></article></div></section>
+  <footer className="approved-actions"><button className={saved?'done':''} onClick={save}><Save/><span><b>{saved?'Guardado':'Guardar'}</b><small>Guardar progreso</small></span></button><button className={assigned?'done primary':''} onClick={()=>setAssigned(true)}><Send/><span><b>{assigned?'Asignado':'Asignar al curso'}</b><small>Enviar a mis estudiantes</small></span></button></footer>
+ </div></AppShell>
+}
