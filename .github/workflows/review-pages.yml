@@ -144,12 +144,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}app/
     steps:
-      - name: Configure or enable GitHub Pages
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
-          token: ${{ secrets.PAGES_TOKEN || secrets.GH_PAGES_TOKEN || secrets.GH_PAT || github.token }}
-
       - name: Deploy review to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
