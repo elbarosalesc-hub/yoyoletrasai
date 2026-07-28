@@ -1,0 +1,1 @@
+GitHub Pages habilitado manualmente. Este archivo dispara una ejecución limpia del workflow de vista previa desde la rama de trabajo.
