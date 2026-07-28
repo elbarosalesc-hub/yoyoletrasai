@@ -14,7 +14,7 @@ async function saveJson() {
 }
 
 async function validateViewport(name, viewport) {
-  const page = await browser.newPage({ viewportSize: viewport })
+  const page = await browser.newPage({ viewport })
   const consoleErrors = []
   page.on('console', message => {
     if (message.type() === 'error') consoleErrors.push(message.text())
