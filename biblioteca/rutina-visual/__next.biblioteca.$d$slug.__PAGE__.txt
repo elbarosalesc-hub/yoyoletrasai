@@ -1,0 +1,6 @@
+1:"$Sreact.fragment"
+2:I[77517,["/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/05-c3ty_6dwfk.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/0-7lqrq6w10wv.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/35efljzi6wxss.js"],"default"]
+3:I[97367,["/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/05-c3ty_6dwfk.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/0-7lqrq6w10wv.js"],"OutletBoundary"]
+4:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"slug":"rutina-visual"}],[["$","script","script-0",{"src":"/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/35efljzi6wxss.js","async":true}]],["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"kGovbBRe008XL9EMZvKMv"}
+5:null

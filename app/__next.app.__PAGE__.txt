@@ -1,0 +1,7 @@
+1:"$Sreact.fragment"
+2:I[19122,["/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/05-c3ty_6dwfk.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/0-7lqrq6w10wv.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/1vv-5090hursd.js"],"AppShell"]
+3:I[62173,["/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/05-c3ty_6dwfk.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/0-7lqrq6w10wv.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/1vv-5090hursd.js"],"default"]
+4:I[97367,["/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/05-c3ty_6dwfk.js","/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/0-7lqrq6w10wv.js"],"OutletBoundary"]
+5:"$Sreact.suspense"
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"active":"Inicio","children":["$","$L3",null,{}]}],[["$","script","script-0",{"src":"/elbarosalesc-hub/yoyoletrasai/review-static/_next/static/chunks/1vv-5090hursd.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"kGovbBRe008XL9EMZvKMv"}
+6:null
