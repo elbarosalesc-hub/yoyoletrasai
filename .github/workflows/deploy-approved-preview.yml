@@ -1,0 +1,43 @@
+name: Desplegar vista aprobada
+
+on:
+  push:
+    branches:
+      - agent/rebuild-reference-model-v3
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-approved-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}app/
+    steps:
+      - name: Download latest validated static site
+        uses: dawidd6/action-download-artifact@v11
+        with:
+          workflow: review-pages.yml
+          branch: agent/rebuild-reference-model-v3
+          name: yoyo-review-static-site
+          path: site
+          search_artifacts: true
+          workflow_conclusion: ""
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
