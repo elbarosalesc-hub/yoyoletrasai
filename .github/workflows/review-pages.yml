@@ -69,7 +69,19 @@ jobs:
         run: npm run typecheck -- --pretty false
 
       - name: Build static review
-        run: npm run build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee /tmp/static-build.log
+
+      - name: Upload static build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-build-log
+          path: /tmp/static-build.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Prepare GitHub Pages files
         run: |
