@@ -137,9 +137,6 @@ jobs:
       pages: write
       id-token: write
       contents: read
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}app/
     steps:
       - name: Deploy review to GitHub Pages
         id: deployment
