@@ -14,6 +14,7 @@ import './integrations-3d.css'
 import './platform-complete.css'
 import './reference-dashboard.css'
 import './reference-fixes.css'
+import './mobile-polish.css'
 
 export const metadata:Metadata={
  title:'YOYOLETRASAI | Plataforma educativa premium con IA',
