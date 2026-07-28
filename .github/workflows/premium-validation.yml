@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - agent/full-premium-rebuild-v2
+      - agent/rebuild-reference-model-v3
   pull_request:
     branches:
       - main
@@ -30,3 +31,29 @@ jobs:
 
       - name: Build Next.js
         run: npm run build
+
+      - name: Start application
+        run: |
+          npm run start > /tmp/yoyoletrasai-next.log 2>&1 &
+          echo $! > /tmp/yoyoletrasai-next.pid
+
+      - name: Wait for application
+        run: |
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:3000/app > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/yoyoletrasai-next.log
+          exit 1
+
+      - name: Validate routes and dashboard structure
+        run: node scripts/smoke-routes.mjs
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f /tmp/yoyoletrasai-next.pid ]; then
+            kill "$(cat /tmp/yoyoletrasai-next.pid)" || true
+          fi
