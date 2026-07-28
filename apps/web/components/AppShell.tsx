@@ -23,6 +23,7 @@ export function AppShell({children,active}:{children:React.ReactNode;active:stri
   <main className="app-main premium-main" id="contenido-principal">
    <div className="app-top premium-topbar">
     <button className="mobile-menu-button" aria-label="Abrir menú" onClick={()=>setOpen(true)}><Menu size={21}/></button>
+    <Link href="/app" className="mobile-brand" aria-label="Ir al inicio"><span>Y</span><div><strong>YOYOLETRASAI</strong><small>Panel docente</small></div></Link>
     <div className="search premium-search" role="search"><Search size={18}/><span>Buscar actividades, temas, OA, habilidades...</span><kbd>⌘ K</kbd></div>
     <div className="top-actions"><Link href="/profesor-virtual" className="ai-pill"><Sparkles size={16}/> Profesor Virtual</Link><button aria-label="Notificaciones"><Bell size={18}/><i>5</i></button><button aria-label="Mensajes"><Mail size={18}/><i>2</i></button><div className="user"><div><strong>Profesora</strong><br/><small>Elba Rosales</small></div><div className="avatar avatar-photo" aria-hidden="true">ER</div></div></div>
    </div>
