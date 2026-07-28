@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - agent/rebuild-reference-model-v3
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -141,7 +138,7 @@ jobs:
       id-token: write
       contents: read
     environment:
-      name: github-pages-review
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}app/
     steps:
       - name: Deploy review to GitHub Pages
