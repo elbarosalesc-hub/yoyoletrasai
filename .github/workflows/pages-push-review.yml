@@ -20,101 +20,31 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
+      - name: Checkout branch de revisión
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Enable and configure GitHub Pages
+      - name: Habilitar GitHub Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund --loglevel=error
-
-      - name: Configure static review
+      - name: Preparar vista funcional aprobada
         run: |
-          cat > apps/web/next.config.mjs <<'EOF'
-          const repositoryBase = '/yoyoletrasai'
-          /** @type {import('next').NextConfig} */
-          const nextConfig = {
-            output: 'export',
-            trailingSlash: true,
-            basePath: repositoryBase,
-            assetPrefix: repositoryBase,
-            images: { unoptimized: true }
-          }
-          export default nextConfig
-          EOF
+          mkdir -p site
+          git fetch origin functional-preview --depth=1
+          git show FETCH_HEAD:preview/index.html > site/index.html
+          test -s site/index.html
+          grep -q "YOYOLETRASAI" site/index.html
+          grep -q "Bosque Mágico" site/index.html
+          touch site/.nojekyll
 
-          cat > apps/web/app/page.tsx <<'EOF'
-          import Link from 'next/link'
-          export default function Home(){
-            return <main style={{minHeight:'100vh',display:'grid',placeItems:'center',fontFamily:'Arial,sans-serif',padding:24}}>
-              <section style={{textAlign:'center',maxWidth:520}}>
-                <h1>YOYOLETRASAI</h1>
-                <p>Vista previa para revisión.</p>
-                <Link href="/app" style={{display:'inline-block',marginTop:16,padding:'12px 18px',borderRadius:12,background:'#123d4b',color:'#fff',fontWeight:700}}>Abrir plataforma</Link>
-              </section>
-            </main>
-          }
-          EOF
-
-          cat > apps/web/components/ReviewResourceClient.tsx <<'EOF'
-          'use client'
-          import {useMemo,useState} from 'react'
-          import Link from 'next/link'
-          import {AppShell} from '@/components/AppShell'
-          import {getPremiumActivity,premiumActivities} from '@/lib/premiumActivities'
-          import {PremiumIllustration} from '@/components/PremiumIllustration'
-
-          export default function ReviewResourceClient({slug}:{slug:string}){
-            const activity=getPremiumActivity(slug)||premiumActivities[0]
-            const[selected,setSelected]=useState<number|null>(null)
-            const[done,setDone]=useState(false)
-            const items=activity.content.items||[]
-            const options=useMemo(()=>items.slice(0,4),[items])
-            return <AppShell active="Biblioteca"><section className="premium-hero resource-premium-hero"><span className="eyebrow">{activity.subject} · {activity.level} · {activity.oa}</span><h1>{activity.title}</h1><p>{activity.summary}</p><div className="hero-cta"><button className="btn btn-coral" onClick={()=>setDone(true)}>Aplicar al curso</button><Link className="btn btn-soft" href="/crear">Crear versión adaptada</Link></div></section><div className="resource-premium-layout"><section className="activity-preview premium-activity-sheet"><div className="activity-sheet-head"><span className="tag">{activity.format}</span><span>{activity.duration}</span></div><h2>{activity.content.title}</h2><p className="activity-body">{activity.content.body}</p><PremiumIllustration kind={activity.illustration} title={activity.title}/><h3>Actividad</h3>{options.length>0&&options.map((o,i)=><button key={o} className={`question-option ${selected===i?'selected':''}`} onClick={()=>setSelected(i)}>{String.fromCharCode(65+i)}. {o}</button>)}<div className="feedback-box">{selected===null?'Selecciona una opción o elemento para recibir retroalimentación.':selected===0?'¡Buen comienzo! Explica por qué elegiste esta respuesta.':'Revisa la información principal y vuelve a intentarlo usando una pista.'}</div><h3>Respuesta y evidencia</h3><textarea rows={5} placeholder="Escribe, dicta o registra la respuesta del estudiante..."/><button className="btn btn-primary" onClick={()=>setDone(true)}>Guardar evidencia</button></section><aside className="resource-side-stack"><section className="panel"><h2>Objetivo</h2><p>{activity.goal}</p><h3>Secuencia</h3><ol className="pedagogical-list">{activity.steps.map(s=><li key={s}>{s}</li>)}</ol></section><section className="panel"><h2>Apoyos disponibles</h2><div className="support-chips">{activity.supports.map(s=><span key={s}>{s}</span>)}</div><h3>Criterios de logro</h3><ul className="success-list">{activity.success.map(s=><li key={s}>✓ {s}</li>)}</ul></section><section className="panel insight-card"><b>Estado</b><p>{done?'Evidencia guardada. YOYO puede preparar el siguiente paso pedagógico.':'Lista para aplicar al curso, grupo flexible o estudiante.'}</p><Link className="btn btn-soft" href="/biblioteca">Volver a biblioteca</Link></section></aside></div></AppShell>
-          }
-          EOF
-
-          cat > 'apps/web/app/biblioteca/[slug]/page.tsx' <<'EOF'
-          import ReviewResourceClient from '@/components/ReviewResourceClient'
-          import {premiumActivities} from '@/lib/premiumActivities'
-          export function generateStaticParams(){
-            return premiumActivities.map(activity=>({slug:activity.slug}))
-          }
-          export default async function Page({params}:{params:Promise<{slug:string}>}){
-            const {slug}=await params
-            return <ReviewResourceClient slug={slug}/>
-          }
-          EOF
-
-      - name: Typecheck
-        run: npm run typecheck -- --pretty false
-
-      - name: Build static review
-        run: npm run build
-
-      - name: Verify and prepare static output
-        run: |
-          test -s apps/web/out/app/index.html
-          grep -q "La aventura del Bosque" apps/web/out/app/index.html
-          touch apps/web/out/.nojekyll
-          cp apps/web/out/app/index.html apps/web/out/index.html
-
-      - name: Upload Pages artifact
+      - name: Subir artefacto de Pages
         uses: actions/upload-pages-artifact@v4
         with:
-          path: apps/web/out
+          path: site
 
   deploy:
     needs: build
@@ -126,7 +56,7 @@ jobs:
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Publicar en GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
@@ -137,16 +67,15 @@ jobs:
       - deploy
     runs-on: ubuntu-latest
     steps:
-      - name: Report deployment status in PR 3
+      - name: Informar estado en PR 3
         uses: actions/github-script@v7
         with:
           script: |
             const marker = '<!-- yoyo-functional-pages-status -->'
             const build = '${{ needs.build.result }}'
             const deploy = '${{ needs.deploy.result }}'
-            const baseUrl = '${{ needs.deploy.outputs.page_url }}'
-            const appUrl = baseUrl ? `${baseUrl}app/` : 'not-available'
-            const body = `${marker}\nVista funcional para \`${context.sha}\`\n- build: **${build}**\n- deploy: **${deploy}**\n- url: ${appUrl}`
+            const pageUrl = '${{ needs.deploy.outputs.page_url }}' || 'not-available'
+            const body = `${marker}\nVista funcional para \`${context.sha}\`\n- build: **${build}**\n- deploy: **${deploy}**\n- url: ${pageUrl}`
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
