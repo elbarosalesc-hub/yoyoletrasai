@@ -1,0 +1,93 @@
+name: Revisión autónoma YOYO
+
+on:
+  push:
+    branches:
+      - agent/rebuild-reference-model-v3
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yoyo-autonomous-review
+  cancel-in-progress: true
+
+jobs:
+  create-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Typecheck
+        run: npm run typecheck -- --pretty false
+
+      - name: Build application
+        run: npm run build
+
+      - name: Install Chromium and SingleFile
+        run: |
+          npm install --no-save --no-audit --no-fund --loglevel=error playwright@1.55.0 single-file-cli
+          npx playwright install --with-deps chromium
+
+      - name: Start application
+        run: |
+          npm run start > /tmp/yoyo-next.log 2>&1 &
+          echo $! > /tmp/yoyo-next.pid
+
+      - name: Wait for application
+        run: |
+          for attempt in {1..40}; do
+            if curl --silent --fail http://127.0.0.1:3000/app > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/yoyo-next.log
+          exit 1
+
+      - name: Create autonomous HTML
+        shell: bash
+        run: |
+          set -e
+          mkdir -p review
+          BROWSER_PATH="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          npx single-file http://127.0.0.1:3000/app review/YOYOLETRASAI_revision.html \
+            --browser-executable-path="$BROWSER_PATH" \
+            --browser-width=1440 \
+            --browser-height=1000 \
+            --remove-unused-styles=false \
+            --compress-HTML-content=false
+          test -s review/YOYOLETRASAI_revision.html
+          grep -q "YOYOLETRASAI" review/YOYOLETRASAI_revision.html
+          grep -q "La aventura del Bosque" review/YOYOLETRASAI_revision.html
+
+      - name: Upload autonomous review
+        uses: actions/upload-artifact@v4
+        with:
+          name: yoyo-autonomous-review
+          path: review/YOYOLETRASAI_revision.html
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Stop application
+        if: always()
+        run: |
+          if [ -f /tmp/yoyo-next.pid ]; then
+            kill "$(cat /tmp/yoyo-next.pid)" || true
+          fi
