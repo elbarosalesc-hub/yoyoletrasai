@@ -12,6 +12,7 @@ import './tools-functional.css'
 import './deploy-ready.css'
 import './integrations-3d.css'
 import './platform-complete.css'
+import './mobile-reference.css'
 
 export const metadata:Metadata={
  title:'YOYOLETRASAI | Plataforma educativa premium con IA',
@@ -20,6 +21,7 @@ export const metadata:Metadata={
  keywords:['educación','Chile','PIE','DUA','recursos educativos','inteligencia artificial','juegos educativos'],
  authors:[{name:'Elba Rosales'}]
 }
+
 export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#123d4b'}
 
 export default function RootLayout({children}:{children:ReactNode}){
