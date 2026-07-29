@@ -15,6 +15,7 @@ import {
   NotebookPen,
   Presentation,
   Settings,
+  ShieldCheck,
   Sparkles,
   Trophy,
   UserRoundCheck,
@@ -61,7 +62,10 @@ export const navigationGroups:NavigationGroup[]=[
   },
   {
     label:'Sistema',
-    items:[{label:'Configuración',icon:Settings,href:'/configuracion'}]
+    items:[
+      {label:'Usuarios y roles',icon:ShieldCheck,href:'/usuarios'},
+      {label:'Configuración',icon:Settings,href:'/configuracion'}
+    ]
   }
 ]
 
