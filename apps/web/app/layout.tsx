@@ -8,6 +8,7 @@ import './dashboard-v3.css'
 import './dashboard-v4.css'
 import './dashboard-v5.css'
 import './students-reports-v2.css'
+import './games-settings-v2.css'
 
 export const metadata: Metadata = {
   title: 'YOYOLETRASAI | Panel docente V2',
