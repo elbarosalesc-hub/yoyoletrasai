@@ -8,7 +8,9 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   Clock3,
+  FolderKanban,
   Images,
   Medal,
   MoreHorizontal,
@@ -16,6 +18,7 @@ import {
   Sparkles,
   Target,
   TrendingUp,
+  Trophy,
   Users,
   Volume2,
   Zap
@@ -38,8 +41,12 @@ const quickActions=[
 ]
 
 const immersiveTools=[
-  {label:'Juegos y mundos 3D',description:'15 misiones interactivas',icon:Boxes,href:'/juegos'},
+  {label:'Juegos y mundos 3D',description:'3 mundos y 15 misiones',icon:Boxes,href:'/juegos'},
   {label:'Profesor virtual',description:'Voz, modelado y preguntas',icon:Presentation,href:'/profesor-virtual'},
+  {label:'Contenidos',description:'Rutas curriculares por nivel',icon:BookOpen,href:'/contenidos'},
+  {label:'Tareas',description:'Asignación y seguimiento',icon:ClipboardCheck,href:'/tareas'},
+  {label:'Portafolios',description:'Evidencias por estudiante',icon:FolderKanban,href:'/portafolios'},
+  {label:'Gamificación',description:'XP, logros y desafíos',icon:Trophy,href:'/gamificacion'},
   {label:'Audio y narración',description:'Ambientes y voces en español',icon:Volume2,href:'/audio'},
   {label:'Recursos PIE',description:'Apoyos y adecuaciones',icon:Accessibility,href:'/recursos-pie'},
   {label:'Banco multimedia',description:'Imágenes, audio y escenas',icon:Images,href:'/multimedia'},
@@ -63,7 +70,7 @@ export default async function TeacherDashboard(){
         <div className="welcome-copy">
           <span className="eyebrow"><Sparkles size={15}/> Panel docente inteligente</span>
           <h1>¡Bienvenida, {snapshot.teacherName}! <span>👋</span></h1>
-          <p>Hoy puedes iniciar una experiencia 3D, presentar una lección con YOYO y revisar el progreso del grupo desde un mismo lugar.</p>
+          <p>Hoy puedes iniciar una experiencia 3D, presentar una lección con YOYO, asignar tareas y revisar evidencias desde un mismo lugar.</p>
           <div className="welcome-actions"><a className="welcome-primary" href="/estudio-inmersivo"><Sparkles size={18}/>Crear mundo 3D</a><a className="welcome-secondary" href="/profesor-virtual"><Presentation size={18}/>Abrir profesor virtual</a></div>
         </div>
         <div className="welcome-visual" aria-hidden="true">
@@ -89,7 +96,7 @@ export default async function TeacherDashboard(){
         </aside>
       </section>
 
-      <section className="dashboard-tool-launcher immersive-tool-launcher" aria-label="Módulos y herramientas destacadas">
+      <section className="dashboard-tool-launcher immersive-tool-launcher expanded-tool-launcher" aria-label="Módulos y herramientas destacadas">
         {immersiveTools.map(({label,description,icon:Icon,href})=><a href={href} key={label}><span><Icon/></span><div><strong>{label}</strong><small>{description}</small></div></a>)}
       </section>
 
