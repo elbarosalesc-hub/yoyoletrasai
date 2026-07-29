@@ -18,7 +18,7 @@ import {
   VolumeX
 } from 'lucide-react'
 import {createSupabaseBrowserClient} from '@/lib/supabase/client'
-import {getImmersiveWorld,immersiveWorlds,type ImmersiveMission,type ImmersiveWorld} from '@/lib/immersive/game-content'
+import {getImmersiveWorld,immersiveWorlds,type ImmersiveMission} from '@/lib/immersive/game-content'
 
 type SceneApi={
   focus:(target:ImmersiveMission['targetObject'])=>void
@@ -89,7 +89,7 @@ export function ForestMission3D(){
       const pathMaterial=new THREE.MeshStandardMaterial({color:world.theme==='forest'?'#9a744a':world.theme==='city'?'#4c5d7b':'#4f747a',roughness:.75,metalness:world.theme==='city'?.18:0})
       const path=new THREE.Mesh(new THREE.PlaneGeometry(5.2,28),pathMaterial);path.rotation.x=-Math.PI/2;path.position.set(0,.025,-5);scene.add(path)
 
-      const objectMap=new Map<string,any>()
+      const objectMap=new globalThis.Map<string,any>()
       const addTarget=(name:string,object:any)=>{object.userData.target=name;objectMap.set(name,object);scene.add(object)}
 
       function buildForest(){
@@ -198,7 +198,7 @@ export function ForestMission3D(){
         raycaster.setFromCamera(pointer,camera)
         const hits=raycaster.intersectObjects(Array.from(objectMap.values()),true)
         if(!hits.length)return
-        let object=hits[0].object
+        let object:any=hits[0]?.object??null
         while(object&&!object.userData.target)object=object.parent
         if(object?.userData.target)focus(object.userData.target)
       }
@@ -208,134 +208,109 @@ export function ForestMission3D(){
 
       clock=new THREE.Clock()
       const resize=()=>{if(!host||!renderer)return;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)}
-      window.addEventListener('resize',resize)
       const animate=()=>{
-        frame=requestAnimationFrame(animate);const delta=Math.min(.035,clock.getDelta());const elapsed=clock.elapsedTime
+        frame=requestAnimationFrame(animate)
+        const delta=Math.min(clock.getDelta(),.04),elapsed=clock.elapsedTime
         if(running){
-          const speed=3.1*delta;let moving=false
-          if(keys.has('w')||keys.has('arrowup')){character.position.z-=speed;moving=true}
-          if(keys.has('s')||keys.has('arrowdown')){character.position.z+=speed;moving=true}
-          if(keys.has('a')||keys.has('arrowleft')){character.position.x-=speed;moving=true}
-          if(keys.has('d')||keys.has('arrowright')){character.position.x+=speed;moving=true}
-          character.position.x=Math.max(-8,Math.min(8,character.position.x));character.position.z=Math.max(-12,Math.min(6,character.position.z))
-          character.position.y=moving?Math.abs(Math.sin(elapsed*8))*.08:Math.sin(elapsed*2)*.025
-          guide.position.y=4.7+Math.sin(elapsed*1.8)*.25;guide.rotation.y=Math.sin(elapsed)*.35
-          orb.position.y=1+Math.sin(elapsed*2)*.18;orb.rotation.y+=delta
-          crystal.rotation.y+=delta*.8;crystal.rotation.x=Math.sin(elapsed*.7)*.16
-          particles.rotation.y=elapsed*.018
+          const speed=5.2*delta
+          if(keys.has('w')||keys.has('arrowup'))character.position.z-=speed
+          if(keys.has('s')||keys.has('arrowdown'))character.position.z+=speed
+          if(keys.has('a')||keys.has('arrowleft'))character.position.x-=speed
+          if(keys.has('d')||keys.has('arrowright'))character.position.x+=speed
+          character.position.x=Math.max(-13,Math.min(13,character.position.x));character.position.z=Math.max(-17,Math.min(8,character.position.z))
+          character.position.y=Math.abs(Math.sin(elapsed*6))*0.045
+          guide.position.y=4.7+Math.sin(elapsed*1.8)*.28;guide.rotation.y=Math.sin(elapsed*.8)*.25
+          orb.position.y=1+Math.sin(elapsed*2.2)*.2;orb.rotation.y+=delta
+          crystal.rotation.y+=delta*.65;particles.rotation.y+=delta*.018
           camera.position.x+=(character.position.x-camera.position.x)*.035
-          camera.position.z+=(character.position.z+10-camera.position.z)*.035
-          camera.lookAt(character.position.x,1.1,character.position.z-2.2)
+          camera.position.z+=(character.position.z+11-camera.position.z)*.025
+          camera.lookAt(character.position.x,1.3,character.position.z-4)
         }
         renderer.render(scene,camera)
       }
-      animate()
+      window.addEventListener('resize',resize);animate()
 
-      sceneApi.current={
-        focus,
-        reset(){character.position.set(0,0,4);camera.position.set(0,5.2,12);camera.lookAt(0,1,-1)},
-        setPaused(paused){setRunning(!paused)},
-        dispose(){canvas.removeEventListener('pointerdown',onPointer);window.removeEventListener('keydown',onKeyDown);window.removeEventListener('keyup',onKeyUp);window.removeEventListener('resize',resize);cancelAnimationFrame(frame);renderer.dispose();canvas.remove()}
-      }
-      sceneApi.current.focus(current.targetObject)
-    })
+      sceneApi.current={focus,reset:()=>{character.position.set(0,0,4);camera.position.set(0,5.2,12);camera.lookAt(0,1,-2)},setPaused:(paused:boolean)=>setRunning(!paused),dispose:()=>{}}
+      return()=>{window.removeEventListener('resize',resize);canvas.removeEventListener('pointerdown',onPointer);window.removeEventListener('keydown',onKeyDown);window.removeEventListener('keyup',onKeyUp)}
+    }).catch(()=>{if(host)host.innerHTML='<div class="webgl-fallback"><strong>Vista 3D no disponible</strong><span>Tu navegador puede continuar con las actividades y narraciones.</span></div>'})
 
-    return()=>{disposed=true;sceneApi.current?.dispose();sceneApi.current=null}
-  },[world.id])
+    return()=>{disposed=true;cancelAnimationFrame(frame);sceneApi.current=null;if(renderer){renderer.dispose();renderer.domElement?.remove()}}
+  },[world,running])
 
-  useEffect(()=>{sceneApi.current?.focus(current.targetObject)},[mission,current.targetObject])
-  useEffect(()=>{sceneApi.current?.setPaused(!running)},[running])
-  useEffect(()=>()=>stopAmbient(),[])
+  useEffect(()=>{sceneApi.current?.focus(current.targetObject)},[current.targetObject])
 
-  function playTone(frequency=440,duration=.12){
+  function playTone(frequency=520,duration=.16){
     if(!sound||typeof window==='undefined')return
-    const AudioContextClass=window.AudioContext||(window as any).webkitAudioContext
-    if(!AudioContextClass)return
+    const AudioContextClass=window.AudioContext||(window as any).webkitAudioContext;if(!AudioContextClass)return
     const context=new AudioContextClass();const oscillator=context.createOscillator();const gain=context.createGain()
-    oscillator.frequency.value=frequency;oscillator.type='sine';gain.gain.setValueAtTime(.07,context.currentTime);gain.gain.exponentialRampToValueAtTime(.001,context.currentTime+duration)
+    oscillator.type='sine';oscillator.frequency.value=frequency;gain.gain.setValueAtTime(.055,context.currentTime);gain.gain.exponentialRampToValueAtTime(.001,context.currentTime+duration)
     oscillator.connect(gain);gain.connect(context.destination);oscillator.start();oscillator.stop(context.currentTime+duration);oscillator.onended=()=>context.close()
   }
 
-  function startAmbient(){
-    if(typeof window==='undefined'||ambientRef.current)return
+  function toggleAmbient(){
+    if(ambientRef.current){ambientRef.current.nodes.forEach(node=>{try{(node as OscillatorNode).stop?.()}catch{}});ambientRef.current.context.close();ambientRef.current=null;setAmbient(false);return}
     const AudioContextClass=window.AudioContext||(window as any).webkitAudioContext;if(!AudioContextClass)return
-    const context=new AudioContextClass();const master=context.createGain();master.gain.value=.035;master.connect(context.destination)
-    const nodes:AudioNode[]=[master]
-    const frequencies=world.theme==='forest'?[110,164,220]:world.theme==='city'?[82,123,246]:[96,144,288]
-    frequencies.forEach((frequency,index)=>{const osc=context.createOscillator();const gain=context.createGain();osc.type=index===0?'sine':'triangle';osc.frequency.value=frequency;gain.gain.value=index===0?.55:.18;osc.connect(gain);gain.connect(master);osc.start();nodes.push(osc,gain)})
-    const lfo=context.createOscillator();const lfoGain=context.createGain();lfo.frequency.value=.12;lfoGain.gain.value=.018;lfo.connect(lfoGain);lfoGain.connect(master.gain);lfo.start();nodes.push(lfo,lfoGain)
+    const context=new AudioContextClass();const master=context.createGain();master.gain.value=.018;master.connect(context.destination)
+    const nodes:AudioNode[]=[]
+    ;[world.theme==='forest'?174:world.theme==='city'?130:220,world.theme==='forest'?261:195].forEach((frequency,index)=>{const osc=context.createOscillator();const gain=context.createGain();osc.type=index?'sine':'triangle';osc.frequency.value=frequency;gain.gain.value=index?.28:.22;osc.connect(gain);gain.connect(master);osc.start();nodes.push(osc,gain)})
     ambientRef.current={context,nodes};setAmbient(true)
   }
-  function stopAmbient(){
-    const ambientAudio=ambientRef.current;if(!ambientAudio)return
-    ambientAudio.nodes.forEach(node=>{try{if('stop'in node)(node as OscillatorNode).stop()}catch{}});void ambientAudio.context.close();ambientRef.current=null;setAmbient(false)
+
+  function speak(text=current.narration){
+    if(!sound||typeof window==='undefined'||!('speechSynthesis'in window))return
+    window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-CL';utterance.rate=.9;utterance.pitch=1.04;window.speechSynthesis.speak(utterance)
   }
 
-  function narrate(text:string){
-    if(typeof window==='undefined'||!('speechSynthesis'in window))return
-    window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-CL';utterance.rate=.88;utterance.pitch=1.02;window.speechSynthesis.speak(utterance)
-  }
-
-  async function persist(nextCorrect:number,nextAnswered:number,nextScore:number,nextMission:number){
+  async function persist(nextMission:number,nextCorrect:number,nextAnswered:number,nextScore:number){
     const client=createSupabaseBrowserClient();if(!client)return
     setSyncStatus('saving')
-    const nextProgress=Math.round(Math.min(100,((nextMission+1)/world.missions.length)*100));const accuracy=nextAnswered?Math.round((nextCorrect/nextAnswered)*100):0
+    const accuracy=nextAnswered?Math.round(nextCorrect/nextAnswered*100):0
     const minutes=Math.max(1,Math.round((Date.now()-startedAt.current)/60000))
-    await client.rpc('record_forest_mission_progress',{p_progress:nextProgress,p_accuracy:accuracy,p_minutes:minutes,p_xp:nextScore,p_correct:nextCorrect,p_total:nextAnswered})
-    setSyncStatus('saved');window.setTimeout(()=>setSyncStatus('idle'),1600)
+    await client.rpc('record_forest_mission_progress',{p_progress:Math.round(nextMission/world.missions.length*100),p_accuracy:accuracy,p_minutes:minutes,p_xp:nextScore,p_correct:nextCorrect,p_total:nextAnswered})
+    setSyncStatus('saved')
   }
 
-  function choose(index:number){
+  function answer(index:number){
     if(selected!==null)return
-    const isCorrect=index===current.answer;const nextAnswered=answered+1;const nextCorrect=correct+(isCorrect?1:0);const nextScore=score+(isCorrect?current.xp:20)
-    setSelected(index);setAnswered(nextAnswered);setCorrect(nextCorrect);setScore(nextScore)
-    if(isCorrect){playTone(780,.2);narrate(`¡Muy bien! ${current.evidence}`)}else{playTone(210,.23);narrate(`Revisa las pistas. ${current.hint}`)}
-    void persist(nextCorrect,nextAnswered,nextScore,mission)
+    const isCorrect=index===current.correct
+    const nextCorrect=correct+(isCorrect?1:0),nextAnswered=answered+1,nextScore=score+(isCorrect?current.xp:5)
+    setSelected(index);setCorrect(nextCorrect);setAnswered(nextAnswered);setScore(nextScore);playTone(isCorrect?720:220,isCorrect?.22:.3);persist(mission+1,nextCorrect,nextAnswered,nextScore)
   }
 
-  function nextMission(){
-    if(mission>=world.missions.length-1){setMission(0);setSelected(null);setHint(false);sceneApi.current?.reset();return}
-    const next=mission+1;setMission(next);setSelected(null);setHint(false);playTone(540,.11)
+  function next(){
+    if(mission<world.missions.length-1){setMission(value=>value+1);setSelected(null);setHint(false)}
   }
 
-  function reset(){setMission(0);setSelected(null);setScore(0);setCorrect(0);setAnswered(0);setHint(false);setExplored([]);startedAt.current=Date.now();sceneApi.current?.reset()}
+  function previous(){if(mission>0){setMission(value=>value-1);setSelected(null);setHint(false)}}
+  function reset(){setMission(0);setSelected(null);setHint(false);setScore(0);setCorrect(0);setAnswered(0);setExplored([]);startedAt.current=Date.now();sceneApi.current?.reset()}
 
-  return <section className="immersive-engine">
-    <header className="immersive-world-tabs">
-      <div><span><Gamepad2/> EXPERIENCIAS INMERSIVAS</span><strong>{world.title}</strong><small>{world.subject} · {world.level} · {world.skill}</small></div>
-      <nav>{immersiveWorlds.map(item=><button key={item.id} className={item.id===world.id?'active':''} onClick={()=>setWorldId(item.id)}><i style={{background:item.accent}}/>{item.shortTitle}</button>)}</nav>
+  return <section className="immersive-engine-shell">
+    <header className="world-selector-bar">
+      <div><span className="module-eyebrow"><Sparkles size={15}/> Motor inmersivo curricular</span><h1>Explora, escucha y aprende en 3D</h1><p>Tres mundos, quince misiones y evidencia pedagógica en tiempo real.</p></div>
+      <div className="world-tabs">{immersiveWorlds.map(item=><button key={item.id} className={item.id===worldId?'active':''} onClick={()=>setWorldId(item.id)}><span>{item.emoji}</span><div><strong>{item.title}</strong><small>{item.subject} · {item.level}</small></div></button>)}</div>
     </header>
 
-    <div className="mission3d-shell immersive-runtime">
-      <div className="mission3d-stage">
-        <div ref={mountRef} className="mission3d-canvas"/>
-        <div className="mission3d-hud"><span>MISIÓN {mission+1}/{world.missions.length}</span><strong>{score} XP</strong><em>{progress}% completado</em>{syncStatus!=='idle'&&<em>{syncStatus==='saving'?'Guardando...':'Progreso guardado'}</em>}</div>
-        <div className="mission3d-controls">
-          <button onClick={()=>setRunning(value=>!value)} aria-label={running?'Pausar animación':'Reanudar animación'}>{running?<Pause/>:<Play/>}</button>
-          <button onClick={()=>{setSound(value=>!value);if(sound)stopAmbient()}} aria-label={sound?'Silenciar':'Activar sonido'}>{sound?<Volume2/>:<VolumeX/>}</button>
-          <button className={ambient?'active':''} onClick={ambient?stopAmbient:startAmbient} aria-label="Activar ambiente sonoro"><Headphones/></button>
-          <button onClick={()=>narrate(`${current.title}. ${current.narration}. ${current.question}`)} aria-label="Escuchar misión"><Sparkles/></button>
-          <button onClick={reset} aria-label="Reiniciar"><RotateCcw/></button>
-        </div>
-        <div className="mission3d-map"><Map/><span>{world.ambientLabel}</span><div>{world.missions.map((item,index)=><i key={item.id} className={`${index<mission?'done':''} ${index===mission?'active':''}`}/>)}</div></div>
-        <div className="mission3d-instruction"><span><Compass/> Explora con libertad</span><p>Usa WASD o las flechas. Haz clic en objetos iluminados para descubrir evidencias.</p><small>{explored.length} objetos explorados</small></div>
-        {guideOpen&&<div className="virtual-guide-overlay"><span className="guide-avatar">🦉</span><div><small>PROFESOR VIRTUAL YOYO</small><strong>{current.title}</strong><p>{current.narration}</p><button onClick={()=>narrate(current.narration)}><Volume2/>Escuchar</button></div><button onClick={()=>setGuideOpen(false)} aria-label="Cerrar guía">×</button></div>}
-        {!guideOpen&&<button className="open-guide" onClick={()=>setGuideOpen(true)}>🦉 Profesor virtual</button>}
-      </div>
+    <div className="immersive-layout">
+      <article className="immersive-stage-card">
+        <div ref={mountRef} className="immersive-canvas"/>
+        <div className="immersive-hud top-left"><span><Gamepad2/> WASD o flechas</span><span><Compass/> Haz clic en objetos</span></div>
+        <div className="immersive-hud top-right"><button onClick={()=>setRunning(value=>!value)}>{running?<Pause/>:<Play/>}</button><button onClick={()=>setSound(value=>!value)}>{sound?<Volume2/>:<VolumeX/>}</button><button className={ambient?'active':''} onClick={toggleAmbient}><Headphones/></button><button onClick={reset}><RotateCcw/></button></div>
+        <div className="immersive-progress-hud"><div><span>Misión {mission+1} de {world.missions.length}</span><strong>{progress}%</strong></div><div><i style={{width:`${progress}%`}}/></div><div><span>XP <strong>{score}</strong></span><span>Precisión <strong>{answered?Math.round(correct/answered*100):0}%</strong></span><span>Explorados <strong>{explored.length}</strong></span></div></div>
+        <button className="virtual-guide-orb" onClick={()=>setGuideOpen(value=>!value)} aria-label="Abrir profesor virtual"><BotAvatar/><span>YOYO</span></button>
+        {guideOpen&&<aside className="in-world-guide"><button onClick={()=>setGuideOpen(false)}>×</button><span>PROFESOR VIRTUAL</span><strong>{current.guide}</strong><p>{current.narration}</p><button onClick={()=>speak()}><Volume2/>Escuchar explicación</button></aside>}
+      </article>
 
-      <aside className="mission3d-panel">
-        <span className="mission3d-kicker">{current.objective}</span>
-        <h2>{current.title}</h2>
-        <p>{current.question}</p>
-        <div className="mission3d-options">{current.options.map((option,index)=>{
-          const right=selected!==null&&index===current.answer;const wrong=selected===index&&index!==current.answer
-          return <button key={option} className={`${right?'correct':''} ${wrong?'wrong':''}`} onClick={()=>choose(index)} disabled={selected!==null}><span>{String.fromCharCode(65+index)}</span>{option}{right&&<CheckCircle2/>}</button>
-        })}</div>
-        {hint&&<div className="mission3d-hint"><Lightbulb/>{current.hint}</div>}
-        {selected!==null&&<div className={`mission-evidence ${selected===current.answer?'correct':'retry'}`}><strong>{selected===current.answer?'Evidencia encontrada':'Revisa la evidencia'}</strong><p>{selected===current.answer?current.evidence:current.hint}</p></div>}
-        <div className="mission3d-panel-actions"><button onClick={()=>{setHint(true);sceneApi.current?.focus(current.targetObject)}}><Lightbulb/>Mostrar pista</button><button onClick={nextMission} disabled={selected===null}>{mission===world.missions.length-1?'Reiniciar mundo':'Siguiente misión'}<ChevronRight/></button></div>
-        <div className="mission-navigation"><button onClick={()=>{setMission(Math.max(0,mission-1));setSelected(null)}} disabled={mission===0}><ChevronLeft/>Anterior</button><span>{correct}/{answered} respuestas correctas</span></div>
+      <aside className="mission-console">
+        <div className="mission-console-head"><span>{world.emoji}</span><div><small>{world.subject} · {world.skill}</small><h2>{current.title}</h2></div></div>
+        <p className="mission-story">{current.story}</p>
+        <div className="mission-objective"><Map/><div><small>OBJETIVO PEDAGÓGICO</small><strong>{world.objective}</strong></div></div>
+        <div className="mission-question"><span>PREGUNTA</span><h3>{current.question}</h3></div>
+        <div className="mission-options">{current.options.map((option,index)=>{const state=selected===null?'':index===current.correct?'correct':index===selected?'wrong':'';return <button className={state} key={option} onClick={()=>answer(index)} disabled={selected!==null}><span>{String.fromCharCode(65+index)}</span>{option}{state==='correct'&&<CheckCircle2/>}</button>})}</div>
+        {selected===null?<button className="hint-button" onClick={()=>setHint(value=>!value)}><Lightbulb/>{hint?current.hint:'Necesito una pista'}</button>:<div className={`mission-feedback ${selected===current.correct?'success':'retry'}`}><strong>{selected===current.correct?'¡Excelente razonamiento!':'Revisemos la evidencia'}</strong><p>{current.evidence}</p><span>+{selected===current.correct?current.xp:5} XP · {syncStatus==='saving'?'Guardando...':syncStatus==='saved'?'Progreso guardado':'Modo demostración'}</span></div>}
+        <div className="mission-nav"><button onClick={previous} disabled={mission===0}><ChevronLeft/>Anterior</button><button onClick={()=>sceneApi.current?.focus(current.targetObject)}><Compass/>Explorar objeto</button><button onClick={next} disabled={selected===null||mission===world.missions.length-1}>Siguiente<ChevronRight/></button></div>
       </aside>
     </div>
   </section>
 }
+
+function BotAvatar(){return <span aria-hidden="true">🤖</span>}
