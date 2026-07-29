@@ -12,10 +12,11 @@ import './auth-roles-v2.css'
 import './users-admin-v2.css'
 import './account-flows-v2.css'
 import './admin-governance-v2.css'
+import './functional-tools-v4.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Plataforma educativa',
-  description:'Plataforma educativa inclusiva con creación, juegos 3D, profesor virtual, seguimiento y gestión institucional.'
+  description:'Plataforma educativa inclusiva con creación, mundos 3D interactivos, profesor virtual, recursos PIE y gestión institucional.'
 }
 
 export const viewport:Viewport={
