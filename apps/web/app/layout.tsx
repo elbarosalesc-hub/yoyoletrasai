@@ -5,6 +5,7 @@ import './modules-v2.css'
 import './yoyo-v2.css'
 import './creator-v2.css'
 import './dashboard-v3.css'
+import './dashboard-v4.css'
 
 export const metadata: Metadata = {
   title: 'YOYOLETRASAI | Panel docente V2',
