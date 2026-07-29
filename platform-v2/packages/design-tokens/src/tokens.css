@@ -1,0 +1,26 @@
+:root {
+  --yoyo-brand: #7c3aed;
+  --yoyo-brand-strong: #6d28d9;
+  --yoyo-brand-soft: #f1eafe;
+  --yoyo-canvas: #f7f7fb;
+  --yoyo-surface: #ffffff;
+  --yoyo-text: #171a26;
+  --yoyo-muted: #667085;
+  --yoyo-border: #e9e7f0;
+  --yoyo-success: #159a72;
+  --yoyo-success-soft: #e7f8f2;
+  --yoyo-info: #1479b8;
+  --yoyo-info-soft: #eaf5fd;
+  --yoyo-warning: #c58a00;
+  --yoyo-warning-soft: #fff6d8;
+  --yoyo-danger: #d92d20;
+  --yoyo-radius-sm: 12px;
+  --yoyo-radius-md: 16px;
+  --yoyo-radius-lg: 22px;
+  --yoyo-radius-xl: 28px;
+  --yoyo-shadow-card: 0 10px 30px rgba(45, 35, 75, 0.08);
+  --yoyo-shadow-elevated: 0 18px 50px rgba(45, 35, 75, 0.14);
+  --yoyo-sidebar-width: 208px;
+  --yoyo-content-max: 1180px;
+  --yoyo-mobile-nav-height: 72px;
+}
