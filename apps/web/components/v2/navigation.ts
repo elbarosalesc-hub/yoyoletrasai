@@ -1,15 +1,18 @@
 import type {LucideIcon} from 'lucide-react'
 import {
   BarChart3,
+  Bell,
   Bot,
   BookOpen,
   BookOpenCheck,
   CalendarDays,
   ClipboardList,
+  FileClock,
   FileText,
   Gamepad2,
   GraduationCap,
   Home,
+  KeyRound,
   Library,
   MessageCircleMore,
   NotebookPen,
@@ -57,13 +60,16 @@ export const navigationGroups:NavigationGroup[]=[
       {label:'Informes',icon:FileText,href:'/informes'},
       {label:'Analítica',icon:BarChart3,href:'/analitica'},
       {label:'Comunicaciones',icon:MessageCircleMore,href:'/comunicaciones'},
-      {label:'Apoderados',icon:UserRoundCheck,href:'/apoderados'}
+      {label:'Apoderados',icon:UserRoundCheck,href:'/apoderados'},
+      {label:'Notificaciones',icon:Bell,href:'/notificaciones'}
     ]
   },
   {
     label:'Sistema',
     items:[
       {label:'Usuarios y roles',icon:ShieldCheck,href:'/usuarios'},
+      {label:'Permisos',icon:KeyRound,href:'/permisos'},
+      {label:'Auditoría',icon:FileClock,href:'/auditoria'},
       {label:'Configuración',icon:Settings,href:'/configuracion'}
     ]
   }
