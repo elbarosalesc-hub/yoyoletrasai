@@ -19,7 +19,7 @@ import {
   Zap
 } from 'lucide-react'
 import {ModuleShell} from '@/components/v2/ModuleShell'
-import {ForestScene} from '@/components/v2/ForestScene'
+import {ImmersivePreview3D} from '@/components/v2/ImmersivePreview3D'
 import {getDashboardSnapshot} from '@/lib/dashboard-data'
 
 const activities=[
@@ -69,22 +69,22 @@ export default async function TeacherDashboard(){
       </section>
 
       <section className="main-grid">
-        <article className="featured-game canonical-featured-game">
-          <ForestScene/>
+        <article className="featured-game canonical-featured-game immersive-featured-game">
+          <ImmersivePreview3D/>
           <div className="featured-shade"/>
           <div className="featured-copy">
-            <div className="featured-kicker"><span>JUEGO INMERSIVO DESTACADO</span><em>Nuevo</em></div>
+            <div className="featured-kicker"><span>EXPERIENCIA 3D DESTACADA</span><em>Interactiva</em></div>
             <h2>La aventura del<br/>Bosque Mágico</h2>
-            <p>Ayuda a Luma a encontrar objetos, escuchar pistas y resolver misiones de comprensión lectora.</p>
-            <div className="chips"><span>Lenguaje</span><span>3.º básico</span><span>Comprensión</span><span>⭐ 5 niveles</span></div>
-            <div className="featured-actions"><a className="play-button" href="/juegos"><Play size={19} fill="currentColor"/>Iniciar juego</a><a className="preview-button" href="/juegos"><Eye size={19}/>Vista previa</a></div>
+            <p>Explora con teclado, interactúa con objetos, escucha el ambiente y resuelve cinco misiones curriculares guiadas por YOYO.</p>
+            <div className="chips"><span>Lenguaje</span><span>3.º básico</span><span>Movimiento real</span><span>🔊 Audio y voz</span></div>
+            <div className="featured-actions"><a className="play-button" href="/juegos"><Play size={19} fill="currentColor"/>Entrar al mundo 3D</a><a className="preview-button" href="/profesor-virtual"><Eye size={19}/>Ver profesor virtual</a></div>
           </div>
-          <div className="progress-panel"><div className="progress-item"><div><span>Progreso del juego</span><strong>60%</strong></div><div className="progress-track"><i style={{width:'60%'}}/></div></div><div className="progress-divider"/><div className="progress-item"><div><span>Pistas encontradas</span><strong>2 / 4</strong></div><div className="progress-track purple"><i style={{width:'50%'}}/></div></div></div>
+          <div className="progress-panel"><div className="progress-item"><div><span>Misiones completadas</span><strong>3 / 5</strong></div><div className="progress-track"><i style={{width:'60%'}}/></div></div><div className="progress-divider"/><div className="progress-item"><div><span>Objetos explorados</span><strong>4 / 6</strong></div><div className="progress-track purple"><i style={{width:'67%'}}/></div></div></div>
         </article>
 
         <aside className="right-rail">
           <article className="panel-card agenda-card"><div className="section-heading"><div><span className="section-kicker">AGENDA</span><h2>Tu día de hoy</h2></div><button aria-label="Más opciones"><MoreHorizontal/></button></div><div className="agenda-list"><div className="agenda-item"><time>09:15</time><span className="agenda-dot violet"/><div><strong>Lectura guiada</strong><small>3.º básico · Sala 5</small></div></div><div className="agenda-item active"><time>10:30</time><span className="agenda-dot mint"/><div><strong>Comprensión lectora</strong><small>Grupo de apoyo PIE</small></div><em>Ahora</em></div><div className="agenda-item"><time>12:00</time><span className="agenda-dot amber"/><div><strong>Revisión de avances</strong><small>Equipo multidisciplinario</small></div></div></div><a className="panel-link" href="/calendario"><CalendarDays size={16}/>Ver calendario completo<ChevronRight size={16}/></a></article>
-          <article className="ai-card"><div className="ai-head"><span><Bot size={21}/></span><div><small>RECOMENDACIÓN DE YOYO</small><strong>Atención pedagógica</strong></div></div><p>El grupo de lectura está listo para avanzar a inferencias sencillas con apoyos visuales.</p><div className="ai-tags"><span>DUA</span><span>Comprensión</span><span>15 min</span></div><a href="/yoyo">Revisar propuesta<ArrowUpRight size={17}/></a></article>
+          <article className="ai-card"><div className="ai-head"><span><Bot size={21}/></span><div><small>PROFESOR VIRTUAL YOYO</small><strong>Lección lista para presentar</strong></div></div><p>YOYO puede explicar inferencias, modelar un ejemplo, narrar la misión y comprobar la comprensión del grupo.</p><div className="ai-tags"><span>Voz</span><span>Modelado</span><span>Control docente</span></div><a href="/profesor-virtual">Abrir aula virtual<ArrowUpRight size={17}/></a></article>
         </aside>
       </section>
 
