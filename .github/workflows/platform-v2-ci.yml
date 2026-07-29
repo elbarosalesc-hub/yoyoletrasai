@@ -3,20 +3,38 @@ name: Platform V2 CI
 on:
   pull_request:
     paths:
+      - 'apps/web/**'
       - 'platform-v2/**'
       - '.github/workflows/platform-v2-ci.yml'
+      - 'package.json'
   push:
     branches:
       - develop
     paths:
+      - 'apps/web/**'
       - 'platform-v2/**'
       - '.github/workflows/platform-v2-ci.yml'
+      - 'package.json'
 
 permissions:
   contents: read
 
 jobs:
-  validate:
+  validate-preview-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install preview dependencies
+        run: npm install --workspaces --include-workspace-root
+      - name: Typecheck preview app
+        run: npm run typecheck --workspace=web
+      - name: Build preview app
+        run: npm run build --workspace=web
+
+  validate-platform-v2:
     runs-on: ubuntu-latest
     defaults:
       run:
