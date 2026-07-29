@@ -11,6 +11,7 @@ import './immersive-v2.css'
 import './auth-roles-v2.css'
 import './users-admin-v2.css'
 import './account-flows-v2.css'
+import './admin-governance-v2.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Plataforma educativa',
