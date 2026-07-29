@@ -1,6 +1,7 @@
 'use client'
 
 import {useState} from 'react'
+import type {LucideIcon} from 'lucide-react'
 import {
   Accessibility,
   Bell,
@@ -96,7 +97,7 @@ export default function ConfiguracionV2(){
     {active==='privacidad'&&<section className="settings-panel-v2">
      <header><span><ShieldCheck/></span><div><small>PRIVACIDAD Y SEGURIDAD</small><h2>Datos institucionales</h2><p>Control de acceso, almacenamiento y auditoría.</p></div></header>
      <div className="security-grid-v2"><article><span><Database/></span><div><strong>Base de datos</strong><small>Supabase PostgreSQL con RLS</small></div><em>Preparada</em></article><article><span><KeyRound/></span><div><strong>Acceso institucional</strong><small>Roles y permisos por organización</small></div><em>Seguro</em></article><article><span><Globe2/></span><div><strong>Región</strong><small>Zona horaria America/Santiago</small></div><em>Chile</em></article></div>
-     <div className="settings-toggle-list-v2"><Toggle icon={BarIcon} title="Analítica pedagógica" text="Utilizar datos de actividad para generar indicadores." value={settings.dataAnalytics} onClick={()=>toggle('dataAnalytics')}/></div>
+     <div className="settings-toggle-list-v2"><Toggle icon={Database} title="Analítica pedagógica" text="Utilizar datos de actividad para generar indicadores." value={settings.dataAnalytics} onClick={()=>toggle('dataAnalytics')}/></div>
      <div className="privacy-actions-v2"><button>Revisar permisos</button><button>Descargar historial</button><button className="danger">Cerrar todas las sesiones</button></div>
     </section>}
    </main>
@@ -104,8 +105,6 @@ export default function ConfiguracionV2(){
  </ModuleShell>
 }
 
-function Toggle({icon:Icon,title,text,value,onClick}:{icon:typeof Accessibility;title:string;text:string;value:boolean;onClick:()=>void}){
+function Toggle({icon:Icon,title,text,value,onClick}:{icon:LucideIcon;title:string;text:string;value:boolean;onClick:()=>void}){
  return <button className={`setting-row-v2 ${value?'on':''}`} onClick={onClick}><span><Icon/></span><div><strong>{title}</strong><small>{text}</small></div><i><em/></i></button>
 }
-
-function BarIcon(){return <Database/>}
