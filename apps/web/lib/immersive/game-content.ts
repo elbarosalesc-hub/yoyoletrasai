@@ -18,6 +18,7 @@ export type ImmersiveWorld={
   id:string
   title:string
   shortTitle:string
+  emoji:string
   subject:string
   level:string
   skill:string
@@ -31,11 +32,23 @@ export type ImmersiveWorld={
   missions:ImmersiveMission[]
 }
 
+export type RuntimeImmersiveMission=ImmersiveMission&{
+  correct:number
+  story:string
+  guide:string
+}
+
+export type RuntimeImmersiveWorld=Omit<ImmersiveWorld,'missions'>&{
+  objective:string
+  missions:RuntimeImmersiveMission[]
+}
+
 export const immersiveWorlds:ImmersiveWorld[]=[
   {
     id:'forest-inferences',
     title:'Bosque de las inferencias',
     shortTitle:'Bosque Mágico',
+    emoji:'🌲',
     subject:'Lenguaje',
     level:'3.º básico',
     skill:'Inferencias sencillas',
@@ -54,6 +67,7 @@ export const immersiveWorlds:ImmersiveWorld[]=[
     id:'city-place-value',
     title:'Ciudad del valor posicional',
     shortTitle:'Ciudad Numérica',
+    emoji:'🏙️',
     subject:'Matemática',
     level:'3.º básico',
     skill:'Unidades, decenas y centenas',
@@ -72,6 +86,7 @@ export const immersiveWorlds:ImmersiveWorld[]=[
     id:'science-body',
     title:'Laboratorio del cuerpo humano',
     shortTitle:'Laboratorio Vital',
+    emoji:'🧪',
     subject:'Ciencias',
     level:'5.º básico',
     skill:'Sistemas del cuerpo',
@@ -88,6 +103,16 @@ export const immersiveWorlds:ImmersiveWorld[]=[
   }
 ]
 
-export function getImmersiveWorld(id:string){
-  return immersiveWorlds.find(world=>world.id===id)??immersiveWorlds[0]
+export function getImmersiveWorld(id:string):RuntimeImmersiveWorld{
+  const source=immersiveWorlds.find(world=>world.id===id)??immersiveWorlds[0]
+  return {
+    ...source,
+    objective:source.description,
+    missions:source.missions.map(mission=>({
+      ...mission,
+      correct:mission.answer,
+      story:mission.narration,
+      guide:mission.objective
+    }))
+  }
 }
