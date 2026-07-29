@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
 import {ArrowRight,BookOpen,Eye,EyeOff,GraduationCap,LockKeyhole,ShieldCheck,Sparkles,UserRound} from 'lucide-react'
 import {createSupabaseBrowserClient} from '@/lib/supabase/client'
 
@@ -12,6 +12,9 @@ export default function LoginPage(){
  const[show,setShow]=useState(false)
  const[loading,setLoading]=useState(false)
  const[message,setMessage]=useState('')
+ const[invite,setInvite]=useState('')
+
+ useEffect(()=>{setInvite(new URLSearchParams(window.location.search).get('invite')||'')},[])
 
  async function signIn(){
   setMessage('')
@@ -21,7 +24,8 @@ export default function LoginPage(){
   const{data,error}=await client.auth.signInWithPassword({email,password})
   if(error||!data.user){setMessage(error?.message||'No fue posible iniciar sesión.');setLoading(false);return}
   const{data:profile}=await client.from('profiles').select('role').eq('id',data.user.id).single()
-  window.location.assign(roleRoutes[profile?.role||'teacher']||'/app')
+  const next=new URLSearchParams(window.location.search).get('next')
+  window.location.assign(next||roleRoutes[profile?.role||'teacher']||'/app')
  }
 
  return <main className="auth-page-v2">
@@ -33,9 +37,10 @@ export default function LoginPage(){
   <section className="auth-form-panel-v2">
    <div className="auth-card-v2">
     <span className="auth-eyebrow-v2">ACCESO INSTITUCIONAL</span><h2>Bienvenido nuevamente</h2><p>Ingresa con la cuenta creada mediante invitación de tu establecimiento.</p>
+    {invite&&<div className="auth-invite-banner"><ShieldCheck/><div><strong>Tienes una invitación pendiente</strong><span>Activa tu cuenta antes de ingresar.</span></div><a href={`/activar?invite=${invite}`}>Activar</a></div>}
     <label>Correo institucional<input type="email" value={email} onChange={event=>setEmail(event.target.value)} placeholder="nombre@colegio.cl"/></label>
     <label>Contraseña<div className="password-field-v2"><input type={show?'text':'password'} value={password} onChange={event=>setPassword(event.target.value)} onKeyDown={event=>event.key==='Enter'&&signIn()} placeholder="••••••••"/><button onClick={()=>setShow(value=>!value)} aria-label={show?'Ocultar contraseña':'Mostrar contraseña'}>{show?<EyeOff/>:<Eye/>}</button></div></label>
-    <div className="auth-options-v2"><label><input type="checkbox"/>Recordarme</label><button>Recuperar contraseña</button></div>
+    <div className="auth-options-v2"><label><input type="checkbox"/>Recordarme</label><a href="/recuperar">Recuperar contraseña</a></div>
     {message&&<div className="auth-message-v2"><LockKeyhole/>{message}</div>}
     <button className="auth-submit-v2" onClick={signIn} disabled={loading||!email||!password}>{loading?'Ingresando...':<>Ingresar a la plataforma<ArrowRight/></>}</button>
     <div className="auth-demo-v2"><strong>Vista demostrativa</strong><span>Mientras Supabase no esté conectado, puedes continuar revisando el panel docente.</span><a href="/app">Abrir demostración</a></div>
