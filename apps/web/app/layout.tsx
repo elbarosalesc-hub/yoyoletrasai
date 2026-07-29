@@ -19,6 +19,7 @@ import './dashboard-art-v7.css'
 import './immersive-accessibility-v3.css'
 import './illustrated-games-v2.css'
 import './virtual-teacher-v2.css'
+import './runtime-dashboard-v2.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Plataforma educativa inmersiva',
