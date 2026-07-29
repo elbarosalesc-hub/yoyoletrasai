@@ -4,9 +4,9 @@ import type {ReactNode} from 'react'
 import {
   Bell,
   ChevronRight,
+  LogOut,
   Menu,
   MessageSquare,
-  MoreHorizontal,
   Plus,
   Search,
   X
@@ -14,9 +14,18 @@ import {
 import {useState} from 'react'
 import {navigationGroups,primaryMobileNavigation} from './navigation'
 import {ScrollReset} from './ScrollReset'
+import {createSupabaseBrowserClient} from '@/lib/supabase/client'
 
 export function ModuleShell({active,children,createHref='/crear'}:{active:string;children:ReactNode;createHref?:string}){
   const[mobileOpen,setMobileOpen]=useState(false)
+  const[profileOpen,setProfileOpen]=useState(false)
+
+  async function signOut(){
+    const client=createSupabaseBrowserClient()
+    if(client)await client.auth.signOut()
+    window.location.assign('/login')
+  }
+
   return <main className="product-shell module-product-shell canonical-shell">
     <ScrollReset/>
     <aside className={`app-sidebar module-sidebar canonical-sidebar ${mobileOpen?'mobile-open':''}`} aria-label="Navegación principal">
@@ -27,7 +36,10 @@ export function ModuleShell({active,children,createHref='/crear'}:{active:string
         {navigationGroups.map(group=><section className="nav-group" key={group.label}><span className="nav-group-label">{group.label}</span>{group.items.map(({label,icon:Icon,href})=><a className={active===label?'nav-link active':'nav-link'} href={href} key={label} aria-current={active===label?'page':undefined}><Icon size={18}/><span>{label}</span>{active===label&&<i/>}</a>)}</section>)}
       </nav>
       <div className="sidebar-help"><span><MessageSquare size={18}/></span><div><strong>¿Necesitas ayuda?</strong><small>Habla con el equipo YOYO</small></div><ChevronRight size={15}/></div>
-      <button className="profile-card" type="button"><span className="profile-avatar">ER</span><span><strong>Elba Rosales</strong><small>Docente · PIE</small></span><MoreHorizontal size={17}/></button>
+      <div className="profile-menu-wrap">
+        <button className="profile-card" type="button" onClick={()=>setProfileOpen(value=>!value)} aria-expanded={profileOpen}><span className="profile-avatar">ER</span><span><strong>Elba Rosales</strong><small>Docente · PIE</small></span><ChevronRight className={profileOpen?'profile-chevron-open':''} size={17}/></button>
+        {profileOpen&&<div className="profile-menu-popover"><a href="/configuracion">Mi perfil y preferencias</a><a href="/usuarios">Usuarios y roles</a><button onClick={signOut}><LogOut/>Cerrar sesión</button></div>}
+      </div>
     </aside>
 
     <section className="workspace module-workspace">
