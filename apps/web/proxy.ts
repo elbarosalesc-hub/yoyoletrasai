@@ -1,7 +1,7 @@
 import {createServerClient} from '@supabase/ssr'
 import {NextResponse,type NextRequest} from 'next/server'
 
-const teacherRoutes=['/app','/biblioteca','/crear','/yoyo','/cursos','/estudiantes','/contenidos','/planificacion','/evaluaciones','/juegos','/profesor-virtual','/audio','/gamificacion','/calendario','/informes','/analitica','/comunicaciones','/apoderados','/configuracion','/usuarios']
+const teacherRoutes=['/app','/biblioteca','/crear','/yoyo','/cursos','/estudiantes','/contenidos','/planificacion','/evaluaciones','/juegos','/profesor-virtual','/audio','/gamificacion','/calendario','/informes','/analitica','/comunicaciones','/apoderados','/notificaciones','/configuracion','/usuarios','/permisos','/auditoria']
 const studentRoutes=['/estudiante']
 const guardianRoutes=['/familia']
 
@@ -64,5 +64,5 @@ export async function proxy(request:NextRequest){
 }
 
 export const config={
-  matcher:['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
+  matcher:['/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)']
 }
