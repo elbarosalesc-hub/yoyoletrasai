@@ -5,13 +5,17 @@ import {
   Bot,
   BookOpen,
   BookOpenCheck,
+  Boxes,
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   FileClock,
   FileText,
+  FolderKanban,
   Gamepad2,
   GraduationCap,
   Home,
+  Images,
   KeyRound,
   Library,
   MessageCircleMore,
@@ -21,6 +25,7 @@ import {
   ShieldCheck,
   Sparkles,
   Trophy,
+  UniversalAccess,
   UserRoundCheck,
   Users,
   Volume2
@@ -46,10 +51,20 @@ export const navigationGroups:NavigationGroup[]=[
       {label:'Estudiantes',icon:Users,href:'/estudiantes'},
       {label:'Contenidos',icon:BookOpen,href:'/contenidos'},
       {label:'Planificación',icon:NotebookPen,href:'/planificacion'},
+      {label:'Tareas',icon:ClipboardCheck,href:'/tareas'},
       {label:'Evaluaciones',icon:BookOpenCheck,href:'/evaluaciones'},
+      {label:'Portafolios',icon:FolderKanban,href:'/portafolios'},
+      {label:'Recursos PIE',icon:UniversalAccess,href:'/recursos-pie'}
+    ]
+  },
+  {
+    label:'Experiencias',
+    items:[
       {label:'Juegos 3D',icon:Gamepad2,href:'/juegos'},
+      {label:'Estudio inmersivo',icon:Boxes,href:'/estudio-inmersivo'},
       {label:'Profesor virtual',icon:Presentation,href:'/profesor-virtual'},
       {label:'Audio y narración',icon:Volume2,href:'/audio'},
+      {label:'Banco multimedia',icon:Images,href:'/multimedia'},
       {label:'Gamificación',icon:Trophy,href:'/gamificacion'}
     ]
   },
