@@ -1,7 +1,43 @@
 'use client'
-import {useMemo,useState} from 'react'
-import {AppShell} from '@/components/AppShell'
-import {Send,CheckCircle2,BookOpen,ClipboardList,Users,BarChart3,Sparkles,ShieldCheck,Undo2} from 'lucide-react'
 
-const quick=[['Crear recurso',BookOpen],['Adaptar para PIE',Users],['Analizar resultados',BarChart3],['Preparar evaluación',ClipboardList]] as const
-export default function Profesor(){const[text,setText]=useState('');const[messages,setMessages]=useState([{role:'ai',text:'Hola, Elba. Revisé 3.º básico y detecté que el OA 4 necesita reforzamiento en justificación de inferencias. Puedo preparar una secuencia completa con juego, guía, adaptación y ticket de salida.'}]);const[approved,setApproved]=useState(false);const send=()=>{if(!text.trim())return;setMessages(v=>[...v,{role:'user',text},{role:'ai',text:'Preparé una propuesta contextualizada: actividad de 35 minutos, juego por niveles, dos versiones accesibles, pauta y seguimiento. Revisa las acciones antes de aprobar.'}]);setText('')};const actions=useMemo(()=>['Analizar OA y resultados','Seleccionar contenidos de la biblioteca','Crear actividad principal','Generar versiones adaptadas','Preparar pauta y ticket de salida','Vincular al curso y seguimiento'],[]);return <AppShell active="Profesor Virtual"><section className="virtual-hero"><div><span className="eyebrow">Profesor Virtual YOYO</span><h1>Tu copiloto pedagógico con contexto real</h1><p>Conversa, crea, adapta, analiza y ejecuta acciones dentro de la plataforma con aprobación docente.</p></div><div className="virtual-orb"><Sparkles/><span>Contexto activo</span><b>3.º básico · Lenguaje</b></div></section><div className="virtual-layout"><section className="virtual-chat"><div className="quick-actions">{quick.map(([label,Icon])=><button key={label} onClick={()=>setText(label)}><Icon size={18}/><span>{label}</span></button>)}</div><div className="chat-messages premium-chat">{messages.map((m,i)=><div className={`chat ${m.role==='user'?'user-msg':'ai-msg'}`} key={i}>{m.role==='ai'&&<span className="yoyo-avatar">Y</span>}<p>{m.text}</p></div>)}</div><div className="chat-input premium-chat-input"><input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Pide una planificación, adaptación, análisis o recurso..."/><button className="btn btn-primary" onClick={send}><Send size={16}/>Enviar</button></div></section><aside className="virtual-actions panel"><div className="virtual-panel-title"><div><span className="eyebrow">Flujo preparado</span><h2>Paquete de refuerzo OA 4</h2></div><ShieldCheck size={26}/></div>{actions.map((x,i)=><div className="action-row premium-action" key={x}><CheckCircle2 size={18}/><span>{x}</span><small>{i<2?'Listo':approved?'Ejecutado':'Pendiente'}</small></div>)}<button className="btn btn-coral virtual-approve" onClick={()=>setApproved(true)}>{approved?'Acciones aprobadas':'Revisar y aprobar'}</button>{approved&&<button className="btn btn-soft virtual-undo" onClick={()=>setApproved(false)}><Undo2 size={16}/>Deshacer aprobación</button>}<div className="insight"><b>Control docente</b><p>YOYO muestra qué hará, qué información utilizará y qué cambiará antes de ejecutar.</p></div></aside></div></AppShell>}
+import {useMemo,useState} from 'react'
+import {Bot,CheckCircle2,ChevronRight,Headphones,Pause,Play,RotateCcw,ShieldCheck,Sparkles,Volume2} from 'lucide-react'
+import {ModuleShell} from '@/components/v2/ModuleShell'
+
+const lesson=[
+ {title:'Activamos conocimientos',text:'Antes de leer, observa el título y la imagen. Pregúntate de qué podría tratar el texto.'},
+ {title:'Buscamos pistas',text:'Mientras lees, identifica palabras, acciones y detalles que entregan información importante.'},
+ {title:'Hacemos una inferencia',text:'Une las pistas del texto con lo que ya sabes para construir una idea que no aparece escrita de forma directa.'},
+ {title:'Justificamos',text:'Explica tu respuesta indicando qué pista del texto te ayudó a pensarla.'}
+]
+
+export default function ProfesorVirtual(){
+ const[step,setStep]=useState(0)
+ const[playing,setPlaying]=useState(false)
+ const[answer,setAnswer]=useState<number|null>(null)
+ const current=lesson[step]
+ const progress=useMemo(()=>Math.round((step+1)/lesson.length*100),[step])
+
+ function speak(){
+  if(typeof window==='undefined'||!('speechSynthesis'in window))return
+  window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(`${current.title}. ${current.text}`);utterance.lang='es-CL';utterance.rate=.88;utterance.pitch=1.05
+  utterance.onstart=()=>setPlaying(true);utterance.onend=()=>setPlaying(false);window.speechSynthesis.speak(utterance)
+ }
+ function stop(){if(typeof window!=='undefined')window.speechSynthesis.cancel();setPlaying(false)}
+ function next(){setStep(value=>(value+1)%lesson.length);setAnswer(null);stop()}
+
+ return <ModuleShell active="Profesor virtual">
+  <section className="virtual-teacher-head"><div><span className="module-eyebrow"><Sparkles size={15}/> Enseñanza guiada multimodal</span><h1>Profesor virtual YOYO</h1><p>Explica, modela, pregunta y retroalimenta con control docente, voz en español y ritmo ajustable.</p></div><div className="teacher-security"><ShieldCheck/><span><strong>Control docente</strong><small>Ninguna lección se publica sin revisión</small></span></div></section>
+
+  <section className="virtual-teacher-layout">
+   <article className="teacher-stage">
+    <div className="teacher-room"><div className="teacher-board"><span>OBJETIVO</span><h2>Realizar inferencias sencillas</h2><p>Usar pistas del texto para comprender información implícita.</p><div className="board-progress"><i style={{width:`${progress}%`}}/></div></div><div className={`teacher-avatar ${playing?'speaking':''}`}><div className="teacher-halo"/><div className="teacher-head"><i/><i/><span/></div><div className="teacher-body"><Bot/></div><div className="speech-wave"><i/><i/><i/><i/></div></div><div className="teacher-desk"><span>📘</span><span>✏️</span></div></div>
+    <div className="teacher-controls"><button onClick={playing?stop:speak}>{playing?<><Pause/>Pausar explicación</>:<><Play/>Escuchar explicación</>}</button><button onClick={()=>{setStep(0);setAnswer(null);stop()}}><RotateCcw/>Reiniciar</button><button onClick={next}>Siguiente paso<ChevronRight/></button></div>
+   </article>
+
+   <aside className="teacher-lesson-panel"><span className="lesson-step">PASO {step+1} DE {lesson.length}</span><h2>{current.title}</h2><p>{current.text}</p><button className="listen-mini" onClick={speak}><Headphones/>Escuchar este paso</button><div className="teacher-check"><small>COMPROBEMOS</small><strong>¿Qué debemos hacer antes de responder una inferencia?</strong>{['Buscar una pista en el texto','Adivinar sin leer','Copiar una oración completa'].map((item,index)=><button key={item} className={`${answer===index?'selected':''} ${answer!==null&&index===0?'correct':''}`} onClick={()=>setAnswer(index)} disabled={answer!==null}><span>{String.fromCharCode(65+index)}</span>{item}{answer!==null&&index===0&&<CheckCircle2/>}</button>)}{answer!==null&&<div className={answer===0?'feedback good':'feedback retry'}>{answer===0?'¡Muy bien! Primero buscamos evidencias en el texto.':'Revisa el paso anterior: una inferencia necesita pistas.'}</div>}</div></aside>
+  </section>
+
+  <section className="teacher-tools-grid"><article><span><Volume2/></span><div><h3>Voz y ritmo</h3><p>Narración en español de Chile con velocidad pausada.</p></div></article><article><span><Sparkles/></span><div><h3>Modelado explícito</h3><p>Explicación breve, ejemplo y práctica guiada.</p></div></article><article><span><ShieldCheck/></span><div><h3>Aprobación profesional</h3><p>El docente revisa cada lección antes de asignarla.</p></div></article></section>
+ </ModuleShell>
+}
