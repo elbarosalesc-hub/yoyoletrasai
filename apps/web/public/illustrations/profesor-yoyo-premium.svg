@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" role="img" aria-labelledby="title desc">
+  <title id="title">Profesor virtual YOYO en aula interactiva</title>
+  <desc id="desc">Aula luminosa con pizarra, robot profesor YOYO, biblioteca, plantas y elementos educativos.</desc>
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#edf2ff"/><stop offset=".55" stop-color="#f9f7ff"/><stop offset="1" stop-color="#e9faf4"/></linearGradient>
+    <linearGradient id="floor" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#d7b382"/><stop offset="1" stop-color="#b98959"/></linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#214e45"/><stop offset="1" stop-color="#123b36"/></linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8f5cf2"/><stop offset="1" stop-color="#6136c8"/></linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".55" stop-color="#dfe6f4"/><stop offset="1" stop-color="#bcc7dd"/></linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2c195c"/><stop offset="1" stop-color="#6f3ede"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#cbb9ff" stop-opacity=".7"/><stop offset="1" stop-color="#cbb9ff" stop-opacity="0"/></radialGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#3d355e" flood-opacity=".18"/></filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="1400" height="820" fill="url(#wall)"/>
+  <rect y="590" width="1400" height="230" fill="url(#floor)"/>
+  <g opacity=".15" stroke="#6b4f35" stroke-width="3"><path d="M0 645h1400M0 715h1400M180 590v230M430 590v230M680 590v230M930 590v230M1180 590v230"/></g>
+
+  <g transform="translate(90 82)" filter="url(#shadow)">
+    <rect width="760" height="390" rx="28" fill="#6c5546"/>
+    <rect x="18" y="18" width="724" height="354" rx="18" fill="url(#board)"/>
+    <g fill="#eaf8f2"><text x="58" y="78" font-family="Arial,sans-serif" font-size="22" font-weight="700">OBJETIVO DE APRENDIZAJE</text><text x="58" y="132" font-family="Arial,sans-serif" font-size="40" font-weight="800">Realizar inferencias sencillas</text><text x="58" y="180" font-family="Arial,sans-serif" font-size="22">Usar pistas del texto para comprender información implícita.</text></g>
+    <g transform="translate(58 232)"><rect width="510" height="18" rx="9" fill="#ffffff" opacity=".18"/><rect width="320" height="18" rx="9" fill="#86e8bd"/><text x="0" y="62" fill="#baf4dc" font-family="Arial,sans-serif" font-size="18">Paso 2 de 4 · Buscar pistas</text></g>
+    <g transform="translate(610 235)"><circle cx="45" cy="45" r="45" fill="#ffffff" opacity=".11"/><path d="M32 45h26M45 32v26" stroke="#fff" stroke-width="8" stroke-linecap="round"/></g>
+  </g>
+
+  <g transform="translate(1010 108)" filter="url(#shadow)">
+    <rect width="260" height="420" rx="22" fill="#ffffff"/>
+    <rect x="18" y="28" width="224" height="20" rx="10" fill="#e9e0ff"/>
+    <rect x="18" y="72" width="224" height="86" rx="14" fill="#f4efff"/>
+    <rect x="18" y="176" width="224" height="86" rx="14" fill="#eaf8f3"/>
+    <rect x="18" y="280" width="224" height="86" rx="14" fill="#eaf2ff"/>
+    <g font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#5f5578"><text x="38" y="110">Pista visual</text><text x="38" y="214">Explicación oral</text><text x="38" y="318">Pregunta guiada</text></g>
+    <circle cx="207" cy="114" r="13" fill="#7d4be6"/><circle cx="207" cy="218" r="13" fill="#32b985"/><circle cx="207" cy="322" r="13" fill="#3d8fe8"/>
+  </g>
+
+  <g transform="translate(250 515)"><rect width="210" height="38" rx="18" fill="#9c6b44"/><rect x="18" y="38" width="24" height="150" rx="10" fill="#744b30"/><rect x="168" y="38" width="24" height="150" rx="10" fill="#744b30"/><g transform="translate(40 -42)"><rect x="0" y="0" width="56" height="42" rx="8" fill="#f4cf58"/><rect x="64" y="6" width="52" height="36" rx="7" fill="#62bfe8"/><rect x="124" y="-6" width="44" height="48" rx="7" fill="#f38b7f"/></g></g>
+
+  <g transform="translate(900 546)"><rect width="330" height="44" rx="20" fill="#a56f48"/><rect x="26" y="44" width="28" height="150" rx="12" fill="#744b30"/><rect x="276" y="44" width="28" height="150" rx="12" fill="#744b30"/><g transform="translate(95 -46)"><rect width="140" height="82" rx="14" fill="#e6edf7"/><rect x="12" y="12" width="116" height="58" rx="8" fill="url(#screen)"/><circle cx="70" cy="41" r="12" fill="#80f0df"/></g></g>
+
+  <g transform="translate(760 275)" filter="url(#shadow)">
+    <ellipse cx="95" cy="142" rx="145" ry="145" fill="url(#halo)" filter="url(#glow)"/>
+    <ellipse cx="95" cy="315" rx="88" ry="22" fill="#3f3856" opacity=".18"/>
+    <rect x="43" y="113" width="104" height="145" rx="48" fill="url(#metal)"/>
+    <rect x="56" y="130" width="78" height="70" rx="28" fill="url(#screen)"/>
+    <ellipse cx="79" cy="162" rx="9" ry="11" fill="#7ff8e8"/><ellipse cx="111" cy="162" rx="9" ry="11" fill="#7ff8e8"/>
+    <path d="M78 183c12 10 23 10 34 0" stroke="#b8fff4" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <rect x="70" y="76" width="50" height="46" rx="23" fill="url(#metal)"/>
+    <rect x="78" y="84" width="34" height="26" rx="12" fill="#6a3bd0"/>
+    <rect x="91" y="48" width="8" height="32" rx="4" fill="#6940c9"/><circle cx="95" cy="40" r="11" fill="#7ff8e8"/>
+    <path d="M43 158 5 204M147 158l38 46" stroke="#d7e0ef" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="2" cy="207" r="16" fill="#8050e8"/><circle cx="188" cy="207" r="16" fill="#8050e8"/>
+    <path d="M69 255 55 315M121 255l14 60" stroke="#bfcadd" stroke-width="22" stroke-linecap="round"/>
+    <ellipse cx="49" cy="318" rx="30" ry="13" fill="#6740cb"/><ellipse cx="141" cy="318" rx="30" ry="13" fill="#6740cb"/>
+    <circle cx="95" cy="224" r="19" fill="#7d4be6"/><path d="M87 224h16M95 216v16" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <g transform="translate(60 535)"><rect width="145" height="185" rx="18" fill="#fff" filter="url(#shadow)"/><rect x="18" y="24" width="22" height="132" rx="4" fill="#8e5ce7"/><rect x="46" y="42" width="22" height="114" rx="4" fill="#45b7a0"/><rect x="74" y="18" width="22" height="138" rx="4" fill="#ef9d4f"/><rect x="102" y="54" width="22" height="102" rx="4" fill="#4c8be7"/></g>
+  <g transform="translate(1240 540)"><rect x="22" y="70" width="90" height="92" rx="18" fill="#c88452"/><path d="M67 70V18" stroke="#5e8a55" stroke-width="12" stroke-linecap="round"/><ellipse cx="39" cy="42" rx="34" ry="18" fill="#6ab56b" transform="rotate(-25 39 42)"/><ellipse cx="94" cy="39" rx="34" ry="18" fill="#52a65c" transform="rotate(28 94 39)"/></g>
+</svg>
