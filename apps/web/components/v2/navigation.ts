@@ -2,6 +2,7 @@ import type {LucideIcon} from 'lucide-react'
 import {
   BarChart3,
   Bot,
+  BookOpen,
   BookOpenCheck,
   CalendarDays,
   ClipboardList,
@@ -12,10 +13,13 @@ import {
   Library,
   MessageCircleMore,
   NotebookPen,
+  Presentation,
   Settings,
   Sparkles,
+  Trophy,
   UserRoundCheck,
-  Users
+  Users,
+  Volume2
 } from 'lucide-react'
 
 export type NavigationItem={label:string;icon:LucideIcon;href:string}
@@ -36,9 +40,13 @@ export const navigationGroups:NavigationGroup[]=[
     items:[
       {label:'Cursos y grupos',icon:GraduationCap,href:'/cursos'},
       {label:'Estudiantes',icon:Users,href:'/estudiantes'},
+      {label:'Contenidos',icon:BookOpen,href:'/contenidos'},
       {label:'Planificación',icon:NotebookPen,href:'/planificacion'},
       {label:'Evaluaciones',icon:BookOpenCheck,href:'/evaluaciones'},
-      {label:'Juegos',icon:Gamepad2,href:'/juegos'}
+      {label:'Juegos 3D',icon:Gamepad2,href:'/juegos'},
+      {label:'Profesor virtual',icon:Presentation,href:'/profesor-virtual'},
+      {label:'Audio y narración',icon:Volume2,href:'/audio'},
+      {label:'Gamificación',icon:Trophy,href:'/gamificacion'}
     ]
   },
   {
