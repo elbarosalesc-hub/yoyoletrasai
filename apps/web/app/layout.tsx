@@ -13,6 +13,7 @@ import './users-admin-v2.css'
 import './account-flows-v2.css'
 import './admin-governance-v2.css'
 import './functional-tools-v4.css'
+import './dashboard-immersive-v6.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Plataforma educativa inmersiva',
