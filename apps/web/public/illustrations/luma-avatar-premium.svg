@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Retrato ilustrado de Luma">
+<defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#ffe0bd"/><stop offset="1" stop-color="#d7c0ff"/></linearGradient><linearGradient id="shirt" x1="0" x2="1"><stop stop-color="#9a65ef"/><stop offset="1" stop-color="#6f3bd5"/></linearGradient></defs>
+<rect width="160" height="160" rx="38" fill="url(#bg)"/>
+<circle cx="80" cy="68" r="38" fill="#f1af7b"/>
+<path d="M42 72c-5-40 22-65 57-60 24 4 39 20 42 43-17-14-32-18-49-15-20 3-31 14-50 32Z" fill="#34263f"/>
+<path d="M48 47c12-27 33-39 57-35 13 2 24 8 31 17-18-3-29 4-37 17-17-6-33-6-51 1Z" fill="#241c2d"/>
+<ellipse cx="68" cy="68" rx="4.5" ry="5.5" fill="#2b2430"/><ellipse cx="94" cy="68" rx="4.5" ry="5.5" fill="#2b2430"/>
+<path d="M69 86c8 7 17 7 25 0" stroke="#b65758" stroke-width="4" fill="none" stroke-linecap="round"/>
+<path d="M50 160c3-38 25-59 58-59 34 0 53 22 55 59Z" fill="url(#shirt)"/>
+<path d="M49 115c-11 8-18 19-21 33" stroke="#f1af7b" stroke-width="14" stroke-linecap="round"/>
+<circle cx="122" cy="38" r="13" fill="#f4b743"/><path d="M116 29c8-9 17-8 24 0-6-1-10 2-13 8-4-5-7-7-11-8Z" fill="#d89424"/>
+</svg>
