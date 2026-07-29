@@ -12,7 +12,6 @@ import {
   Download,
   Eye,
   FileText,
-  Image as ImageIcon,
   LayoutTemplate,
   ListChecks,
   Palette,
@@ -22,8 +21,8 @@ import {
   Save,
   Settings2,
   Sparkles,
-  Trash2,
-  WandSparkles
+  Target,
+  Trash2
 } from 'lucide-react'
 import {ModuleShell} from '@/components/v2/ModuleShell'
 
@@ -145,7 +144,7 @@ export default function CrearV2(){
     <div className="creator-field"><label htmlFor="creator-adaptation">Perfil de apoyo</label><select id="creator-adaptation" value={adaptation} onChange={event=>setAdaptation(event.target.value as Adaptation)}>{Object.keys(supportMap).map(item=><option key={item}>{item}</option>)}</select></div>
 
     <div className="support-summary"><span><Accessibility/></span><div><strong>{support.title}</strong><p>{support.text}</p><div>{support.items.map(item=><em key={item}><Check/>{item}</em>)}</div></div></div>
-    <button className="generate-resource" onClick={generate} disabled={generating}>{generating?<><RefreshCw className="spin"/>Generando recurso...</>:<><WandSparkles/>Generar con YOYO IA</>}</button>
+    <button className="generate-resource" onClick={generate} disabled={generating}>{generating?<><RefreshCw className="spin"/>Generando recurso...</>:<><Sparkles/>Generar con YOYO IA</>}</button>
    </aside>
 
    <main className="creator-preview-area">
@@ -153,7 +152,7 @@ export default function CrearV2(){
 
     <section className={`resource-paper ${previewMode==='estudiante'?'student-mode':''}`}>
      <div className="paper-topline"><span>YOYOLETRASAI</span><em>{resourceType}</em></div>
-     <div className="paper-header"><div><small>{subject}</small><h2>{title||'Recurso sin título'}</h2><p>{level}</p></div><div className="paper-illustration"><span>🌿</span><ImageIcon/></div></div>
+     <div className="paper-header"><div><small>{subject}</small><h2>{title||'Recurso sin título'}</h2><p>{level}</p></div><div className="paper-illustration"><span>🌿</span><BookOpen/></div></div>
      <div className="paper-objective"><Target/><div><small>OBJETIVO DE APRENDIZAJE</small><p>{objective}</p></div></div>
      <div className="paper-student-data"><span>Nombre: <i/></span><span>Curso: <i/></span><span>Fecha: <i/></span></div>
      <div className="paper-section-head"><div><span>{questions.length}</span><div><small>{resourceType==='Rúbrica'?'CRITERIOS':'ACTIVIDADES'}</small><h3>{resourceType==='Rúbrica'?'Criterios de evaluación':'Practiquemos paso a paso'}</h3></div></div><button onClick={addQuestion}><Plus/>Agregar</button></div>
