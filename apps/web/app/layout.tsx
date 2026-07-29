@@ -8,10 +8,11 @@ import './students-reports-v2.css'
 import './games-settings-v2.css'
 import './canonical-v2.css'
 import './immersive-v2.css'
+import './auth-roles-v2.css'
 
 export const metadata:Metadata={
-  title:'YOYOLETRASAI | Panel docente V2',
-  description:'Plataforma educativa inclusiva para planificación, creación y seguimiento pedagógico.'
+  title:'YOYOLETRASAI | Plataforma educativa',
+  description:'Plataforma educativa inclusiva con creación, juegos 3D, profesor virtual y seguimiento pedagógico.'
 }
 
 export const viewport:Viewport={
