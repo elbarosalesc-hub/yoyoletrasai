@@ -47,7 +47,7 @@ export function ModuleShell({active,children,createHref='/crear'}:{active:string
         <button className="mobile-menu-trigger" onClick={()=>setMobileOpen(true)} aria-label="Abrir menú"><Menu/></button>
         <div className="mobile-brand"><span className="brand-mark">Y</span><strong>YOYOLETRASAI</strong></div>
         <label className="global-search"><Search size={19}/><input aria-label="Buscar" placeholder="Buscar recursos, estudiantes o actividades..."/><kbd>⌘ K</kbd></label>
-        <div className="topbar-actions"><button className="icon-button" aria-label="Notificaciones"><Bell size={20}/><span>3</span></button><a className="primary-button" href={createHref}><Plus size={20}/><span>Crear actividad</span></a></div>
+        <div className="topbar-actions"><a className="icon-button" href="/notificaciones" aria-label="Notificaciones"><Bell size={20}/><span>3</span></a><a className="primary-button" href={createHref}><Plus size={20}/><span>Crear actividad</span></a></div>
       </header>
       <div className="module-content">{children}</div>
     </section>
