@@ -7,6 +7,7 @@ import './creator-v2.css'
 import './students-reports-v2.css'
 import './games-settings-v2.css'
 import './canonical-v2.css'
+import './immersive-v2.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Panel docente V2',
