@@ -24,7 +24,23 @@ import {
 } from 'lucide-react'
 import {ImmersivePreview3D} from './ImmersivePreview3D'
 
-const missions=[
+type DashboardMission={
+  title:string
+  instruction:string
+  question:string
+  answers:string[]
+  correct:number
+  explanation:string
+  xp:number
+}
+
+type DashboardTool={
+  label:string
+  icon:typeof Search
+  message:string
+}
+
+const missions:DashboardMission[]=[
   {
     title:'La ventana iluminada',
     instruction:'Observa la cabaña y usa una pista visual para inferir qué ocurre.',
@@ -54,7 +70,7 @@ const missions=[
   }
 ]
 
-const tools=[
+const tools:DashboardTool[]=[
   {label:'Pista',icon:Search,message:'Observa la ventana, la linterna y el sendero. Las pistas visuales ayudan a inferir.'},
   {label:'Diario',icon:BookOpen,message:'Registra la pista y explica con tus palabras qué información entrega.'},
   {label:'Mapa',icon:Map,message:'Localiza la cabaña, el puente y el siguiente punto de la misión.'},
@@ -68,10 +84,10 @@ export function DashboardImmersiveHero(){
   const[score,setScore]=useState(640)
   const[narrating,setNarrating]=useState(false)
   const[audioEnabled,setAudioEnabled]=useState(true)
-  const[current]=missions[mission]
+  const current=missions[mission]??missions[0]
   const progress=Math.round(((mission+(selected!==null?1:0))/missions.length)*100)
   const isCorrect=selected===current.correct
-  const supportMessage=useMemo(()=>tools[activeTool].message,[activeTool])
+  const supportMessage=useMemo(()=>tools[activeTool]?.message??tools[0].message,[activeTool])
 
   function speak(text:string){
     if(!audioEnabled||typeof window==='undefined'||!('speechSynthesis' in window))return
@@ -101,7 +117,7 @@ export function DashboardImmersiveHero(){
     setMission(0)
     setSelected(null)
     setScore(640)
-    window.speechSynthesis?.cancel()
+    if(typeof window!=='undefined'&&'speechSynthesis' in window)window.speechSynthesis.cancel()
   }
 
   return <article className="immersive-dashboard-pro realtime-world dashboard-runtime-v2">
@@ -117,7 +133,7 @@ export function DashboardImmersiveHero(){
       </div>
 
       <div className="runtime-top-actions-v2">
-        <button className={audioEnabled?'active':''} onClick={()=>{setAudioEnabled(value=>!value);window.speechSynthesis?.cancel()}} aria-label={audioEnabled?'Silenciar narración':'Activar narración'}>{audioEnabled?<Volume2/>:<VolumeX/>}</button>
+        <button className={audioEnabled?'active':''} onClick={()=>{setAudioEnabled(value=>!value);if(typeof window!=='undefined'&&'speechSynthesis' in window)window.speechSynthesis.cancel()}} aria-label={audioEnabled?'Silenciar narración':'Activar narración'}>{audioEnabled?<Volume2/>:<VolumeX/>}</button>
         <button className={narrating?'active':''} onClick={()=>speak(`${current.title}. ${current.instruction} ${current.question}`)}><Mic2/><span>{narrating?'Narrando...':'Escuchar misión'}</span></button>
         <a href="/juegos"><ArrowUpRight/><span>Abrir mundo completo</span></a>
       </div>
@@ -131,7 +147,7 @@ export function DashboardImmersiveHero(){
         <header><div><span>MISIÓN {mission+1} DE {missions.length}</span><h3>{current.title}</h3></div><strong>{progress}%</strong></header>
         <p>{current.instruction}</p>
         <div className="runtime-question-v2"><span><Sparkles/></span><strong>{current.question}</strong></div>
-        <div className="runtime-answers-v2">{current.answers.map((answerText,index)=><button key={answerText} disabled={selected!==null} className={selected===index?(index===current.correct?'correct':'incorrect'):selected!==null&&index===current.correct?'correct':''} onClick={()=>answer(index)}><i>{String.fromCharCode(65+index)}</i><span>{answerText}</span>{selected!==null&&index===current.correct&&<CheckCircle2/>}</button>)}</div>
+        <div className="runtime-answers-v2">{current.answers.map((answerText:string,index:number)=><button key={answerText} disabled={selected!==null} className={selected===index?(index===current.correct?'correct':'incorrect'):selected!==null&&index===current.correct?'correct':''} onClick={()=>answer(index)}><i>{String.fromCharCode(65+index)}</i><span>{answerText}</span>{selected!==null&&index===current.correct&&<CheckCircle2/>}</button>)}</div>
         {selected!==null&&<div className={isCorrect?'runtime-feedback-v2 success':'runtime-feedback-v2 retry'}><Lightbulb/><div><strong>{isCorrect?'¡Respuesta correcta!':'Revisa la evidencia'}</strong><p>{current.explanation}</p></div></div>}
         <footer><button onClick={reset}><RotateCcw/>Reiniciar</button>{selected!==null&&mission<missions.length-1?<button className="primary" onClick={nextMission}>Siguiente misión<ChevronRight/></button>:selected!==null?<a href="/juegos">Continuar mundo<ChevronRight/></a>:<button className="primary" onClick={()=>speak(`${current.instruction} ${current.question}`)}><Play/>Comenzar</button>}</footer>
       </aside>
@@ -142,7 +158,7 @@ export function DashboardImmersiveHero(){
       </div>
 
       <div className="immersive-tool-dock runtime-tool-dock-v2">
-        {tools.map(({label,icon:Icon},index)=><button key={label} className={activeTool===index?'active':''} onClick={()=>setActiveTool(index)}><span><Icon/></span><small>{label}</small></button>)}
+        {tools.map(({label,icon:Icon}:DashboardTool,index:number)=><button key={label} className={activeTool===index?'active':''} onClick={()=>setActiveTool(index)}><span><Icon/></span><small>{label}</small></button>)}
       </div>
     </div>
 
