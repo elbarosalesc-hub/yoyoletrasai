@@ -1,5 +1,6 @@
 import type {LucideIcon} from 'lucide-react'
 import {
+  Accessibility,
   BarChart3,
   Bell,
   Bot,
@@ -25,7 +26,6 @@ import {
   ShieldCheck,
   Sparkles,
   Trophy,
-  UniversalAccess,
   UserRoundCheck,
   Users,
   Volume2
@@ -54,7 +54,7 @@ export const navigationGroups:NavigationGroup[]=[
       {label:'Tareas',icon:ClipboardCheck,href:'/tareas'},
       {label:'Evaluaciones',icon:BookOpenCheck,href:'/evaluaciones'},
       {label:'Portafolios',icon:FolderKanban,href:'/portafolios'},
-      {label:'Recursos PIE',icon:UniversalAccess,href:'/recursos-pie'}
+      {label:'Recursos PIE',icon:Accessibility,href:'/recursos-pie'}
     ]
   },
   {
