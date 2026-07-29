@@ -2,6 +2,7 @@
 
 import {useEffect,useRef,useState} from 'react'
 import {CheckCircle2,Headphones,Lightbulb,Pause,Play,RotateCcw,Volume2,VolumeX} from 'lucide-react'
+import {createSupabaseBrowserClient} from '@/lib/supabase/client'
 
 type Mission={title:string;question:string;options:string[];answer:number;hint:string}
 
@@ -13,12 +14,16 @@ const missions:Mission[]=[
 
 export function ForestMission3D(){
   const mountRef=useRef<HTMLDivElement|null>(null)
+  const startedAt=useRef(Date.now())
   const [running,setRunning]=useState(true)
   const [sound,setSound]=useState(true)
   const [mission,setMission]=useState(0)
   const [selected,setSelected]=useState<number|null>(null)
   const [score,setScore]=useState(0)
+  const [correct,setCorrect]=useState(0)
+  const [answered,setAnswered]=useState(0)
   const [hint,setHint]=useState(false)
+  const [syncStatus,setSyncStatus]=useState<'idle'|'saving'|'saved'>('idle')
 
   useEffect(()=>{
     let disposed=false
@@ -117,25 +122,42 @@ export function ForestMission3D(){
     window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang='es-CL';utterance.rate=.92;window.speechSynthesis.speak(utterance)
   }
 
-  function choose(index:number){
-    if(selected!==null)return
-    setSelected(index)
-    if(index===missions[mission].answer){setScore(value=>value+100);playTone(760,.18);narrate('¡Muy bien! Encontraste la pista correcta.')}
-    else{playTone(210,.22);narrate('Inténtalo nuevamente. Revisa las pistas del escenario.')}
+  async function persist(nextCorrect:number,nextAnswered:number,nextScore:number,nextMission:number){
+    const client=createSupabaseBrowserClient()
+    if(!client)return
+    setSyncStatus('saving')
+    const progress=Math.round(Math.min(100,((nextMission+1)/missions.length)*100))
+    const accuracy=nextAnswered?Math.round((nextCorrect/nextAnswered)*100):0
+    const minutes=Math.max(1,Math.round((Date.now()-startedAt.current)/60000))
+    await client.rpc('record_forest_mission_progress',{p_progress:progress,p_accuracy:accuracy,p_minutes:minutes,p_xp:nextScore,p_correct:nextCorrect,p_total:nextAnswered})
+    setSyncStatus('saved')
+    window.setTimeout(()=>setSyncStatus('idle'),1800)
   }
 
-  function nextMission(){setMission(value=>(value+1)%missions.length);setSelected(null);setHint(false);playTone(520,.1)}
+  function choose(index:number){
+    if(selected!==null)return
+    const isCorrect=index===missions[mission].answer
+    const nextAnswered=answered+1
+    const nextCorrect=correct+(isCorrect?1:0)
+    const nextScore=score+(isCorrect?100:0)
+    setSelected(index);setAnswered(nextAnswered);setCorrect(nextCorrect);setScore(nextScore)
+    if(isCorrect){playTone(760,.18);narrate('¡Muy bien! Encontraste la pista correcta.')}
+    else{playTone(210,.22);narrate('Inténtalo nuevamente. Revisa las pistas del escenario.')}
+    void persist(nextCorrect,nextAnswered,nextScore,mission)
+  }
+
+  function nextMission(){const next=(mission+1)%missions.length;setMission(next);setSelected(null);setHint(false);playTone(520,.1)}
   const current=missions[mission]
 
   return <section className="mission3d-shell">
     <div className="mission3d-stage">
       <div ref={mountRef} className="mission3d-canvas"/>
-      <div className="mission3d-hud"><span>MISIÓN {mission+1}/{missions.length}</span><strong>{score} XP</strong></div>
+      <div className="mission3d-hud"><span>MISIÓN {mission+1}/{missions.length}</span><strong>{score} XP</strong>{syncStatus!=='idle'&&<em>{syncStatus==='saving'?'Guardando...':'Progreso guardado'}</em>}</div>
       <div className="mission3d-controls">
         <button onClick={()=>setRunning(value=>!value)} aria-label={running?'Pausar animación':'Reanudar animación'}>{running?<Pause/>:<Play/>}</button>
         <button onClick={()=>setSound(value=>!value)} aria-label={sound?'Silenciar':'Activar sonido'}>{sound?<Volume2/>:<VolumeX/>}</button>
         <button onClick={()=>narrate(`${current.title}. ${current.question}`)} aria-label="Escuchar misión"><Headphones/></button>
-        <button onClick={()=>{setMission(0);setSelected(null);setScore(0);setHint(false)}} aria-label="Reiniciar"><RotateCcw/></button>
+        <button onClick={()=>{setMission(0);setSelected(null);setScore(0);setCorrect(0);setAnswered(0);setHint(false);startedAt.current=Date.now()}} aria-label="Reiniciar"><RotateCcw/></button>
       </div>
       <div className="mission3d-instruction"><span>Explora</span><p>Haz clic en el escenario para mover al búho y descubrir pistas.</p></div>
     </div>
@@ -145,9 +167,9 @@ export function ForestMission3D(){
       <h2>{current.title}</h2>
       <p>{current.question}</p>
       <div className="mission3d-options">{current.options.map((option,index)=>{
-        const correct=selected!==null&&index===current.answer
+        const right=selected!==null&&index===current.answer
         const wrong=selected===index&&index!==current.answer
-        return <button key={option} className={`${correct?'correct':''} ${wrong?'wrong':''}`} onClick={()=>choose(index)} disabled={selected!==null}><span>{String.fromCharCode(65+index)}</span>{option}{correct&&<CheckCircle2/>}</button>
+        return <button key={option} className={`${right?'correct':''} ${wrong?'wrong':''}`} onClick={()=>choose(index)} disabled={selected!==null}><span>{String.fromCharCode(65+index)}</span>{option}{right&&<CheckCircle2/>}</button>
       })}</div>
       {hint&&<div className="mission3d-hint"><Lightbulb/>{current.hint}</div>}
       <div className="mission3d-panel-actions"><button onClick={()=>setHint(true)}><Lightbulb/>Ver pista</button><button onClick={nextMission} disabled={selected===null}>Siguiente misión</button></div>
