@@ -64,6 +64,12 @@ const recentActivities=[
  {title:'Desafío de multiplicación',meta:'5.º básico · Matemática',progress:26,emoji:'✖️'}
 ]
 
+const priorities=[
+ {title:'Inferencias sencillas',detail:'11 estudiantes · propuesta lista',status:'Prioridad alta',tone:'violet',icon:Target,href:'/yoyo'},
+ {title:'Seguimiento de asistencia',detail:'2 estudiantes bajo 80%',status:'Revisar hoy',tone:'amber',icon:Clock3,href:'/estudiantes'},
+ {title:'Evidencias pendientes',detail:'4 registros por completar',status:'Esta semana',tone:'blue',icon:FileText,href:'/informes'}
+]
+
 type Metric={value:string;detail:string;label:string;trend:string;tone:string;icon:typeof Users}
 
 function MetricCard({metric}:{metric:Metric}){
@@ -86,7 +92,7 @@ export default async function TeacherDashboard(){
   {value:String(snapshot.achievements),detail:'reconocimientos obtenidos',label:'Logros del curso',trend:'+3',tone:'amber',icon:Medal}
  ]
 
- return <main className="product-shell dashboard-v4-shell">
+ return <main className="product-shell dashboard-v4-shell dashboard-v5-shell">
   <aside className="app-sidebar" aria-label="Navegación principal">
    <div className="brand"><span className="brand-mark">Y</span><div><strong>YOYOLETRASAI</strong><small>Panel docente</small></div></div>
    <div className="workspace-switch"><span className="workspace-logo">C</span><span><small>Institución</small><strong>Colegio Coyam</strong></span><ChevronRight size={17}/></div>
@@ -96,24 +102,24 @@ export default async function TeacherDashboard(){
   </aside>
 
   <section className="workspace">
-   <header className="topbar topbar-v4">
+   <header className="topbar topbar-v4 topbar-v5">
     <div className="mobile-brand"><span className="brand-mark">Y</span><strong>YOYOLETRASAI</strong></div>
     <label className="global-search"><Search size={19}/><input aria-label="Buscar" placeholder="Buscar recursos, estudiantes o actividades..."/><kbd>⌘ K</kbd></label>
     <div className="topbar-actions">
-     <span className={`data-source-v4 ${snapshot.source}`}><i/>{snapshot.source==='supabase'?'Datos sincronizados':'Vista de demostración'}</span>
+     <span className={`data-source-v4 data-source-v5 ${snapshot.source}`}><i/>{snapshot.source==='supabase'?'Datos sincronizados':'Datos de ejemplo'}</span>
      <button className="icon-button" aria-label="Notificaciones"><Bell size={20}/><span>3</span></button>
      <a className="primary-button" href="/crear"><Plus size={20}/><span>Crear actividad</span></a>
     </div>
    </header>
 
-   <div className="dashboard-v4-content">
-    <section className="dashboard-title-v4">
-     <div><span>Miércoles, 29 de julio</span><h1>Buenos días, {snapshot.teacherName} 👋</h1><p>Este es el panorama pedagógico de tus cursos para hoy.</p></div>
+   <div className="dashboard-v4-content dashboard-v5-content" id="dashboard-top">
+    <section className="dashboard-title-v4 dashboard-title-v5">
+     <div><span>Miércoles, 29 de julio</span><h1>Buenos días, {snapshot.teacherName} 👋</h1><p>Revisa avances, prioridades y actividades desde un solo lugar.</p></div>
      <div className="title-actions-v4"><a href="/crear"><Sparkles/>Crear experiencia</a><a href="/yoyo"><Bot/>Pedir ayuda a YOYO</a></div>
     </section>
 
-    <section className="overview-bento-v4">
-     <article className="class-summary-v4">
+    <section className="overview-bento-v4 overview-bento-v5">
+     <article className="class-summary-v4 class-summary-v5">
       <div className="summary-copy-v4">
        <span className="summary-kicker-v4"><CheckCircle2/> CURSO EN BUEN RITMO</span>
        <h2>Tu grupo mantiene un <strong>{snapshot.participation}%</strong> de participación</h2>
@@ -127,40 +133,52 @@ export default async function TeacherDashboard(){
       </div>
      </article>
 
-     <article className="today-card-v4">
+     <article className="today-card-v4 today-card-v5">
       <header><div><span>AGENDA DE HOY</span><h2>Próximas actividades</h2></div><a href="/calendario"><CalendarDays/></a></header>
       <div className="today-list-v4">{upcoming.map(item=><div className={item.active?'active':''} key={item.time}><time>{item.time}</time><i className={item.tone}/><span><strong>{item.title}</strong><small>{item.detail}</small></span>{item.active&&<em>Ahora</em>}</div>)}</div>
      </article>
 
-     <article className="yoyo-focus-v4">
+     <article className="yoyo-focus-v4 yoyo-focus-v5">
       <div className="yoyo-focus-icon-v4"><Bot/></div>
       <div><span>RECOMENDACIÓN DE YOYO</span><h2>Trabajar inferencias sencillas</h2><p>Actividad breve con pistas visuales, preguntas graduadas y apoyo DUA.</p><div className="focus-tags-v4"><i>15 min</i><i>Lenguaje</i><i>Lista para usar</i></div><a href="/yoyo">Revisar propuesta<ArrowUpRight/></a></div>
      </article>
     </section>
 
-    <section className="metrics-grid-v4" aria-label="Resumen pedagógico">{metrics.map(metric=><MetricCard metric={metric} key={metric.label}/>)}</section>
+    <section className="metrics-grid-v4 metrics-grid-v5" aria-label="Resumen pedagógico">{metrics.map(metric=><MetricCard metric={metric} key={metric.label}/>)}</section>
 
-    <section className="quick-launch-v4">
+    <section className="quick-launch-v4 quick-launch-v5">
      {quickActions.map(({label,description,icon:Icon,tone,href})=><a href={href} key={label} className={`quick-launch-item-v4 tone-${tone}`}><span><Icon/></span><div><strong>{label}</strong><small>{description}</small></div><ChevronRight/></a>)}
     </section>
 
-    <section className="learning-grid-v4">
-     <article className="panel-card group-progress-v4">
-      <header className="section-heading-v4"><div><span>SEGUIMIENTO</span><h2>Progreso por grupo</h2></div><a href="/estudiantes">Ver detalle<ChevronRight/></a></header>
-      <div className="group-list-v4">{groups.map(group=><div key={group.name}><span className={`group-dot-v4 ${group.tone}`}/><div className="group-info-v4"><strong>{group.name}</strong><small>{group.students} estudiantes</small></div><div className="group-bar-v4"><span><i className={group.tone} style={{width:`${group.progress}%`}}/></span><em>{group.progress}%</em></div></div>)}</div>
+    <section className="secondary-workspace-v5">
+     <article className="panel-card learning-overview-v5">
+      <header className="section-heading-v5"><div><span>SEGUIMIENTO PEDAGÓGICO</span><h2>Progreso y recursos activos</h2><p>Información prioritaria de tus grupos y actividades.</p></div><a href="/informes">Abrir analítica<ArrowUpRight/></a></header>
+      <div className="learning-split-v5">
+       <section className="groups-panel-v5">
+        <div className="subheading-v5"><span>Progreso por grupo</span><a href="/estudiantes">Ver estudiantes<ChevronRight/></a></div>
+        <div className="group-list-v4 group-list-v5">{groups.map(group=><div key={group.name}><span className={`group-dot-v4 ${group.tone}`}/><div className="group-info-v4"><strong>{group.name}</strong><small>{group.students} estudiantes</small></div><div className="group-bar-v4"><span><i className={group.tone} style={{width:`${group.progress}%`}}/></span><em>{group.progress}%</em></div></div>)}</div>
+       </section>
+
+       <section className="resources-panel-v5">
+        <div className="subheading-v5"><span>Recursos en curso</span><a href="/biblioteca">Ver biblioteca<ChevronRight/></a></div>
+        <div className="recent-list-v4 recent-list-v5">{recentActivities.map(activity=><div key={activity.title}><span>{activity.emoji}</span><div><strong>{activity.title}</strong><small>{activity.meta}</small></div><div className="recent-progress-v4"><span><i style={{width:`${activity.progress}%`}}/></span><em>{activity.progress}%</em></div></div>)}</div>
+       </section>
+      </div>
      </article>
 
-     <article className="panel-card recent-activities-v4">
-      <header className="section-heading-v4"><div><span>ACTIVIDAD RECIENTE</span><h2>Recursos en curso</h2></div><a href="/biblioteca">Ver todos<ChevronRight/></a></header>
-      <div className="recent-list-v4">{recentActivities.map(activity=><div key={activity.title}><span>{activity.emoji}</span><div><strong>{activity.title}</strong><small>{activity.meta}</small></div><div className="recent-progress-v4"><span><i style={{width:`${activity.progress}%`}}/></span><em>{activity.progress}%</em></div></div>)}</div>
-     </article>
+     <aside className="secondary-rail-v5">
+      <article className="priorities-card-v5">
+       <header><div><span>PRIORIDADES</span><h2>Necesita tu atención</h2></div><em>3 pendientes</em></header>
+       <div className="priority-list-v5">{priorities.map(({title,detail,status,tone,icon:Icon,href})=><a href={href} key={title}><span className={`priority-icon-v5 ${tone}`}><Icon/></span><div><strong>{title}</strong><small>{detail}</small></div><em>{status}</em><ChevronRight/></a>)}</div>
+      </article>
 
-     <article className="game-card-v4">
-      <ForestScene/>
-      <div className="game-overlay-v4"/>
-      <div className="game-copy-v4"><span>JUEGO DESTACADO</span><h2>La aventura del Bosque Mágico</h2><p>Comprensión lectora con pistas visuales, audio y cinco niveles progresivos.</p><div><button><Play fill="currentColor"/>Iniciar juego</button><a href="/juegos">Ver detalles<ChevronRight/></a></div></div>
-      <div className="game-progress-v4"><span><strong>60%</strong><small>progreso</small></span><span><strong>2 / 4</strong><small>pistas</small></span></div>
-     </article>
+      <article className="game-card-v5">
+       <ForestScene/>
+       <div className="game-overlay-v5"/>
+       <div className="game-copy-v5"><span>JUEGO DESTACADO</span><h2>Bosque Mágico</h2><p>Comprensión lectora con pistas visuales y cinco niveles.</p><div><button><Play fill="currentColor"/>Iniciar</button><a href="/juegos">Detalles<ChevronRight/></a></div></div>
+       <div className="game-status-v5"><span><strong>60%</strong><small>progreso</small></span><span><strong>2 / 4</strong><small>pistas</small></span></div>
+      </article>
+     </aside>
     </section>
    </div>
   </section>
