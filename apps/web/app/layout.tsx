@@ -15,7 +15,7 @@ import './admin-governance-v2.css'
 
 export const metadata:Metadata={
   title:'YOYOLETRASAI | Plataforma educativa',
-  description:'Plataforma educativa inclusiva con creación, juegos 3D, profesor virtual y seguimiento pedagógico.'
+  description:'Plataforma educativa inclusiva con creación, juegos 3D, profesor virtual, seguimiento y gestión institucional.'
 }
 
 export const viewport:Viewport={
