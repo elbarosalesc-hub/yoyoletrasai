@@ -53,9 +53,12 @@ export function DashboardImmersiveHero(){
     setMessage(messages[label])
   }
 
-  return <article className="immersive-dashboard-pro">
+  return <article className="immersive-dashboard-pro premium-illustrated-world">
     <div className="immersive-dashboard-stage">
+      <div className="premium-forest-art" aria-hidden="true"/>
+      <div className="premium-forest-depth depth-back" aria-hidden="true"/>
       <ImmersivePreview3D/>
+      <div className="premium-forest-depth depth-front" aria-hidden="true"/>
       <div className="immersive-dashboard-vignette"/>
 
       <div className="immersive-dashboard-copy">
@@ -69,13 +72,13 @@ export function DashboardImmersiveHero(){
         {narrating?<Volume2/>:<Mic2/>}<span>{narrating?'Narrando...':'Narración'}</span>
       </button>
 
-      <div className="immersive-yoyo-bubble">
+      <div className="immersive-yoyo-bubble compact-yoyo-bubble">
         <span className="immersive-yoyo-avatar"><Bot/></span>
-        <div><strong>YOYO, profesor virtual</strong><p>{message}</p><button onClick={narrate}><Volume2/>Escuchar explicación</button></div>
+        <div><strong>YOYO, profesor virtual</strong><p>{message}</p><button onClick={narrate}><Volume2/>Escuchar</button></div>
       </div>
 
-      <div className="immersive-player-hud">
-        <span className="immersive-player-avatar">👧🏽</span>
+      <div className="immersive-player-hud illustrated-player-hud">
+        <span className="immersive-player-avatar illustrated-luma-avatar" aria-label="Luma"/>
         <div><strong>Luma</strong><span className="immersive-hearts"><Heart fill="currentColor"/><Heart fill="currentColor"/><Heart fill="currentColor"/><Heart fill="currentColor"/><Heart/></span><small>Nivel 3 · 640 / 1000 XP</small><i><b style={{width:'64%'}}/></i></div>
       </div>
 
