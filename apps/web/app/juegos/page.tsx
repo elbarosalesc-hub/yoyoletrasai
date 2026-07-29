@@ -1,43 +1,86 @@
 'use client'
-import dynamic from 'next/dynamic'
+
 import {useMemo,useState} from 'react'
-import {AppShell} from '@/components/AppShell'
-import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard} from 'lucide-react'
-const Bosque3D=dynamic(()=>import('@/components/games/Bosque3D'),{ssr:false})
+import {
+  Accessibility,
+  BarChart3,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  Filter,
+  Gamepad2,
+  Headphones,
+  Lock,
+  Medal,
+  Play,
+  Search,
+  Sparkles,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
+  Volume2
+} from 'lucide-react'
+import {ModuleShell,ModuleStat} from '@/components/v2/ModuleShell'
+import {ForestScene} from '@/components/v2/ForestScene'
 
-const clues:Record<string,string>={
- mochila:'La mochila sigue cerrada. Sofía todavía no se ha preparado para entrar.',
- nota:'La nota dice: “Espera a la profesora antes de pasar”.',
- ave:'El ave permanece tranquila. No hay una amenaza visible en el entorno.',
- cabana:'La puerta está entreabierta y la cabaña se encuentra sin luz.'
-}
-const levels=[
- {id:1,name:'Explorar',goal:2,skill:'Localizar información',question:'¿Por qué Sofía espera antes de entrar?',answers:['Porque está perdida.','Porque debe esperar a la profesora.','Porque el ave la asustó.'],correct:1},
- {id:2,name:'Relacionar',goal:3,skill:'Relacionar pistas',question:'¿Qué dos pistas apoyan mejor la inferencia?',answers:['Nota y mochila','Ave y árbol','Cabaña y cielo'],correct:0},
- {id:3,name:'Inferir',goal:3,skill:'Inferencia sencilla',question:'¿Cómo se siente Sofía antes de entrar?',answers:['Cauta y atenta','Enojada con el ave','Aburrida del bosque'],correct:0},
- {id:4,name:'Justificar',goal:4,skill:'Justificar con evidencia',question:'Completa: Sofía espera porque…',answers:['la nota se lo indica y aún no está preparada.','quiere perseguir al ave.','el bosque está vacío.'],correct:0},
- {id:5,name:'Transferir',goal:4,skill:'Aplicar a una situación nueva',question:'Si la nota desapareciera, ¿qué otra pista permitiría actuar con cautela?',answers:['La cabaña oscura y entreabierta.','El color del cielo.','El tamaño de los árboles.'],correct:0}
+const games=[
+ {title:'Bosque de las inferencias',subject:'Lenguaje',level:'3.º básico',skill:'Inferencias sencillas',progress:60,players:18,difficulty:3,tone:'forest',featured:true},
+ {title:'Ruta de lectura',subject:'Lenguaje',level:'3.º básico',skill:'Fluidez y secuencia',progress:42,players:14,difficulty:2,tone:'violet'},
+ {title:'Ciudad de las centenas',subject:'Matemática',level:'3.º básico',skill:'Valor posicional',progress:71,players:21,difficulty:3,tone:'blue'},
+ {title:'Mercado matemático',subject:'Matemática',level:'5.º básico',skill:'Resolución de problemas',progress:34,players:11,difficulty:4,tone:'amber'},
+ {title:'Laboratorio fraccional',subject:'Matemática',level:'5.º básico',skill:'Fracciones',progress:27,players:9,difficulty:4,tone:'mint'},
+ {title:'Exploradores del cuerpo',subject:'Ciencias',level:'5.º básico',skill:'Sistemas del cuerpo',progress:54,players:16,difficulty:3,tone:'coral'}
 ]
-function tone(ok=true){const Ctx=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;if(!Ctx)return;const ctx=new Ctx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type=ok?'sine':'triangle';osc.frequency.value=ok?660:220;gain.gain.value=.08;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.18)}
-function speak(text:string){if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(text))}}
 
-export default function Juegos(){
- const[running,setRunning]=useState(false),[sound,setSound]=useState(true),[reduced,setReduced]=useState(false),[contrast,setContrast]=useState(false)
- const[level,setLevel]=useState(0),[found,setFound]=useState<string[]>([]),[answer,setAnswer]=useState<number|null>(null),[attempts,setAttempts]=useState(0)
- const[feedback,setFeedback]=useState('Inicia la misión y explora los objetos del bosque.')
- const current=levels[level];const unlocked=found.length>=current.goal;const progress=Math.min(100,Math.round(found.length/current.goal*100));const correct=answer===current.correct
- const stars=useMemo(()=>level+(correct?1:0),[level,correct]);const accuracy=attempts===0?100:Math.round(((level+(correct?1:0))/attempts)*100)
- const select=(id:string)=>{if(!running){setFeedback('Primero inicia la misión.');return}if(!found.includes(id))setFound(v=>[...v,id]);setFeedback(clues[id]);if(sound){tone(true);speak(clues[id])}}
- const choose=(i:number)=>{if(!unlocked)return;setAttempts(v=>v+1);setAnswer(i);const ok=i===current.correct;const msg=ok?'Respuesta correcta. Usaste evidencia pertinente.':'Aún no. Revisa las pistas más relacionadas con la pregunta.';setFeedback(msg);if(sound){tone(ok);speak(msg)}}
- const next=()=>{if(!correct)return;if(level<levels.length-1){setLevel(v=>v+1);setAnswer(null);setFound([]);setFeedback('Nuevo nivel desbloqueado. La complejidad aumentó.')}else setFeedback('Misión completa. Lograste explorar, relacionar, inferir, justificar y transferir.')}
- const reset=()=>{setFound([]);setAnswer(null);setLevel(0);setAttempts(0);setFeedback('Misión reiniciada.')}
- return <AppShell active="Juegos inmersivos">
-  <section className="game-premium-head"><div><span className="eyebrow">WebGL 3D · Lenguaje · 3.º básico</span><h1>Bosque de las inferencias</h1><p>Cinco niveles progresivos, narración, apoyos accesibles, dificultad adaptativa y analítica docente.</p></div><div className="game-actions"><button className="btn btn-coral" onClick={()=>setRunning(v=>!v)}>{running?<Pause size={18}/>:<Play size={18}/>} {running?'Pausar':'Comenzar misión'}</button><button className="btn btn-soft" onClick={reset}><RotateCcw size={17}/> Reiniciar</button></div></section>
-  <div className="level-rail">{levels.map((l,i)=><div key={l.id} className={'level-step '+(i===level?'active ':'')+(i<level?'done ':'')+(i>level?'locked':'')}><span>{i<level?<CheckCircle2 size={18}/>:i>level?<Lock size={16}/>:l.id}</span><div><b>{l.name}</b><small>{l.skill}</small></div></div>)}</div>
-  <div className="tool-row"><button className="control-chip" onClick={()=>setSound(v=>!v)}>{sound?<Volume2 size={16}/>:<VolumeX size={16}/>} {sound?'Audio activo':'Audio desactivado'}</button><button className="control-chip" onClick={()=>setReduced(v=>!v)}><Sparkles size={16}/>{reduced?'Movimiento reducido':'Animaciones activas'}</button><button className="control-chip" onClick={()=>setContrast(v=>!v)}><Eye size={16}/>{contrast?'Contraste alto':'Contraste estándar'}</button><span className="control-chip"><Keyboard size={16}/>Teclado y foco visibles</span><span className="control-chip"><Star size={16}/>{stars}/5 logros</span></div>
-  <div className="game-layout premium-game-grid">
-   <section className="immersive-stage premium-3d-card"><div className="game-hud"><span>Nivel {current.id}: {current.name}</span><div className="hud-progress"><i style={{width:progress+'%'}}/></div><b>{found.length}/{current.goal} pistas</b></div><Bosque3D onSelect={select} active={found} reducedMotion={reduced} highContrast={contrast}/><div className="mission"><b>Misión:</b> explora, escucha y responde usando evidencia.<div className="feedback-box" role="status" aria-live="polite">{feedback}</div></div></section>
-   <aside className="panel challenge-panel"><span className="eyebrow">{current.skill}</span><h2>{current.question}</h2><div className="answer-stack">{current.answers.map((a,i)=><button key={a} disabled={!unlocked} onClick={()=>choose(i)} className={'answer-card '+(answer===i?(i===current.correct?'correct':'wrong'):'')}>{String.fromCharCode(65+i)}. {a}</button>)}</div>{!unlocked&&<div className="locked-note"><Lock size={16}/> Encuentra {current.goal-found.length} pista(s) más.</div>}<button className="btn btn-primary next-level" disabled={!correct} onClick={next}>{level===levels.length-1?'Finalizar misión':'Ir al siguiente nivel'}</button><div className="teacher-live"><h3>Analítica docente</h3><div className="metric-grid"><div><strong>{attempts}</strong><span>intentos</span></div><div><strong>{accuracy}%</strong><span>precisión</span></div><div><strong>{sound?'Sí':'No'}</strong><span>narración</span></div><div><strong>{current.id}/5</strong><span>complejidad</span></div></div><div className="accessibility-summary"><Accessibility size={18}/><span>Alternativa textual, lector de pantalla, reducción de movimiento y alto contraste disponibles.</span></div><div className="difficulty-note"><Brain size={18}/><span>La dificultad progresa desde localizar hasta transferir el aprendizaje.</span></div></div></aside>
-  </div>
- </AppShell>
+export default function JuegosV2(){
+ const[query,setQuery]=useState('')
+ const[subject,setSubject]=useState('Todas')
+ const[preview,setPreview]=useState<string|null>(null)
+ const filtered=useMemo(()=>games.filter(game=>{
+  const text=`${game.title} ${game.subject} ${game.level} ${game.skill}`.toLowerCase()
+  return text.includes(query.toLowerCase())&&(subject==='Todas'||game.subject===subject)
+ }),[query,subject])
+ const featured=games[0]
+
+ return <ModuleShell active="Juegos">
+  <section className="games-hero-v2">
+   <div className="games-hero-copy-v2">
+    <span className="module-eyebrow"><Sparkles size={15}/> Experiencias inmersivas y accesibles</span>
+    <h1>Aprender jugando, con <span>propósito pedagógico</span></h1>
+    <p>Explora juegos alineados al currículum, con niveles progresivos, apoyos accesibles y seguimiento docente.</p>
+    <div className="games-hero-actions-v2"><button onClick={()=>setPreview(featured.title)}><Play/>Iniciar juego destacado</button><a href="#catalogo"><BookOpen/>Ver catálogo</a></div>
+    <div className="games-access-v2"><span><Headphones/>Narración</span><span><Accessibility/>Accesibilidad</span><span><BarChart3/>Analítica</span></div>
+   </div>
+   <div className="games-featured-visual-v2"><ForestScene/><div className="games-visual-overlay-v2"/><div className="games-featured-copy-v2"><span>DESTACADO</span><h2>{featured.title}</h2><p>{featured.skill} · {featured.level}</p><div><strong>{featured.progress}%</strong><small>progreso promedio</small></div></div></div>
+  </section>
+
+  <section className="module-stats-grid games-stats-v2">
+   <ModuleStat icon={Gamepad2} value="6" label="juegos publicados" tone="violet"/>
+   <ModuleStat icon={Users} value="28" label="estudiantes activos" tone="mint"/>
+   <ModuleStat icon={TrendingUp} value="64%" label="progreso promedio" tone="blue"/>
+   <ModuleStat icon={Medal} value="17" label="misiones completadas" tone="amber"/>
+  </section>
+
+  <section className="games-toolbar-v2" id="catalogo">
+   <div><span className="section-kicker-v2">CATÁLOGO</span><h2>Juegos disponibles</h2><p>Selecciona una experiencia según nivel, asignatura o habilidad.</p></div>
+   <div className="games-filters-v2"><label><Search/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar juego..."/></label><label><Filter/><select value={subject} onChange={event=>setSubject(event.target.value)}><option>Todas</option><option>Lenguaje</option><option>Matemática</option><option>Ciencias</option></select></label></div>
+  </section>
+
+  <section className="games-grid-v2">
+   {filtered.map(game=><article className={`game-library-card-v2 tone-${game.tone}`} key={game.title}>
+    <div className="game-cover-v2">{game.featured?<ForestScene/>:<span className="game-emoji-v2">{game.subject==='Lenguaje'?'📚':game.subject==='Matemática'?'🧠':'🔬'}</span>}<div className="cover-shade-v2"/><span className="game-subject-v2">{game.subject}</span><button aria-label={`Vista previa de ${game.title}`} onClick={()=>setPreview(game.title)}><Eye/></button></div>
+    <div className="game-card-body-v2"><div className="game-card-title-v2"><div><h3>{game.title}</h3><p>{game.skill}</p></div><span>{game.level}</span></div><div className="game-meta-v2"><span><Users/>{game.players} jugadores</span><span><Target/>Nivel {game.difficulty}/5</span><span><Volume2/>Audio</span></div><div className="game-progress-row-v2"><span><i style={{width:`${game.progress}%`}}/></span><strong>{game.progress}%</strong></div><div className="game-card-actions-v2"><button onClick={()=>setPreview(game.title)}><Play/>Iniciar</button><a href="/informes"><BarChart3/>Analítica</a></div></div>
+   </article>)}
+  </section>
+
+  <section className="games-bottom-grid-v2">
+   <article className="games-insight-v2"><span><Sparkles/></span><div><small>RECOMENDACIÓN DE YOYO</small><h3>Refuerza inferencias antes de avanzar</h3><p>El grupo de comprensión guiada presenta mejor respuesta cuando las pistas se entregan de forma visual y gradual.</p><button>Asignar Bosque de las inferencias</button></div></article>
+   <article className="games-accessibility-card-v2"><div><span><Accessibility/></span><h3>Diseño inclusivo</h3><p>Todos los juegos incluyen navegación por teclado, reducción de movimiento, contraste alto y narración opcional.</p></div><ul><li><CheckCircle2/>Instrucciones breves</li><li><CheckCircle2/>Lectura en voz alta</li><li><CheckCircle2/>Dificultad progresiva</li></ul></article>
+   <article className="games-progress-card-v2"><div><span><Clock3/></span><div><small>TIEMPO DE JUEGO</small><strong>2h 35m</strong><p>Esta semana</p></div></div><div><span><Star/></span><div><small>LOGROS</small><strong>12</strong><p>Obtenidos este mes</p></div></div></article>
+  </section>
+
+  {preview&&<div className="game-preview-modal-v2" role="dialog" aria-modal="true" aria-label={`Vista previa de ${preview}`}><button className="modal-backdrop-v2" onClick={()=>setPreview(null)} aria-label="Cerrar vista previa"/><article><div className="modal-game-visual-v2"><ForestScene/><div/></div><div className="modal-game-content-v2"><span>VISTA PREVIA</span><h2>{preview}</h2><p>Explora una experiencia progresiva con pistas, narración, retroalimentación inmediata y registro de avance.</p><div className="modal-feature-list-v2"><span><CheckCircle2/>5 niveles</span><span><CheckCircle2/>Narración</span><span><CheckCircle2/>Analítica docente</span></div><div className="modal-actions-v2"><button onClick={()=>setPreview(null)}><Play/>Comenzar misión</button><button onClick={()=>setPreview(null)}>Cerrar</button></div></div></article></div>}
+ </ModuleShell>
 }
