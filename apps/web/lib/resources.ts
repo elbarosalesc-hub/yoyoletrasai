@@ -1,7 +1,0 @@
-export const resources=[
-{slug:'comprension-bosque-nativo',title:'Comprensión lectora: El bosque nativo',subject:'Lenguaje',level:'3° básico',type:'Guía',oa:'OA 4',desc:'Texto informativo breve con preguntas explícitas, vocabulario e inferencias sencillas.',cover:'c1',emoji:'📚'},
-{slug:'valor-posicional',title:'Valor posicional hasta 1.000',subject:'Matemática',level:'3° básico',type:'Ficha',oa:'OA 5',desc:'Actividad visual y graduada para reconocer centenas, decenas y unidades.',cover:'c2',emoji:'🔢'},
-{slug:'rutina-visual',title:'Rutina visual: trabajo autónomo',subject:'PIE / DUA',level:'Multinivel',type:'Apoyo visual',oa:'DUA',desc:'Secuencia editable con anticipación, pasos y refuerzo positivo.',cover:'c3',emoji:'🧩'},
-{slug:'tabla-del-6',title:'Ruta matemática: tabla del 6',subject:'Matemática',level:'4° básico',type:'Juego',oa:'OA 7',desc:'Juego progresivo con intentos, ayudas y retroalimentación inmediata.',cover:'c4',emoji:'🎮'},
-{slug:'conciencia-fonologica',title:'Conciencia fonológica con M y P',subject:'Lenguaje',level:'1° básico',type:'Actividad',oa:'OA 3',desc:'Identificación de sonido inicial con imágenes y opciones de respuesta.',cover:'c1',emoji:'🔤'},
-{slug:'ciclo-del-agua',title:'El ciclo del agua paso a paso',subject:'Ciencias',level:'4° básico',type:'Guía',oa:'OA 11',desc:'Organizador visual, explicación breve y actividad de aplicación.',cover:'c2',emoji:'💧'}]

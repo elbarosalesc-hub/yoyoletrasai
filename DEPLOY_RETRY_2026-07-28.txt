@@ -1,2 +1,0 @@
-YOYOLETRASAI production deploy retry after successful GitHub validation.
-No application behavior changed.
