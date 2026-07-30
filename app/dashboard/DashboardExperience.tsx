@@ -2,46 +2,85 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Bell, BookOpen, Bot, CalendarDays, CheckCircle2, ChevronRight, Coins, Compass, Heart, HelpCircle, Home, Map, MessageCircle, Settings, Sparkles, Star, Trophy, Volume2, Zap } from 'lucide-react'
+import {
+  Bell,
+  BookOpen,
+  Bot,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Coins,
+  Compass,
+  Heart,
+  HelpCircle,
+  Home,
+  Map,
+  MessageCircle,
+  Settings,
+  Sparkles,
+  Star,
+  Trophy,
+  UserRound,
+  Volume2,
+  Zap,
+} from 'lucide-react'
 
 const answers = ['Una estrella escondida', 'Una llave dorada', 'Un libro mágico']
 
-export function DashboardExperience({ displayName, authenticated }: { displayName: string; authenticated: boolean }) {
+export function DashboardExperience({
+  displayName,
+  authenticated,
+}: {
+  displayName: string
+  authenticated: boolean
+}) {
   const [selected, setSelected] = useState<string | null>(null)
   const [feedback, setFeedback] = useState('')
   const [xp, setXp] = useState(640)
   const [coins, setCoins] = useState(1250)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [completed, setCompleted] = useState(false)
 
   function verifyAnswer() {
+    if (completed) {
+      setFeedback('Esta misión ya fue completada. Tu recompensa quedó registrada.')
+      return
+    }
+
     if (!selected) {
       setFeedback('Selecciona una alternativa antes de comprobar.')
       return
     }
+
     if (selected === 'Una llave dorada') {
       setFeedback('¡Excelente! Encontraste la pista correcta y ganaste 40 XP.')
       setXp((value) => Math.min(value + 40, 1000))
       setCoins((value) => value + 20)
-    } else {
-      setFeedback('Casi. Observa el brillo junto al árbol y vuelve a intentarlo.')
+      setCompleted(true)
+      return
     }
+
+    setFeedback('Casi. Observa el brillo junto al árbol y vuelve a intentarlo.')
   }
 
   return (
     <main className="dashboard-shell">
       <header className="top-status-bar">
-        <Link href="/dashboard" className="dashboard-logo"><span>YO</span><strong>YoYo Letras AI</strong></Link>
+        <Link href="/dashboard" className="dashboard-logo">
+          <span>YO</span>
+          <strong>YoYo Letras AI</strong>
+        </Link>
         <nav className="quick-actions" aria-label="Acciones rápidas">
-          <button aria-label="Sonido"><Volume2 /></button>
-          <button aria-label="Notificaciones"><Bell /></button>
-          <button aria-label="Configuración"><Settings /></button>
+          <button type="button" aria-label="Sonido"><Volume2 /></button>
+          <button type="button" aria-label="Notificaciones"><Bell /></button>
+          <Link href="/perfil" aria-label="Configuración"><Settings /></Link>
         </nav>
         <div className="player-stats">
           <div className="level-pill"><Star /><span>Nivel 8</span><i><b style={{ width: `${xp / 10}%` }} /></i></div>
           <span className="stat-chip heart"><Heart /> 4</span>
           <span className="stat-chip energy"><Zap /> 92</span>
           <span className="stat-chip coin"><Coins /> {coins}</span>
-          <div className="avatar">ER</div>
+          <Link href="/perfil" className="avatar" aria-label="Abrir perfil">ER</Link>
         </div>
       </header>
 
@@ -55,7 +94,7 @@ export function DashboardExperience({ displayName, authenticated }: { displayNam
           <div className="forest floor-two" />
           <div className="cabin"><span className="cabin-window" /><span className="cabin-door" /></div>
           <div className="hero-character"><span className="hero-head" /><span className="hero-body" /><span className="hero-book">Aa</span></div>
-          <div className="robot-character"><Bot /></div>
+          <button type="button" className="robot-character" aria-label="Abrir asistente Yoyo" onClick={() => setAssistantOpen(true)}><Bot /></button>
           <div className="welcome-copy">
             <span className="eyebrow">BOSQUE DE LAS PALABRAS</span>
             <h1>¡Hola, {displayName}!</h1>
@@ -71,18 +110,28 @@ export function DashboardExperience({ displayName, authenticated }: { displayNam
 
         <section className="mission-card glass-card">
           <div className="mission-header"><div><span className="eyebrow">MISIÓN PRINCIPAL · 3 DE 5</span><h2>El secreto del árbol luminoso</h2></div><span className="reward-pill"><Trophy /> +40 XP</span></div>
-          <div className="mission-progress"><i><b style={{ width: '60%' }} /></i><span>60%</span></div>
+          <div className="mission-progress"><i><b style={{ width: completed ? '100%' : '60%' }} /></i><span>{completed ? '100%' : '60%'}</span></div>
           <div className="story-box"><Sparkles /><p>Luma encontró un destello cerca del árbol antiguo. Lee con atención y descubre qué objeto escondía la luz.</p></div>
-          <fieldset>
+          <fieldset disabled={completed}>
             <legend>¿Qué encontró Luma junto al árbol?</legend>
-            {answers.map((answer) => (
-              <button key={answer} type="button" className={`answer-option ${selected === answer ? 'selected' : ''}`} onClick={() => { setSelected(answer); setFeedback('') }}>
-                <span>{selected === answer ? <CheckCircle2 /> : <span className="option-letter">{String.fromCharCode(65 + answers.indexOf(answer))}</span>}</span>{answer}
+            {answers.map((answer, index) => (
+              <button
+                key={answer}
+                type="button"
+                aria-pressed={selected === answer}
+                className={`answer-option ${selected === answer ? 'selected' : ''}`}
+                onClick={() => { setSelected(answer); setFeedback('') }}
+              >
+                <span>{selected === answer ? <CheckCircle2 /> : <span className="option-letter">{String.fromCharCode(65 + index)}</span>}</span>
+                {answer}
               </button>
             ))}
           </fieldset>
           {feedback && <div className="mission-feedback" role="status">{feedback}</div>}
-          <div className="mission-actions"><button className="hint-button" onClick={() => setAssistantOpen(true)}><HelpCircle /> Pedir una pista</button><button className="primary-button" onClick={verifyAnswer}>Comprobar <ChevronRight /></button></div>
+          <div className="mission-actions">
+            <button type="button" className="hint-button" onClick={() => setAssistantOpen(true)}><HelpCircle /> Pedir una pista</button>
+            <button type="button" className="primary-button" onClick={verifyAnswer} disabled={completed}>{completed ? 'Misión completada' : 'Comprobar'} <ChevronRight /></button>
+          </div>
           <div className="reward-row"><span><Coins /> 20 monedas</span><span><Star /> Progreso de ruta</span><span><Trophy /> Insignia posible</span></div>
         </section>
 
@@ -94,26 +143,32 @@ export function DashboardExperience({ displayName, authenticated }: { displayNam
               <article><time>10:30</time><span className="agenda-icon blue"><Compass /></span><div><strong>Misión del bosque</strong><small>En curso</small></div><span className="live-dot" /></article>
               <article><time>12:15</time><span className="agenda-icon gold"><Trophy /></span><div><strong>Desafío semanal</strong><small>20 minutos</small></div></article>
             </div>
-            <button className="secondary-button">Ver calendario completo</button>
+            <Link href="/agenda" className="secondary-button">Ver calendario completo</Link>
           </section>
           <section className="assistant-card glass-card">
             <div className="assistant-avatar"><Bot /></div>
             <div><span className="eyebrow">PROFESORA AI</span><h2>Yoyo</h2><p>Estoy aquí para darte pistas y explicarte cada paso con calma.</p></div>
-            <button className="primary-button" onClick={() => setAssistantOpen(true)}><MessageCircle /> Hablar con Yoyo</button>
+            <button type="button" className="primary-button" onClick={() => setAssistantOpen(true)}><MessageCircle /> Hablar con Yoyo</button>
           </section>
         </aside>
       </section>
 
       <nav className="bottom-navigation" aria-label="Navegación principal">
         <Link className="active" href="/dashboard"><Home /><span>Inicio</span></Link>
-        <Link href="#"><BookOpen /><span>Diario</span></Link>
-        <Link href="#"><Map /><span>Mapa</span></Link>
-        <Link href="#"><Compass /><span>Misiones</span></Link>
-        <Link href="#"><Trophy /><span>Logros</span></Link>
-        <Link href="#"><Settings /><span>Más</span></Link>
+        <Link href="/agenda"><BookOpen /><span>Diario</span></Link>
+        <Link href="/misiones"><Map /><span>Mapa</span></Link>
+        <Link href="/misiones"><Compass /><span>Misiones</span></Link>
+        <Link href="/logros"><Trophy /><span>Logros</span></Link>
+        <Link href="/perfil"><UserRound /><span>Perfil</span></Link>
       </nav>
 
-      {assistantOpen && <div className="assistant-drawer" role="dialog" aria-modal="true" aria-label="Asistente Yoyo"><div className="drawer-header"><div className="assistant-avatar"><Bot /></div><div><strong>Yoyo</strong><small>Asistente educativa</small></div><button onClick={() => setAssistantOpen(false)} aria-label="Cerrar">×</button></div><div className="chat-bubble">Observa la parte del texto que habla de un objeto que puede abrir algo. ¿Qué alternativa cumple esa función?</div><div className="quick-replies"><button onClick={() => setFeedback('Pista: sirve para abrir una puerta o un cofre.')}>Dame otra pista</button><button onClick={() => setFeedback('Busca una palabra asociada a abrir.')}>Explícamelo más fácil</button></div></div>}
+      {assistantOpen && (
+        <div className="assistant-drawer" role="dialog" aria-modal="true" aria-label="Asistente Yoyo">
+          <div className="drawer-header"><div className="assistant-avatar"><Bot /></div><div><strong>Yoyo</strong><small>Asistente educativa</small></div><button type="button" onClick={() => setAssistantOpen(false)} aria-label="Cerrar">×</button></div>
+          <div className="chat-bubble">Observa la parte del texto que habla de un objeto que puede abrir algo. ¿Qué alternativa cumple esa función?</div>
+          <div className="quick-replies"><button type="button" onClick={() => setFeedback('Pista: sirve para abrir una puerta o un cofre.')}>Dame otra pista</button><button type="button" onClick={() => setFeedback('Busca una palabra asociada a abrir.')}>Explícamelo más fácil</button></div>
+        </div>
+      )}
     </main>
   )
 }
