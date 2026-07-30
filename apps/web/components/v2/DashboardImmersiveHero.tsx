@@ -84,7 +84,7 @@ export function DashboardImmersiveHero(){
   const[score,setScore]=useState(640)
   const[narrating,setNarrating]=useState(false)
   const[audioEnabled,setAudioEnabled]=useState(true)
-  const current=missions[mission]??missions[0]
+  const current:DashboardMission=missions[mission]??missions[0]
   const progress=Math.round(((mission+(selected!==null?1:0))/missions.length)*100)
   const isCorrect=selected===current.correct
   const supportMessage=useMemo(()=>tools[activeTool]?.message??tools[0].message,[activeTool])
