@@ -27,6 +27,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: gh-pages
+          fetch-depth: 1
+      - name: Verificar ruta pública
+        run: test -f nueva-plataforma-2026/index.html
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
         with:
@@ -38,3 +41,5 @@ jobs:
       - name: Publicar dashboard nuevo
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Publicación forzada después de crear la ruta en gh-pages: 2026-07-30T15:33-04:00
