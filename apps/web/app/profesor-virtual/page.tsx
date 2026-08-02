@@ -1,6 +1,6 @@
 import { AppShell } from '@/components/AppShell'
 import { requireOrganizationContext } from '@/lib/auth/organization-context'
-import { ProfesorVirtualClient } from './ProfesorVirtualClient'
+import { VirtualTeacherClient } from './VirtualTeacherClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,9 +9,9 @@ export default async function ProfesorVirtualPage() {
 
   return (
     <AppShell active="Profesor Virtual">
-      <ProfesorVirtualClient
+      <VirtualTeacherClient
         displayName={context.displayName}
-        organizationName={context.organization.name}
+        organization={context.organization.name}
       />
     </AppShell>
   )
