@@ -13,6 +13,15 @@ const messages: Record<string, string> = {
   signed_out: 'Tu sesión se cerró correctamente.',
 }
 
+function getFriendlyError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : ''
+  if (message.includes('invalid login credentials')) return 'El correo o la contraseña no son correctos.'
+  if (message.includes('email not confirmed')) return 'Debes confirmar tu correo antes de ingresar.'
+  if (message.includes('user already registered')) return 'Ya existe una cuenta asociada a este correo.'
+  if (message.includes('password')) return 'La contraseña no cumple los requisitos de seguridad.'
+  return 'No fue posible completar la solicitud. Inténtalo nuevamente.'
+}
+
 function AccessForm() {
   const params = useSearchParams()
   const [mode, setMode] = useState<Mode>('login')
@@ -52,12 +61,12 @@ function AccessForm() {
         return
       }
 
-      const callback = `${window.location.origin}/auth/callback?next=/acceso`
+      const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/restablecer-contrasena')}`
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callback })
       if (error) throw error
       setFeedback('Enviamos un enlace de recuperación a tu correo.')
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'No fue posible completar la solicitud.')
+      setFeedback(getFriendlyError(error))
     } finally {
       setPending(false)
     }
