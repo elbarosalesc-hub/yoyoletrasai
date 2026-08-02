@@ -35,8 +35,7 @@ import './assessment-workspace.css'
 import './virtual-professor.css'
 import './virtual-teacher.css'
 import './planner-workspace.css'
-import './learning-centers.css'
-import './learning-centers-real.css'
+import './centres-premium.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',
