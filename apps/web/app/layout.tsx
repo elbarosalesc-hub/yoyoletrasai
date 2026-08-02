@@ -19,6 +19,7 @@ import './deploy-ready.css'
 import './integrations-3d.css'
 import './platform-complete.css'
 import './mobile-reference.css'
+import './approved-platform.css'
 
 export const metadata:Metadata={
  title:'YOYOLETRASAI | Plataforma educativa premium con IA',
@@ -28,7 +29,7 @@ export const metadata:Metadata={
  authors:[{name:'Elba Rosales'}]
 }
 
-export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#123d4b'}
+export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#0d1530'}
 
 export default function RootLayout({children}:{children:ReactNode}){
  return <html lang="es"><body>{children}</body></html>
