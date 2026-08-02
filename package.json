@@ -9,9 +9,14 @@
     "dev": "npm run dev --workspace=web",
     "build": "npm run build --workspace=web",
     "start": "npm run start --workspace=web",
-    "typecheck": "npm run typecheck --workspace=web"
+    "typecheck": "npm run typecheck --workspace=web",
+    "supabase:init": "npx supabase init",
+    "supabase:start": "npx supabase start",
+    "supabase:stop": "npx supabase stop",
+    "supabase:reset": "npx supabase db reset",
+    "supabase:types": "npx supabase gen types typescript --local > apps/web/lib/supabase/database.types.ts"
   },
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.0.0"
   }
 }
