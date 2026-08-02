@@ -68,6 +68,26 @@ export type Database = {
           { foreignKeyName: 'student_support_profiles_student_id_fkey'; columns: ['student_id']; isOneToOne: true; referencedRelation: 'students'; referencedColumns: ['id'] }
         ]
       }
+      learning_objectives: {
+        Row: { id: string; organization_id: string; course_id: string | null; subject: string; code: string; title: string; description: string | null; academic_year: number; is_active: boolean; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; course_id?: string | null; subject: string; code: string; title: string; description?: string | null; academic_year: number; is_active?: boolean; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; course_id?: string | null; subject?: string; code?: string; title?: string; description?: string | null; academic_year?: number; is_active?: boolean; created_by?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: 'learning_objectives_organization_id_fkey'; columns: ['organization_id']; isOneToOne: false; referencedRelation: 'organizations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'learning_objectives_course_id_fkey'; columns: ['course_id']; isOneToOne: false; referencedRelation: 'courses'; referencedColumns: ['id'] }
+        ]
+      }
+      learning_evidence: {
+        Row: { id: string; organization_id: string; student_id: string; course_id: string | null; objective_id: string; evidence_type: string; description: string; achievement_level: string; support_used: string | null; autonomy_level: string | null; observed_at: string; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; organization_id: string; student_id: string; course_id?: string | null; objective_id: string; evidence_type: string; description: string; achievement_level: string; support_used?: string | null; autonomy_level?: string | null; observed_at?: string; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; organization_id?: string; student_id?: string; course_id?: string | null; objective_id?: string; evidence_type?: string; description?: string; achievement_level?: string; support_used?: string | null; autonomy_level?: string | null; observed_at?: string; created_by?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: 'learning_evidence_organization_id_fkey'; columns: ['organization_id']; isOneToOne: false; referencedRelation: 'organizations'; referencedColumns: ['id'] },
+          { foreignKeyName: 'learning_evidence_student_id_fkey'; columns: ['student_id']; isOneToOne: false; referencedRelation: 'students'; referencedColumns: ['id'] },
+          { foreignKeyName: 'learning_evidence_course_id_fkey'; columns: ['course_id']; isOneToOne: false; referencedRelation: 'courses'; referencedColumns: ['id'] },
+          { foreignKeyName: 'learning_evidence_objective_id_fkey'; columns: ['objective_id']; isOneToOne: false; referencedRelation: 'learning_objectives'; referencedColumns: ['id'] }
+        ]
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
