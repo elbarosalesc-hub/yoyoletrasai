@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useMemo, useState } from 'react'
-import { Search, UserPlus, Users, GraduationCap, ShieldCheck } from 'lucide-react'
+import { Search, UserPlus, Users, GraduationCap, ShieldCheck, ChevronRight } from 'lucide-react'
 import { createStudent, initialStudentActionState } from './actions'
 
 type Course = { id: string; name: string; level: string; academic_year: number }
@@ -49,7 +50,7 @@ export function StudentManager({ students, courses, canManage }: { students: Stu
           </div>
           <label className="student-search"><Search size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nombre, identificador o curso" /></label>
           <div className="student-table">
-            <div className="student-table-head"><span>Estudiante</span><span>Curso</span><span>Identificador</span><span>Estado</span></div>
+            <div className="student-table-head"><span>Estudiante</span><span>Curso</span><span>Identificador</span><span>Estado</span><span></span></div>
             {filtered.length ? filtered.map((student) => {
               const enrollment = student.course_enrollments?.find((item) => item.enrollment_status === 'active')
               return <article className="student-row" key={student.id}>
@@ -57,6 +58,7 @@ export function StudentManager({ students, courses, canManage }: { students: Stu
                 <span>{enrollment?.courses ? `${enrollment.courses.name} · ${enrollment.courses.level}` : 'Sin matrícula activa'}</span>
                 <span>{student.external_reference || 'Sin asignar'}</span>
                 <em className={`student-status status-${student.status}`}>{student.status === 'active' ? 'Activo' : 'Inactivo'}</em>
+                <Link href={`/seguimiento/${student.id}`} className="student-open-link" aria-label={`Abrir ficha de ${student.first_name} ${student.last_name}`}>Ver ficha <ChevronRight size={15} /></Link>
               </article>
             }) : <div className="command-empty"><Users /><strong>No hay resultados</strong><span>Ajusta la búsqueda o crea una nueva ficha.</span></div>}
           </div>
