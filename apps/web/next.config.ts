@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   compress: true,
   productionBrowserSourceMaps: false,
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'images.unsplash.com', pathname: '/**' },
+    ],
+  },
   async headers() {
     return [
       {
@@ -31,7 +36,7 @@ const nextConfig: NextConfig = {
         source: '/api/:path*',
         headers: [
           { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow,noarchive' },
         ],
       },
     ]
