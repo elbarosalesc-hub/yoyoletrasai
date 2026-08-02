@@ -19,16 +19,18 @@ import './deploy-ready.css'
 import './integrations-3d.css'
 import './platform-complete.css'
 import './mobile-reference.css'
+import './approved-platform.css'
+import './approved-shell.css'
 
 export const metadata:Metadata={
- title:'YOYOLETRASAI | Plataforma educativa premium con IA',
- description:'Recursos curriculares, Profesor Virtual, juegos inmersivos, herramientas DUA y PIE, evaluación y seguimiento para Chile y Latinoamérica',
- applicationName:'YOYOLETRASAI',
- keywords:['educación','Chile','PIE','DUA','recursos educativos','inteligencia artificial','juegos educativos'],
+ title:'YoYo Letras AI | Plataforma educativa inteligente',
+ description:'Plataforma educativa institucional con IA, inclusión, recursos, evaluación, seguimiento y gestión pedagógica.',
+ applicationName:'YoYo Letras AI',
+ keywords:['educación','Chile','PIE','DUA','recursos educativos','inteligencia artificial','gestión escolar'],
  authors:[{name:'Elba Rosales'}]
 }
 
-export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#123d4b'}
+export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#0d1530'}
 
 export default function RootLayout({children}:{children:ReactNode}){
  return <html lang="es"><body>{children}</body></html>
