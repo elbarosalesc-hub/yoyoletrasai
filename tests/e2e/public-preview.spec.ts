@@ -1,12 +1,12 @@
 import { mkdir } from 'node:fs/promises'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 const baseUrl = 'http://127.0.0.1:3000'
 
-function collectBrowserErrors(page: Parameters<typeof test>[0] extends never ? never : any) {
+function collectBrowserErrors(page: Page) {
   const errors: string[] = []
-  page.on('pageerror', (error: Error) => errors.push(`pageerror: ${error.message}`))
-  page.on('console', (message: { type: () => string; text: () => string }) => {
+  page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`))
+  page.on('console', (message) => {
     if (message.type() === 'error') errors.push(`console: ${message.text()}`)
   })
   return errors
