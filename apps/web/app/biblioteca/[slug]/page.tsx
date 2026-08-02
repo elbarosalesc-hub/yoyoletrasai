@@ -3,7 +3,7 @@
 import {useMemo,useState} from 'react'
 import {useParams} from 'next/navigation'
 import {AppShell} from '@/components/AppShell'
-import {getPremiumActivity,premiumActivities} from '@/lib/activityCatalog'
+import {getPremiumActivity,premiumActivities} from '@/lib/resourceCatalog'
 import {BookOpen,Eye,Headphones,ImageIcon,Lightbulb,Mic,PenLine,Save,Send,ShieldCheck,Sparkles,Star,Users} from 'lucide-react'
 
 const choiceArt=['🔑','🗺️','🧰','🎵']
