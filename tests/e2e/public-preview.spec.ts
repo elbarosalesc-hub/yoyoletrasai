@@ -38,8 +38,8 @@ test.describe('vista previa premium', () => {
     expect(response?.ok()).toBeTruthy()
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Aprendizaje, inclusión y gestión escolar')
     await expect(page.getByRole('heading', { name: 'Bienvenida nuevamente' })).toBeVisible()
-    await expect(page.getByLabel('Correo electrónico')).toBeVisible()
-    await expect(page.getByLabel('Contraseña')).toBeVisible()
+    await expect(page.getByRole('textbox', { name: /Correo electrónico/i })).toBeVisible()
+    await expect(page.locator('input[type="password"]')).toBeVisible()
     await expect(page.getByRole('button', { name: /Mostrar contraseña/i })).toBeVisible()
 
     await page.screenshot({ path: '/tmp/yoyo-preview/acceso-premium.png', fullPage: true })
