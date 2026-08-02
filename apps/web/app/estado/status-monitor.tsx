@@ -1,15 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { CheckCircle2, Database, RefreshCw, Server, Settings2, TriangleAlert } from 'lucide-react'
 import styles from './status.module.css'
 
 type HealthPayload = {
-  status: 'ok' | 'degraded' | 'error'
-  application?: string
-  configuration?: string
-  database?: string
-  timestamp?: string
+  status: 'ok' | 'degraded' | 'misconfigured'
+  checkedAt?: string
+  services?: {
+    application?: 'ok'
+    databaseGateway?: 'reachable' | 'unreachable' | 'error' | 'unavailable'
+  }
 }
 
 export function StatusMonitor() {
@@ -22,7 +23,7 @@ export function StatusMonitor() {
     setMessage('Comprobando servicios esenciales…')
 
     const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 8000)
+    const timeout = window.setTimeout(() => controller.abort(), 8_000)
 
     try {
       const response = await fetch('/api/health', {
@@ -32,9 +33,16 @@ export function StatusMonitor() {
       })
       const result = (await response.json()) as HealthPayload
       setPayload(result)
-      setMessage(response.ok ? 'Los servicios esenciales responden correctamente.' : 'La plataforma responde con capacidad limitada.')
+
+      if (result.status === 'ok') {
+        setMessage('Los servicios esenciales responden correctamente.')
+      } else if (result.status === 'misconfigured') {
+        setMessage('La aplicación responde, pero faltan variables de configuración esenciales.')
+      } else {
+        setMessage('La plataforma responde con capacidad limitada. Revisa la conectividad de datos.')
+      }
     } catch {
-      setPayload({ status: 'error' })
+      setPayload(null)
       setMessage('No fue posible completar la comprobación. Revisa la conexión e inténtalo nuevamente.')
     } finally {
       window.clearTimeout(timeout)
@@ -46,18 +54,23 @@ export function StatusMonitor() {
     void checkHealth()
   }, [checkHealth])
 
+  const applicationOk = payload?.services?.application === 'ok'
+  const databaseValue = payload?.services?.databaseGateway
+  const databaseOk = databaseValue === 'reachable'
+  const configurationOk = payload?.status !== 'misconfigured' && Boolean(payload)
   const overallOk = payload?.status === 'ok'
+  const checkFailed = !loading && !payload
 
   return (
     <section className={styles.monitor} aria-live="polite">
-      <div className={`${styles.summary} ${overallOk ? styles.summaryOk : payload?.status === 'error' ? styles.summaryError : styles.summaryPending}`}>
+      <div className={`${styles.summary} ${overallOk ? styles.summaryOk : checkFailed ? styles.summaryError : styles.summaryPending}`}>
         <span className={styles.summaryIcon}>
           {overallOk ? <CheckCircle2 size={28} /> : <TriangleAlert size={28} />}
         </span>
         <div>
           <strong>{loading ? 'Verificación en curso' : overallOk ? 'Plataforma operativa' : 'Revisión necesaria'}</strong>
           <p>{message}</p>
-          {payload?.timestamp && <small>Última comprobación: {new Date(payload.timestamp).toLocaleString('es-CL')}</small>}
+          {payload?.checkedAt && <small>Última comprobación: {new Date(payload.checkedAt).toLocaleString('es-CL')}</small>}
         </div>
         <button type="button" onClick={() => void checkHealth()} disabled={loading}>
           <RefreshCw size={17} className={loading ? styles.spinning : undefined} />
@@ -69,20 +82,20 @@ export function StatusMonitor() {
         <StatusCard
           icon={<Server size={22} />}
           title="Aplicación web"
-          value={payload?.application ?? (payload ? 'No disponible' : 'Comprobando')}
-          ok={payload?.application === 'operational'}
+          value={applicationOk ? 'Aplicación disponible' : loading ? 'Comprobando' : 'Sin respuesta verificada'}
+          ok={applicationOk}
         />
         <StatusCard
           icon={<Settings2 size={22} />}
           title="Configuración"
-          value={payload?.configuration ?? (payload ? 'No disponible' : 'Comprobando')}
-          ok={payload?.configuration === 'valid'}
+          value={configurationOk ? 'Variables configuradas' : loading ? 'Comprobando' : 'Configuración incompleta'}
+          ok={configurationOk}
         />
         <StatusCard
           icon={<Database size={22} />}
           title="Supabase"
-          value={payload?.database ?? (payload ? 'No disponible' : 'Comprobando')}
-          ok={payload?.database === 'reachable'}
+          value={databaseLabel(databaseValue, loading)}
+          ok={databaseOk}
         />
       </div>
 
@@ -102,27 +115,24 @@ export function StatusMonitor() {
   )
 }
 
-function StatusCard({ icon, title, value, ok }: { icon: React.ReactNode; title: string; value: string; ok: boolean }) {
+function StatusCard({ icon, title, value, ok }: { icon: ReactNode; title: string; value: string; ok: boolean }) {
   return (
     <article className={styles.card}>
       <span className={styles.cardIcon}>{icon}</span>
       <div>
         <small>{title}</small>
-        <strong>{humanize(value)}</strong>
+        <strong>{value}</strong>
       </div>
       <em className={ok ? styles.good : styles.review}>{ok ? 'Operativo' : 'Revisar'}</em>
     </article>
   )
 }
 
-function humanize(value: string) {
-  const labels: Record<string, string> = {
-    operational: 'Aplicación disponible',
-    valid: 'Variables configuradas',
-    reachable: 'Servicio accesible',
-    missing: 'Configuración incompleta',
-    unreachable: 'Servicio sin respuesta',
-    checking: 'Comprobando',
-  }
-  return labels[value] ?? value.replaceAll('_', ' ')
+function databaseLabel(value: HealthPayload['services'] extends infer T ? T extends { databaseGateway?: infer D } ? D : never : never, loading: boolean) {
+  if (loading) return 'Comprobando'
+  if (value === 'reachable') return 'Servicio accesible'
+  if (value === 'unavailable') return 'Configuración incompleta'
+  if (value === 'unreachable') return 'Servicio sin respuesta'
+  if (value === 'error') return 'Gateway con error'
+  return 'No disponible'
 }
