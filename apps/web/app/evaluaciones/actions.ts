@@ -28,7 +28,11 @@ export type AssessmentDraftInput = {
   rubric: AssessmentRubric[]
 }
 
-export async function saveAssessment(input: AssessmentDraftInput) {
+type SaveAssessmentResult =
+  | { ok: true; id: string; updatedAt: string }
+  | { ok: false; error: string }
+
+export async function saveAssessment(input: AssessmentDraftInput): Promise<SaveAssessmentResult> {
   const context = await requireOrganizationContext('/evaluaciones')
   const title = input.title.trim()
 
@@ -61,10 +65,12 @@ export async function saveAssessment(input: AssessmentDraftInput) {
     : supabase.from('assessments').insert(payload)
 
   const { data, error } = await query.select('id, updated_at').single()
-  if (error) return { ok: false, error: 'No fue posible guardar la evaluación.' }
+  if (error || !data?.id || !data?.updated_at) {
+    return { ok: false, error: 'No fue posible guardar la evaluación.' }
+  }
 
   revalidatePath('/evaluaciones')
   revalidatePath('/app')
 
-  return { ok: true, id: data.id as string, updatedAt: data.updated_at as string }
+  return { ok: true, id: String(data.id), updatedAt: String(data.updated_at) }
 }
