@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { CheckCircle2, Database, RefreshCw, Server, Settings2, TriangleAlert } from 'lucide-react'
 import styles from './status.module.css'
 
+type DatabaseGatewayStatus = 'reachable' | 'unreachable' | 'error' | 'unavailable'
+
 type HealthPayload = {
   status: 'ok' | 'degraded' | 'misconfigured'
   checkedAt?: string
   services?: {
     application?: 'ok'
-    databaseGateway?: 'reachable' | 'unreachable' | 'error' | 'unavailable'
+    databaseGateway?: DatabaseGatewayStatus
   }
 }
 
@@ -128,7 +130,7 @@ function StatusCard({ icon, title, value, ok }: { icon: ReactNode; title: string
   )
 }
 
-function databaseLabel(value: HealthPayload['services'] extends infer T ? T extends { databaseGateway?: infer D } ? D : never : never, loading: boolean) {
+function databaseLabel(value: DatabaseGatewayStatus | undefined, loading: boolean) {
   if (loading) return 'Comprobando'
   if (value === 'reachable') return 'Servicio accesible'
   if (value === 'unavailable') return 'Configuración incompleta'
