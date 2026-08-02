@@ -36,10 +36,10 @@ import {
 } from 'lucide-react'
 import { SessionMenu } from '@/components/SessionMenu'
 
-type NavItem = readonly [label: string, href: string, icon: LucideIcon]
-type NavGroup = { label: string; items: readonly NavItem[] }
+type NavItem = [label: string, href: string, icon: LucideIcon]
+type NavGroup = { label: string; items: NavItem[] }
 
-const groups: readonly NavGroup[] = [
+const groups: NavGroup[] = [
   {
     label: 'Principal',
     items: [
@@ -82,9 +82,9 @@ const groups: readonly NavGroup[] = [
   },
 ]
 
-const allItems: NavItem[] = groups.flatMap((group) => [...group.items])
+const allItems: NavItem[] = groups.flatMap((group) => group.items)
 
-const mobile: readonly NavItem[] = [
+const mobile: NavItem[] = [
   ['Inicio', '/app', Home],
   ['Cursos', '/cursos', BookOpen],
   ['Crear', '/crear', Sparkles],
