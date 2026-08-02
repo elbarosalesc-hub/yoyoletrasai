@@ -16,7 +16,7 @@ type Student = {
   course_enrollments: Enrollment[] | null
 }
 
-export function StudentManager({ students, courses }: { students: Student[]; courses: Course[] }) {
+export function StudentManager({ students, courses, canManage }: { students: Student[]; courses: Course[]; canManage: boolean }) {
   const [query, setQuery] = useState('')
   const [state, action, pending] = useActionState(createStudent, initialStudentActionState)
 
@@ -63,15 +63,22 @@ export function StudentManager({ students, courses }: { students: Student[]; cou
         </section>
 
         <aside className="tracking-side">
-          <form action={action} className="premium-card evidence-form student-form">
-            <div><span className="eyebrow">Nueva ficha</span><h2>Agregar estudiante</h2><p>Los antecedentes PIE y DUA se gestionan por separado y con permisos restringidos.</p></div>
-            <div className="form-two"><label>Nombres<input name="firstName" required maxLength={80} /></label><label>Apellidos<input name="lastName" required maxLength={120} /></label></div>
-            <label>Nombre preferido<input name="preferredName" maxLength={120} placeholder="Opcional" /></label>
-            <div className="form-two"><label>Identificador interno<input name="externalReference" maxLength={60} placeholder="RUT, matrícula u otro" /></label><label>Fecha de nacimiento<input name="birthDate" type="date" /></label></div>
-            <label>Curso inicial<select name="courseId" defaultValue=""><option value="">Sin matrícula por ahora</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.name} · {course.level} · {course.academic_year}</option>)}</select></label>
-            <button className="btn btn-primary" disabled={pending}><UserPlus size={17} />{pending ? 'Guardando…' : 'Crear estudiante'}</button>
-            {state.message && <p className={`save-status ${state.status}`}>{state.message}</p>}
-          </form>
+          {canManage ? (
+            <form action={action} className="premium-card evidence-form student-form">
+              <div><span className="eyebrow">Nueva ficha</span><h2>Agregar estudiante</h2><p>Los antecedentes PIE y DUA se gestionan por separado y con permisos restringidos.</p></div>
+              <div className="form-two"><label>Nombres<input name="firstName" required maxLength={80} /></label><label>Apellidos<input name="lastName" required maxLength={120} /></label></div>
+              <label>Nombre preferido<input name="preferredName" maxLength={120} placeholder="Opcional" /></label>
+              <div className="form-two"><label>Identificador interno<input name="externalReference" maxLength={60} placeholder="RUT, matrícula u otro" /></label><label>Fecha de nacimiento<input name="birthDate" type="date" /></label></div>
+              <label>Curso inicial<select name="courseId" defaultValue=""><option value="">Sin matrícula por ahora</option>{courses.map((course) => <option value={course.id} key={course.id}>{course.name} · {course.level} · {course.academic_year}</option>)}</select></label>
+              <button className="btn btn-primary" disabled={pending}><UserPlus size={17} />{pending ? 'Guardando…' : 'Crear estudiante'}</button>
+              {state.message && <p className={`save-status ${state.status}`}>{state.message}</p>}
+            </form>
+          ) : (
+            <section className="premium-card evidence-form student-form">
+              <ShieldCheck size={28} />
+              <div><span className="eyebrow">Acceso protegido</span><h2>Consulta institucional</h2><p>Tu rol no permite crear fichas ni matrículas. Los datos visibles continúan filtrados por organización.</p></div>
+            </section>
+          )}
         </aside>
       </div>
     </div>
