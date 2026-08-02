@@ -31,6 +31,7 @@ import './operational-status.css'
 import './status-monitor.css'
 import './assessment-workspace.css'
 import './virtual-professor.css'
+import './virtual-teacher.css'
 import './planner-workspace.css'
 
 export const metadata:Metadata={
