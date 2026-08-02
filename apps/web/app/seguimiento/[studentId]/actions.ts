@@ -14,6 +14,7 @@ export const initialSupportActionState: SupportActionState = {
 }
 
 const supportRoles = new Set(['pie', 'utp', 'principal', 'institution_admin', 'platform_admin'])
+const supportStatuses = new Set(['monitoring', 'active', 'closed'])
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key)
@@ -31,21 +32,26 @@ export async function saveSupportProfile(
     return { status: 'error', message: 'Tu rol no tiene permisos para editar antecedentes PIE y DUA.' }
   }
 
-  const { data: student } = await context.supabase
+  const { data: student, error: studentError } = await context.supabase
     .from('students')
     .select('id')
     .eq('id', studentId)
     .eq('organization_id', context.organization.id)
     .maybeSingle()
 
-  if (!student) {
+  if (studentError || !student) {
     return { status: 'error', message: 'El estudiante no pertenece a la institución activa.' }
+  }
+
+  const supportStatus = readText(formData, 'supportStatus') || 'monitoring'
+  if (!supportStatuses.has(supportStatus)) {
+    return { status: 'error', message: 'El estado del apoyo no es válido.' }
   }
 
   const payload = {
     organization_id: context.organization.id,
     student_id: studentId,
-    support_status: readText(formData, 'supportStatus') || 'monitoring',
+    support_status: supportStatus,
     strengths: readText(formData, 'strengths') || null,
     barriers: readText(formData, 'barriers') || null,
     interests: readText(formData, 'interests') || null,
@@ -58,12 +64,16 @@ export async function saveSupportProfile(
     updated_by: context.userId,
   }
 
-  const { data: existing } = await context.supabase
+  const { data: existing, error: existingError } = await context.supabase
     .from('student_support_profiles')
     .select('id')
     .eq('student_id', studentId)
     .eq('organization_id', context.organization.id)
     .maybeSingle()
+
+  if (existingError) {
+    return { status: 'error', message: 'No fue posible verificar el perfil pedagógico.' }
+  }
 
   const result = existing
     ? await context.supabase
