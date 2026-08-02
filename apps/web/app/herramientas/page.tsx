@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   FileText,
   Gamepad2,
+  Gauge,
   Grid3X3,
   HeartHandshake,
   Image,
@@ -20,6 +21,7 @@ import { AppShell } from '@/components/AppShell'
 
 const tools = [
   { title: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica con contexto institucional.', icon: BrainCircuit, href: '/profesor-virtual', status: 'Interactivo', featured: true },
+  { title: 'Centro de Aula', description: 'Temporizador, selector equitativo, grupos, calificaciones y velocidad lectora.', icon: Gauge, href: '/herramientas/aula', status: 'Nuevo', featured: true },
   { title: 'Planificador semanal', description: 'Organiza OA, actividades, apoyos y evaluaciones en una semana editable.', icon: CalendarDays, href: '/planificador', status: 'Nuevo', featured: true },
   { title: 'Estudio de creación', description: 'Genera guías, evaluaciones y rúbricas editables con apoyos DUA y PIE.', icon: WandSparkles, href: '/crear', status: 'Operativo', featured: true },
   { title: 'Constructor de evaluaciones', description: 'Diseña instrumentos, variantes diversificadas, puntajes y rúbricas.', icon: ClipboardCheck, href: '/evaluaciones', status: 'Conectado' },
@@ -36,7 +38,7 @@ const tools = [
 
 export default function HerramientasPage() {
   return (
-    <AppShell active="Herramientas docentes">
+    <AppShell active="Herramientas">
       <div className="tools-command-page">
         <section className="premium-hero tools-command-hero">
           <div>
