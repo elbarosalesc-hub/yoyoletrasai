@@ -26,6 +26,7 @@ import './student-support.css'
 import './learning-evidence.css'
 import './evidence-dashboard.css'
 import './resilience.css'
+import './operational-status.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',
