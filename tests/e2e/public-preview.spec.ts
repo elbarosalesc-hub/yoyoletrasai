@@ -12,26 +12,26 @@ function collectBrowserErrors(page: Page) {
   return errors
 }
 
-test.describe('vista previa aprobada', () => {
-  test('la portada carga, navega y no presenta errores de navegador', async ({ page }) => {
+test.describe('vista previa premium', () => {
+  test('la portada premium carga, navega y no presenta errores', async ({ page }) => {
     const browserErrors = collectBrowserErrors(page)
     const response = await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
 
     expect(response?.ok()).toBeTruthy()
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Una plataforma clara, inclusiva y conectada')
-    await expect(page.getByRole('link', { name: /Acceder a la plataforma/i })).toBeVisible()
-    await expect(page.getByRole('heading', { name: /Todo el trabajo pedagógico organizado/i })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('El centro de operaciones')
+    await expect(page.getByRole('link', { name: /Entrar a la plataforma/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /De la planificación a la evidencia/i })).toBeVisible()
 
-    await page.getByRole('link', { name: 'Explorar módulos' }).click()
+    await page.getByRole('link', { name: 'Explorar el ecosistema' }).click()
     await expect(page).toHaveURL(/#ecosistema$/)
 
     await mkdir('/tmp/yoyo-preview', { recursive: true })
-    await page.screenshot({ path: '/tmp/yoyo-preview/portada-aprobada.png', fullPage: true })
+    await page.screenshot({ path: '/tmp/yoyo-preview/portada-premium.png', fullPage: true })
 
     expect(browserErrors).toEqual([])
   })
 
-  test('el acceso seguro se muestra correctamente', async ({ page }) => {
+  test('el acceso premium se muestra correctamente', async ({ page }) => {
     const browserErrors = collectBrowserErrors(page)
     const response = await page.goto(`${baseUrl}/acceso`, { waitUntil: 'networkidle' })
 
@@ -40,8 +40,9 @@ test.describe('vista previa aprobada', () => {
     await expect(page.getByRole('heading', { name: 'Bienvenida nuevamente' })).toBeVisible()
     await expect(page.getByLabel('Correo electrónico')).toBeVisible()
     await expect(page.getByLabel('Contraseña')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Mostrar contraseña/i })).toBeVisible()
 
-    await page.screenshot({ path: '/tmp/yoyo-preview/acceso-seguro.png', fullPage: true })
+    await page.screenshot({ path: '/tmp/yoyo-preview/acceso-premium.png', fullPage: true })
     expect(browserErrors).toEqual([])
   })
 })
