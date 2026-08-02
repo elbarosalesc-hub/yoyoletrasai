@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpenCheck,
   BrainCircuit,
+  CalendarDays,
   ClipboardCheck,
   FileText,
   Gamepad2,
@@ -18,7 +19,8 @@ import {
 import { AppShell } from '@/components/AppShell'
 
 const tools = [
-  { title: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica con contexto institucional.', icon: BrainCircuit, href: '/profesor-virtual', status: 'Nuevo', featured: true },
+  { title: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica con contexto institucional.', icon: BrainCircuit, href: '/profesor-virtual', status: 'Interactivo', featured: true },
+  { title: 'Planificador semanal', description: 'Organiza OA, actividades, apoyos y evaluaciones en una semana editable.', icon: CalendarDays, href: '/planificador', status: 'Nuevo', featured: true },
   { title: 'Estudio de creación', description: 'Genera guías, evaluaciones y rúbricas editables con apoyos DUA y PIE.', icon: WandSparkles, href: '/crear', status: 'Operativo', featured: true },
   { title: 'Constructor de evaluaciones', description: 'Diseña instrumentos, variantes diversificadas, puntajes y rúbricas.', icon: ClipboardCheck, href: '/evaluaciones', status: 'Conectado' },
   { title: 'Biblioteca pedagógica', description: 'Busca, previsualiza, adapta y asigna recursos a cursos.', icon: BookOpenCheck, href: '/biblioteca', status: 'Interactivo' },
@@ -46,7 +48,7 @@ export default function HerramientasPage() {
         </section>
 
         <section className="tools-flow-strip" aria-label="Flujo de trabajo docente">
-          <span><b>1</b> Detectar necesidad</span><ArrowRight /><span><b>2</b> Diseñar apoyo</span><ArrowRight /><span><b>3</b> Aplicar recurso</span><ArrowRight /><span><b>4</b> Registrar evidencia</span>
+          <span><b>1</b> Detectar necesidad</span><ArrowRight /><span><b>2</b> Planificar apoyo</span><ArrowRight /><span><b>3</b> Crear y aplicar</span><ArrowRight /><span><b>4</b> Evaluar y registrar</span>
         </section>
 
         <section className="tools-featured-grid">
