@@ -20,6 +20,7 @@ import {
 import { AppShell } from '@/components/AppShell'
 
 const tools = [
+  { title: 'Centros Premium', description: 'MathLab, Ciencia Viva, caligrafía, grafomotricidad, pictogramas con fotografía real y Plan Lector.', icon: Shapes, href: '/centros-premium', status: 'Premium', featured: true },
   { title: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica con contexto institucional.', icon: BrainCircuit, href: '/profesor-virtual', status: 'Interactivo', featured: true },
   { title: 'Centro de Aula', description: 'Temporizador, selector equitativo, grupos, calificaciones y velocidad lectora.', icon: Gauge, href: '/herramientas/aula', status: 'Nuevo', featured: true },
   { title: 'Planificador semanal', description: 'Organiza OA, actividades, apoyos y evaluaciones en una semana editable.', icon: CalendarDays, href: '/planificador', status: 'Nuevo', featured: true },
@@ -28,9 +29,9 @@ const tools = [
   { title: 'Biblioteca pedagógica', description: 'Busca, previsualiza, adapta y asigna recursos a cursos.', icon: BookOpenCheck, href: '/biblioteca', status: 'Interactivo' },
   { title: 'Seguimiento por evidencias', description: 'Registra desempeño, apoyos utilizados, autonomía y nivel de logro.', icon: BarChart3, href: '/seguimiento/evidencias', status: 'Conectado' },
   { title: 'Inclusión y perfiles de apoyo', description: 'Organiza fortalezas, barreras, adecuaciones y responsables.', icon: HeartHandshake, href: '/inclusion', status: 'Operativo' },
-  { title: 'Caligrafía y grafomotricidad', description: 'Crea trazos, palabras, pautas y actividades listas para imprimir.', icon: PenTool, href: '/caligrafia', status: 'Operativo' },
-  { title: 'Manipulativos matemáticos', description: 'Base diez, fracciones, dinero, geometría y representaciones visuales.', icon: Shapes, href: '/manipulativos', status: 'Operativo' },
-  { title: 'Pictogramas y apoyos visuales', description: 'Rutinas, secuencias, tableros y comunicación visual.', icon: Image, href: '/inclusion', status: 'Operativo' },
+  { title: 'Caligrafía y grafomotricidad', description: 'Crea trazos, palabras, pautas y recorridos listos para imprimir.', icon: PenTool, href: '/centros-premium', status: 'Integrado' },
+  { title: 'Manipulativos matemáticos', description: 'Base diez, fracciones, valor posicional y representaciones visuales.', icon: Shapes, href: '/centros-premium', status: 'Integrado' },
+  { title: 'Pictogramas y apoyos visuales', description: 'Fotografías reales, rutinas, secuencias y comunicación visual.', icon: Image, href: '/centros-premium', status: 'Integrado' },
   { title: 'Generador de fichas', description: 'Transforma una idea en actividades digitales, imprimibles y editables.', icon: Grid3X3, href: '/crear', status: 'Operativo' },
   { title: 'Juegos educativos', description: 'Actividades motivadoras con objetivos y retroalimentación inmediata.', icon: Gamepad2, href: '/juegos', status: 'Interactivo' },
   { title: 'Informes pedagógicos', description: 'Plantillas para avances, familia, PIE y seguimiento institucional.', icon: FileText, href: '/informes', status: 'Operativo' },
@@ -46,7 +47,7 @@ export default function HerramientasPage() {
             <h1>De una necesidad pedagógica a una acción lista para aplicar.</h1>
             <p>Crea una vez y transforma el contenido en planificación, recurso, evaluación, adaptación, juego y evidencia de aprendizaje.</p>
           </div>
-          <Link href="/profesor-virtual" className="btn btn-primary"><BrainCircuit size={18} /> Consultar al Profesor Virtual</Link>
+          <Link href="/centros-premium" className="btn btn-primary"><Shapes size={18} /> Abrir Centros Premium</Link>
         </section>
 
         <section className="tools-flow-strip" aria-label="Flujo de trabajo docente">
