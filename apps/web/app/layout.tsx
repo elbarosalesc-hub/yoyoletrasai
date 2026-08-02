@@ -21,6 +21,7 @@ import './platform-complete.css'
 import './mobile-reference.css'
 import './approved-platform.css'
 import './approved-shell.css'
+import './student-management.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',
