@@ -1,7 +1,18 @@
-'use client'
-import {useMemo,useState} from 'react'
-import {AppShell} from '@/components/AppShell'
-import {Send,CheckCircle2,BookOpen,ClipboardList,Users,BarChart3,Sparkles,ShieldCheck,Undo2} from 'lucide-react'
+import { AppShell } from '@/components/AppShell'
+import { requireOrganizationContext } from '@/lib/auth/organization-context'
+import { VirtualTeacherClient } from './VirtualTeacherClient'
 
-const quick=[['Crear recurso',BookOpen],['Adaptar para PIE',Users],['Analizar resultados',BarChart3],['Preparar evaluación',ClipboardList]] as const
-export default function Profesor(){const[text,setText]=useState('');const[messages,setMessages]=useState([{role:'ai',text:'Hola, Elba. Revisé 3.º básico y detecté que el OA 4 necesita reforzamiento en justificación de inferencias. Puedo preparar una secuencia completa con juego, guía, adaptación y ticket de salida.'}]);const[approved,setApproved]=useState(false);const send=()=>{if(!text.trim())return;setMessages(v=>[...v,{role:'user',text},{role:'ai',text:'Preparé una propuesta contextualizada: actividad de 35 minutos, juego por niveles, dos versiones accesibles, pauta y seguimiento. Revisa las acciones antes de aprobar.'}]);setText('')};const actions=useMemo(()=>['Analizar OA y resultados','Seleccionar contenidos de la biblioteca','Crear actividad principal','Generar versiones adaptadas','Preparar pauta y ticket de salida','Vincular al curso y seguimiento'],[]);return <AppShell active="Profesor Virtual"><section className="virtual-hero"><div><span className="eyebrow">Profesor Virtual YOYO</span><h1>Tu copiloto pedagógico con contexto real</h1><p>Conversa, crea, adapta, analiza y ejecuta acciones dentro de la plataforma con aprobación docente.</p></div><div className="virtual-orb"><Sparkles/><span>Contexto activo</span><b>3.º básico · Lenguaje</b></div></section><div className="virtual-layout"><section className="virtual-chat"><div className="quick-actions">{quick.map(([label,Icon])=><button key={label} onClick={()=>setText(label)}><Icon size={18}/><span>{label}</span></button>)}</div><div className="chat-messages premium-chat">{messages.map((m,i)=><div className={`chat ${m.role==='user'?'user-msg':'ai-msg'}`} key={i}>{m.role==='ai'&&<span className="yoyo-avatar">Y</span>}<p>{m.text}</p></div>)}</div><div className="chat-input premium-chat-input"><input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Pide una planificación, adaptación, análisis o recurso..."/><button className="btn btn-primary" onClick={send}><Send size={16}/>Enviar</button></div></section><aside className="virtual-actions panel"><div className="virtual-panel-title"><div><span className="eyebrow">Flujo preparado</span><h2>Paquete de refuerzo OA 4</h2></div><ShieldCheck size={26}/></div>{actions.map((x,i)=><div className="action-row premium-action" key={x}><CheckCircle2 size={18}/><span>{x}</span><small>{i<2?'Listo':approved?'Ejecutado':'Pendiente'}</small></div>)}<button className="btn btn-coral virtual-approve" onClick={()=>setApproved(true)}>{approved?'Acciones aprobadas':'Revisar y aprobar'}</button>{approved&&<button className="btn btn-soft virtual-undo" onClick={()=>setApproved(false)}><Undo2 size={16}/>Deshacer aprobación</button>}<div className="insight"><b>Control docente</b><p>YOYO muestra qué hará, qué información utilizará y qué cambiará antes de ejecutar.</p></div></aside></div></AppShell>}
+export const dynamic = 'force-dynamic'
+
+export default async function ProfesorVirtualPage() {
+  const context = await requireOrganizationContext('/profesor-virtual')
+
+  return (
+    <AppShell active="Profesor Virtual">
+      <VirtualTeacherClient
+        displayName={context.displayName}
+        organization={context.organization.name}
+      />
+    </AppShell>
+  )
+}
