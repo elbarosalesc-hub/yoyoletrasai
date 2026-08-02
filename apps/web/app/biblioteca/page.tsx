@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {Bookmark,CheckCircle2,Eye,Filter,Grid2X2,List,Search,Users,X} from 'lucide-react'
 import {AppShell} from '@/components/AppShell'
 import {ResourceAssignmentModal,type ResourceAssignment} from '@/components/ResourceAssignmentModal'
-import {premiumActivities,type PremiumActivity} from '@/lib/activityCatalog'
+import {resourceCatalog,type PremiumActivity} from '@/lib/resourceCatalog'
 
 const art:Record<string,string>={forest:'🌳',reading:'📖',placevalue:'🏙️',market:'🛒',division:'➗',tracing:'🦌',letterm:'✍️',routine:'🧩',ecosystem:'🦊',circuit:'💡',assessment:'📝',puzzle:'🐱'}
 
@@ -31,10 +31,10 @@ export default function Biblioteca(){
   }catch{setFavorites([]);setAssignments([])}
  },[])
 
- const subjects=['Todas',...Array.from(new Set(premiumActivities.map(r=>r.subject)))]
- const levels=['Todos',...Array.from(new Set(premiumActivities.map(r=>r.level)))]
- const formats=['Todos',...Array.from(new Set(premiumActivities.map(r=>r.format)))]
- const filtered=useMemo(()=>premiumActivities.filter(resource=>{
+ const subjects=['Todas',...Array.from(new Set(resourceCatalog.map(r=>r.subject)))]
+ const levels=['Todos',...Array.from(new Set(resourceCatalog.map(r=>r.level)))]
+ const formats=['Todos',...Array.from(new Set(resourceCatalog.map(r=>r.format)))]
+ const filtered=useMemo(()=>resourceCatalog.filter(resource=>{
   const text=(resource.title+' '+resource.summary+' '+resource.oa+' '+resource.subject+' '+resource.level).toLowerCase()
   return text.includes(q.toLowerCase())
    &&(subject==='Todas'||resource.subject===subject)
@@ -53,7 +53,7 @@ export default function Biblioteca(){
  const clearFilters=()=>{setQ('');setSubject('Todas');setLevel('Todos');setFormat('Todos');setOnlyFavorites(false)}
 
  return <AppShell active="Biblioteca">
-  <section className="premium-hero library-hero"><span className="eyebrow">Biblioteca inteligente</span><h1>Recursos listos para enseñar, adaptar y asignar</h1><p>Explora actividades con objetivos, secuencia, apoyos y criterios de logro. Previsualiza, guarda favoritos y asigna a tus cursos sin abandonar la biblioteca.</p><div className="library-stats"><span><strong>{premiumActivities.length}</strong> recursos</span><span><strong>{favorites.length}</strong> favoritos</span><span><strong>{assignments.length}</strong> asignaciones</span></div></section>
+  <section className="premium-hero library-hero"><span className="eyebrow">Biblioteca inteligente</span><h1>Recursos listos para enseñar, adaptar y asignar</h1><p>Explora actividades con objetivos, secuencia, apoyos y criterios de logro. Previsualiza, guarda favoritos y asigna a tus cursos sin abandonar la biblioteca.</p><div className="library-stats"><span><strong>{resourceCatalog.length}</strong> recursos</span><span><strong>{favorites.length}</strong> favoritos</span><span><strong>{assignments.length}</strong> asignaciones</span></div></section>
 
   <section className="library-control-panel premium-card">
    <div className="library-search"><Search size={19}/><input value={q} onChange={event=>setQ(event.target.value)} placeholder="Buscar por tema, OA, curso o habilidad"/></div>
