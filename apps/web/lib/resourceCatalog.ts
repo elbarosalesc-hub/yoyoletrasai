@@ -1,7 +1,11 @@
-import { premiumActivities } from './premiumActivities'
+import { premiumActivities as coreActivities } from './premiumActivities'
 import { extraActivities } from './extraActivities'
 
 export type { PremiumActivity } from './premiumActivities'
 
-export const resourceCatalog = [...premiumActivities, ...extraActivities]
-export const getResource = (slug: string) => resourceCatalog.find((activity) => activity.slug === slug)
+export const premiumActivities = [...coreActivities, ...extraActivities]
+export const getPremiumActivity = (slug: string) =>
+  premiumActivities.find((activity) => activity.slug === slug)
+
+export const resourceCatalog = premiumActivities
+export const getResource = getPremiumActivity
