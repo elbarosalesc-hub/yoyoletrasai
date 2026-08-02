@@ -96,7 +96,7 @@ export function SessionMenu({ open, onToggle, onClose }: SessionMenuProps) {
           <Link href="/seleccionar-institucion" onClick={onClose}>
             <Building2 size={17} /> Cambiar institución
           </Link>
-          <Link href="/qa" onClick={onClose}>
+          <Link href="/estado" onClick={onClose}>
             <ShieldCheck size={17} /> Estado de la plataforma
           </Link>
           <form action="/auth/cerrar-sesion" method="post">

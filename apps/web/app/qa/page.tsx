@@ -1,2 +1,17 @@
-import {AppShell} from '@/components/AppShell'
-export default function QA(){const items=[['Autenticación y permisos','Preparado'],['Biblioteca y filtros','Implementado'],['Profesor Virtual','Flujo implementado'],['Juegos multimedia','Prototipo interactivo'],['Exportación e impresión','Especificado'],['Pagos','Pendiente proveedor'],['Responsive','Implementado'],['Accesibilidad','En revisión'],['GitHub y Vercel','GitHub conectado']];return <AppShell active="QA y publicación"><div className="page-head"><div><h1>QA y publicación</h1><p>Estado real del producto y requisitos de despliegue.</p></div><span className="tag">Build consolidado</span></div><div className="quick-grid"><div className="quick"><strong>15</strong><span>rutas principales</span></div><div className="quick"><strong>0</strong><span>enlaces vacíos críticos</span></div><div className="quick"><strong>1</strong><span>app consolidada</span></div><div className="quick"><strong>6</strong><span>integraciones pendientes</span></div></div><div className="content-grid"><section className="panel"><h2>Checklist</h2>{items.map(([a,b])=><div className="action-row" key={a}><span>{a}</span><small>{b}</small></div>)}</section><aside className="panel"><h2>Para publicar</h2><div className="quality-list"><span>Proyecto Supabase</span><span>Proveedor de IA</span><span>Storage multimedia</span><span>Pagos</span><span>Dominio y Vercel</span></div><div className="insight"><b>Estado honesto</b><p>El frontend navegable está consolidado. Las integraciones externas requieren credenciales y proyectos reales.</p></div></aside></div></AppShell>}
+import { AppShell } from '@/components/AppShell'
+import { PlatformStatusDashboard } from '@/components/PlatformStatusDashboard'
+
+export default function QA() {
+  return (
+    <AppShell active="QA y publicación">
+      <div className="page-head">
+        <div>
+          <h1>Estado y calidad</h1>
+          <p>Monitoreo operativo, seguridad y avance real de la plataforma.</p>
+        </div>
+        <span className="tag">Verificación activa</span>
+      </div>
+      <PlatformStatusDashboard />
+    </AppShell>
+  )
+}
