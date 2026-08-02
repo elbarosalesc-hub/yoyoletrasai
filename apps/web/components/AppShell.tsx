@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import {useEffect,useMemo,useRef,useState} from 'react'
 import {useRouter} from 'next/navigation'
-import {BookOpen,Home,Sparkles,Users,Gamepad2,Accessibility,BarChart3,Settings,Search,PenTool,Images,ShieldCheck,ClipboardList,FlaskConical,FileText,UsersRound,Menu,Wrench,Bell,Mail,Bot,Cloud,X,ChevronRight,Command,Check,LogOut,ChevronDown} from 'lucide-react'
+import {BookOpen,Home,Sparkles,Users,Gamepad2,Accessibility,BarChart3,Settings,Search,PenTool,Images,ShieldCheck,ClipboardList,FlaskConical,FileText,UsersRound,Menu,Wrench,Bell,Mail,Bot,Cloud,X,ChevronRight,Command,Check} from 'lucide-react'
+import {SessionMenu} from '@/components/SessionMenu'
 
 const items=[
  ['Inicio','/app',Home],['Biblioteca','/biblioteca',BookOpen],['Crear con IA','/crear',Sparkles],['Profesor Virtual','/profesor-virtual',Bot],['Cursos y grupos','/cursos',Users],['Juegos inmersivos','/juegos',Gamepad2],['Caligrafía y trazos','/caligrafia',PenTool],['Pictogramas y apoyos','/inclusion',Accessibility],['Evaluaciones','/evaluaciones',ClipboardList],['Simuladores y ciencias','/simuladores',FlaskConical],['Herramientas docentes','/herramientas',Wrench],['Seguimiento','/seguimiento',BarChart3],['Familias','/familias',UsersRound],['Informes','/informes',FileText],['Integraciones','/integraciones',Cloud],['Centro multimedia','/multimedia',Images],['QA y publicación','/qa',ShieldCheck],['Configuración','/configuracion',Settings]
@@ -18,9 +19,9 @@ const mobile=[
 ] as const
 
 const notifications=[
- {title:'3.º Básico A completó una actividad',detail:'24 estudiantes finalizaron Detectives del bosque nativo.',time:'Hace 8 min'},
- {title:'Nuevo borrador guardado',detail:'Evaluación diversificada de inferencias.',time:'Hace 32 min'},
- {title:'Alerta de apoyo',detail:'5 estudiantes requieren reforzamiento en OA 4.',time:'Hoy'}
+ {title:'Actividad lista para revisar',detail:'Revisa el avance y las evidencias registradas en tus cursos.',time:'Hoy'},
+ {title:'Planificación pendiente',detail:'Completa los objetivos y apoyos del siguiente periodo.',time:'Esta semana'},
+ {title:'Seguimiento institucional',detail:'Consulta los indicadores de participación y progreso.',time:'Reciente'}
 ]
 
 export function AppShell({children,active}:{children:React.ReactNode;active:string}){
@@ -60,18 +61,18 @@ export function AppShell({children,active}:{children:React.ReactNode;active:stri
    <div className="sidebar-brand-row"><Link className="brand brand-premium" href="/app" onClick={()=>setOpen(false)}><span className="logo logo-premium">Y</span><span><strong>YOYOLETRASAI</strong><small>Aprender jugando, crear sin límites</small></span></Link><button className="sidebar-close" aria-label="Cerrar menú" onClick={()=>setOpen(false)}><X size={19}/></button></div>
    <div className="sidebar-section-label">Plataforma educativa</div>
    <nav className="menu premium-menu" aria-label="Navegación principal">{items.map(([label,href,Icon])=><Link key={label} href={href} onClick={()=>setOpen(false)} className={label===active?'active':''}><Icon size={17}/><span>{label}</span>{label==='Juegos inmersivos'&&<em>LIVE</em>}{label===active&&<ChevronRight className="active-arrow" size={15}/>}</Link>)}</nav>
-   <div className="sidebar-foot premium-plan"><div><ShieldCheck size={18}/><strong>Plan Docente Pro + PIE</strong></div><span>Profesor Virtual, juegos, adaptaciones y seguimiento incluidos.</span><div className="plan-progress"><i style={{width:'82%'}}/></div><small>82% de configuración completada</small><Link href="/qa">Ver estado del sistema</Link></div>
+   <div className="sidebar-foot premium-plan"><div><ShieldCheck size={18}/><strong>Plataforma educativa integral</strong></div><span>Gestión pedagógica, inclusión, recursos y seguimiento institucional.</span><div className="plan-progress"><i style={{width:'92%'}}/></div><small>Configuración técnica en etapa final</small><Link href="/qa">Ver estado del sistema</Link></div>
   </aside>
   <main className="app-main premium-main" id="contenido-principal">
    <div className="app-top premium-topbar">
     <button className="mobile-menu-button" aria-label="Abrir menú" onClick={()=>setOpen(true)}><Menu size={21}/></button>
-    <Link href="/app" className="mobile-brand" aria-label="Ir al inicio"><span className="mobile-brand-logo">Y</span><span><strong>YOYOLETRASAI</strong><small>Panel docente</small></span></Link>
+    <Link href="/app" className="mobile-brand" aria-label="Ir al inicio"><span className="mobile-brand-logo">Y</span><span><strong>YOYOLETRASAI</strong><small>Panel institucional</small></span></Link>
     <button className="search premium-search" type="button" onClick={()=>setSearchOpen(true)} aria-label="Abrir buscador"><Search size={18}/><span>Buscar actividades, temas, OA, habilidades...</span><kbd>⌘ K</kbd></button>
     <div className="top-actions">
      <Link href="/profesor-virtual" className="ai-pill"><Sparkles size={16}/> Profesor Virtual</Link>
      <div className="top-action-wrap"><button aria-label="Notificaciones" aria-expanded={notificationsOpen} onClick={()=>{setNotificationsOpen(value=>!value);setProfileOpen(false)}}><Bell size={18}/>{readCount<notifications.length&&<i>{notifications.length-readCount}</i>}</button>{notificationsOpen&&<div className="top-popover notification-popover"><div className="popover-head"><div><strong>Notificaciones</strong><span>{notifications.length-readCount} pendientes</span></div><button onClick={()=>setReadCount(notifications.length)}><Check size={15}/> Marcar leídas</button></div><div className="notification-list">{notifications.map((item,index)=><article className={index<readCount?'read':''} key={item.title}><span></span><div><b>{item.title}</b><p>{item.detail}</p><small>{item.time}</small></div></article>)}</div><Link href="/seguimiento" onClick={()=>setNotificationsOpen(false)} className="popover-footer">Ver seguimiento completo <ChevronRight size={15}/></Link></div>}</div>
-     <button aria-label="Mensajes" onClick={()=>router.push('/familias')}><Mail size={18}/><i>2</i></button>
-     <div className="top-action-wrap profile-wrap"><button className="user user-button" onClick={()=>{setProfileOpen(value=>!value);setNotificationsOpen(false)}} aria-expanded={profileOpen}><div><strong>Profesora</strong><br/><small>Elba Rosales</small></div><div className="avatar avatar-photo" aria-hidden="true">ER</div><ChevronDown size={15}/></button>{profileOpen&&<div className="top-popover profile-popover"><div className="profile-summary"><div className="avatar avatar-photo">ER</div><div><strong>Elba Rosales</strong><span>Docente · PIE</span></div></div><Link href="/configuracion" onClick={()=>setProfileOpen(false)}><Settings size={17}/> Configuración</Link><Link href="/qa" onClick={()=>setProfileOpen(false)}><ShieldCheck size={17}/> Estado de la plataforma</Link><button><LogOut size={17}/> Cerrar sesión</button></div>}</div>
+     <button aria-label="Mensajes" onClick={()=>router.push('/familias')}><Mail size={18}/></button>
+     <SessionMenu open={profileOpen} onToggle={()=>{setProfileOpen(value=>!value);setNotificationsOpen(false)}} onClose={()=>setProfileOpen(false)}/>
     </div>
    </div>
    {children}
