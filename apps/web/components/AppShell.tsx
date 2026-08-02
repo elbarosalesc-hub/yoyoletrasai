@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import type { LucideIcon } from 'lucide-react'
 import {
   Accessibility,
   BarChart3,
@@ -35,7 +36,10 @@ import {
 } from 'lucide-react'
 import { SessionMenu } from '@/components/SessionMenu'
 
-const groups = [
+type NavItem = readonly [label: string, href: string, icon: LucideIcon]
+type NavGroup = { label: string; items: readonly NavItem[] }
+
+const groups: readonly NavGroup[] = [
   {
     label: 'Principal',
     items: [
@@ -76,17 +80,17 @@ const groups = [
       ['Configuración', '/configuracion', Settings],
     ],
   },
-] as const
+]
 
-const allItems = groups.flatMap((group) => group.items)
+const allItems: NavItem[] = groups.flatMap((group) => [...group.items])
 
-const mobile = [
+const mobile: readonly NavItem[] = [
   ['Inicio', '/app', Home],
   ['Cursos', '/cursos', BookOpen],
   ['Crear', '/crear', Sparkles],
   ['Recursos', '/biblioteca', Images],
   ['Perfil', '/configuracion', UsersRound],
-] as const
+]
 
 const notifications = [
   { title: 'Plataforma consolidada', detail: 'La nueva interfaz premium está activa en la rama aprobada.', time: 'Ahora' },
