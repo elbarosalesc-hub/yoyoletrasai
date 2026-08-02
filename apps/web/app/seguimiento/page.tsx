@@ -4,8 +4,11 @@ import { StudentManager } from './StudentManager'
 
 export const dynamic = 'force-dynamic'
 
+const managementRoles = new Set(['teacher', 'pie', 'utp', 'principal', 'institution_admin', 'platform_admin'])
+
 export default async function SeguimientoPage() {
   const context = await requireOrganizationContext('/seguimiento')
+  const canManage = managementRoles.has(context.role)
 
   const [studentsResult, coursesResult] = await Promise.all([
     context.supabase
@@ -37,10 +40,10 @@ export default async function SeguimientoPage() {
       {studentsResult.error || coursesResult.error ? (
         <section className="premium-card command-empty">
           <strong>No fue posible cargar el directorio.</strong>
-          <span>Revisa la conexión institucional o vuelve a intentarlo.</span>
+          <span>Tu rol no tiene acceso o la conexión institucional necesita revisión.</span>
         </section>
       ) : (
-        <StudentManager students={studentsResult.data ?? []} courses={coursesResult.data ?? []} />
+        <StudentManager students={studentsResult.data ?? []} courses={coursesResult.data ?? []} canManage={canManage} />
       )}
     </AppShell>
   )
