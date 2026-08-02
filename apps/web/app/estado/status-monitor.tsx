@@ -4,15 +4,12 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { CheckCircle2, Database, RefreshCw, Server, Settings2, TriangleAlert } from 'lucide-react'
 import styles from './status.module.css'
 
-type DatabaseGatewayStatus = 'reachable' | 'unreachable' | 'error' | 'unavailable'
-
 type HealthPayload = {
-  status: 'ok' | 'degraded' | 'misconfigured'
-  checkedAt?: string
-  services?: {
-    application?: 'ok'
-    databaseGateway?: DatabaseGatewayStatus
-  }
+  status: 'ok' | 'degraded' | 'error'
+  application?: 'operational'
+  configuration?: 'valid' | 'missing'
+  database?: 'reachable' | 'unreachable' | 'not_configured'
+  timestamp?: string
 }
 
 export function StatusMonitor() {
@@ -38,7 +35,7 @@ export function StatusMonitor() {
 
       if (result.status === 'ok') {
         setMessage('Los servicios esenciales responden correctamente.')
-      } else if (result.status === 'misconfigured') {
+      } else if (result.configuration === 'missing') {
         setMessage('La aplicación responde, pero faltan variables de configuración esenciales.')
       } else {
         setMessage('La plataforma responde con capacidad limitada. Revisa la conectividad de datos.')
@@ -56,10 +53,9 @@ export function StatusMonitor() {
     void checkHealth()
   }, [checkHealth])
 
-  const applicationOk = payload?.services?.application === 'ok'
-  const databaseValue = payload?.services?.databaseGateway
-  const databaseOk = databaseValue === 'reachable'
-  const configurationOk = payload?.status !== 'misconfigured' && Boolean(payload)
+  const applicationOk = payload?.application === 'operational'
+  const configurationOk = payload?.configuration === 'valid'
+  const databaseOk = payload?.database === 'reachable'
   const overallOk = payload?.status === 'ok'
   const checkFailed = !loading && !payload
 
@@ -72,7 +68,7 @@ export function StatusMonitor() {
         <div>
           <strong>{loading ? 'Verificación en curso' : overallOk ? 'Plataforma operativa' : 'Revisión necesaria'}</strong>
           <p>{message}</p>
-          {payload?.checkedAt && <small>Última comprobación: {new Date(payload.checkedAt).toLocaleString('es-CL')}</small>}
+          {payload?.timestamp && <small>Última comprobación: {new Date(payload.timestamp).toLocaleString('es-CL')}</small>}
         </div>
         <button type="button" onClick={() => void checkHealth()} disabled={loading}>
           <RefreshCw size={17} className={loading ? styles.spinning : undefined} />
@@ -81,32 +77,14 @@ export function StatusMonitor() {
       </div>
 
       <div className={styles.grid}>
-        <StatusCard
-          icon={<Server size={22} />}
-          title="Aplicación web"
-          value={applicationOk ? 'Aplicación disponible' : loading ? 'Comprobando' : 'Sin respuesta verificada'}
-          ok={applicationOk}
-        />
-        <StatusCard
-          icon={<Settings2 size={22} />}
-          title="Configuración"
-          value={configurationOk ? 'Variables configuradas' : loading ? 'Comprobando' : 'Configuración incompleta'}
-          ok={configurationOk}
-        />
-        <StatusCard
-          icon={<Database size={22} />}
-          title="Supabase"
-          value={databaseLabel(databaseValue, loading)}
-          ok={databaseOk}
-        />
+        <StatusCard icon={<Server size={22} />} title="Aplicación web" value={applicationOk ? 'Aplicación disponible' : loading ? 'Comprobando' : 'Sin respuesta verificada'} ok={applicationOk} />
+        <StatusCard icon={<Settings2 size={22} />} title="Configuración" value={configurationOk ? 'Variables configuradas' : loading ? 'Comprobando' : 'Configuración incompleta'} ok={configurationOk} />
+        <StatusCard icon={<Database size={22} />} title="Supabase" value={databaseLabel(payload?.database, loading)} ok={databaseOk} />
       </div>
 
       <article className={styles.guide}>
         <h2>Recuperación segura</h2>
-        <p>
-          Si algún servicio aparece limitado, no vuelvas a enviar formularios repetidamente. Actualiza esta comprobación,
-          confirma la conexión y conserva el código de error mostrado por la pantalla de contingencia.
-        </p>
+        <p>Si algún servicio aparece limitado, no vuelvas a enviar formularios repetidamente. Actualiza esta comprobación, confirma la conexión y conserva el código de error mostrado por la pantalla de contingencia.</p>
         <div>
           <span>1</span><p><strong>Comprueba nuevamente.</strong> Los cortes breves pueden recuperarse solos.</p>
           <span>2</span><p><strong>Revisa el acceso.</strong> Cierra sesión y vuelve a ingresar si el problema es de autenticación.</p>
@@ -121,20 +99,16 @@ function StatusCard({ icon, title, value, ok }: { icon: ReactNode; title: string
   return (
     <article className={styles.card}>
       <span className={styles.cardIcon}>{icon}</span>
-      <div>
-        <small>{title}</small>
-        <strong>{value}</strong>
-      </div>
+      <div><small>{title}</small><strong>{value}</strong></div>
       <em className={ok ? styles.good : styles.review}>{ok ? 'Operativo' : 'Revisar'}</em>
     </article>
   )
 }
 
-function databaseLabel(value: DatabaseGatewayStatus | undefined, loading: boolean) {
+function databaseLabel(value: HealthPayload['database'], loading: boolean) {
   if (loading) return 'Comprobando'
   if (value === 'reachable') return 'Servicio accesible'
-  if (value === 'unavailable') return 'Configuración incompleta'
+  if (value === 'not_configured') return 'Configuración incompleta'
   if (value === 'unreachable') return 'Servicio sin respuesta'
-  if (value === 'error') return 'Gateway con error'
   return 'No disponible'
 }
