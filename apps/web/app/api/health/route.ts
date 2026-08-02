@@ -14,29 +14,28 @@ function json(body: Record<string, unknown>, status: number) {
 }
 
 export async function GET() {
-  const checkedAt = new Date().toISOString()
+  const timestamp = new Date().toISOString()
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   if (!supabaseUrl || !publishableKey) {
     return json(
       {
-        status: 'misconfigured',
-        checkedAt,
-        services: {
-          application: 'ok',
-          databaseGateway: 'unavailable',
-        },
+        status: 'degraded',
+        application: 'operational',
+        configuration: 'missing',
+        database: 'not_configured',
+        timestamp,
       },
       503,
     )
   }
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 4_000)
+
   try {
     const endpoint = new URL('/rest/v1/', supabaseUrl)
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 4_000)
-
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: {
@@ -48,17 +47,14 @@ export async function GET() {
       signal: controller.signal,
     })
 
-    clearTimeout(timeout)
-
     if (response.status >= 500) {
       return json(
         {
           status: 'degraded',
-          checkedAt,
-          services: {
-            application: 'ok',
-            databaseGateway: 'error',
-          },
+          application: 'operational',
+          configuration: 'valid',
+          database: 'unreachable',
+          timestamp,
         },
         503,
       )
@@ -67,11 +63,10 @@ export async function GET() {
     return json(
       {
         status: 'ok',
-        checkedAt,
-        services: {
-          application: 'ok',
-          databaseGateway: 'reachable',
-        },
+        application: 'operational',
+        configuration: 'valid',
+        database: 'reachable',
+        timestamp,
       },
       200,
     )
@@ -83,13 +78,14 @@ export async function GET() {
     return json(
       {
         status: 'degraded',
-        checkedAt,
-        services: {
-          application: 'ok',
-          databaseGateway: 'unreachable',
-        },
+        application: 'operational',
+        configuration: 'valid',
+        database: 'unreachable',
+        timestamp,
       },
       503,
     )
+  } finally {
+    clearTimeout(timeout)
   }
 }
