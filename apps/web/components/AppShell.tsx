@@ -65,7 +65,8 @@ const groups: NavGroup[] = [
   {
     label: 'Gestión',
     items: [
-      ['Analítica', '/seguimiento', BarChart3],
+      ['Progreso por OA', '/progreso', BarChart3],
+      ['Evidencias', '/seguimiento/evidencias', ClipboardList],
       ['Familias', '/familias', UsersRound],
       ['Informes', '/informes', FileText],
       ['Multimedia', '/multimedia', Images],
@@ -76,6 +77,7 @@ const groups: NavGroup[] = [
   {
     label: 'Sistema',
     items: [
+      ['Estado del sistema', '/estado', ShieldCheck],
       ['QA y publicación', '/qa', ShieldCheck],
       ['Configuración', '/configuracion', Settings],
     ],
@@ -104,7 +106,8 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
   const [collapsed, setCollapsed] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarProfileOpen, setSidebarProfileOpen] = useState(false)
+  const [topProfileOpen, setTopProfileOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [readCount, setReadCount] = useState(0)
   const searchInput = useRef<HTMLInputElement>(null)
@@ -122,7 +125,8 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
       if (event.key === 'Escape') {
         setSearchOpen(false)
         setNotificationsOpen(false)
-        setProfileOpen(false)
+        setSidebarProfileOpen(false)
+        setTopProfileOpen(false)
         setOpen(false)
       }
     }
@@ -172,7 +176,15 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
 
         <div className="approved-sidebar-foot">
           <div className="institution-mini"><ShieldCheck size={17} /><span><small>Institución activa</small><strong>Contexto protegido</strong></span></div>
-          <SessionMenu open={profileOpen} onToggle={() => { setProfileOpen((value) => !value); setNotificationsOpen(false) }} onClose={() => setProfileOpen(false)} />
+          <SessionMenu
+            open={sidebarProfileOpen}
+            onToggle={() => {
+              setSidebarProfileOpen((value) => !value)
+              setTopProfileOpen(false)
+              setNotificationsOpen(false)
+            }}
+            onClose={() => setSidebarProfileOpen(false)}
+          />
         </div>
       </aside>
 
@@ -187,7 +199,15 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
             <Link href="/crear" className="approved-create-button"><Sparkles size={16} /> Crear</Link>
             <button aria-label="Mensajes" onClick={() => router.push('/familias')}><Mail size={18} /></button>
             <div className="top-action-wrap">
-              <button aria-label="Notificaciones" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen((value) => !value); setProfileOpen(false) }}>
+              <button
+                aria-label="Notificaciones"
+                aria-expanded={notificationsOpen}
+                onClick={() => {
+                  setNotificationsOpen((value) => !value)
+                  setSidebarProfileOpen(false)
+                  setTopProfileOpen(false)
+                }}
+              >
                 <Bell size={18} />{readCount < notifications.length && <i>{notifications.length - readCount}</i>}
               </button>
               {notificationsOpen && (
@@ -197,7 +217,15 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
                 </div>
               )}
             </div>
-            <SessionMenu open={profileOpen} onToggle={() => { setProfileOpen((value) => !value); setNotificationsOpen(false) }} onClose={() => setProfileOpen(false)} />
+            <SessionMenu
+              open={topProfileOpen}
+              onToggle={() => {
+                setTopProfileOpen((value) => !value)
+                setSidebarProfileOpen(false)
+                setNotificationsOpen(false)
+              }}
+              onClose={() => setTopProfileOpen(false)}
+            />
           </div>
         </header>
         <div className="approved-content">{children}</div>
