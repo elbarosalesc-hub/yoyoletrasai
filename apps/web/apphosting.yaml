@@ -1,0 +1,15 @@
+# Firebase App Hosting configuration for YoYoLetrasAI.
+# Create the backend in Firebase with:
+# - repository: elbarosalesc-hub/yoyoletrasai
+# - live branch: main
+# - root directory: apps/web
+#
+# Configure Supabase values in Firebase App Hosting environment settings
+# and Google Cloud Secret Manager. Never commit service-role keys.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
