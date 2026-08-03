@@ -1,12 +1,11 @@
 # Firebase App Hosting configuration for YoYoLetrasAI.
-# Backend connection:
-# - Repository: elbarosalesc-hub/yoyoletrasai
+# Backend settings:
+# - GitHub repository: elbarosalesc-hub/yoyoletrasai
 # - Live branch: main
-# - App root directory: apps/web
+# - Application root: apps/web
 #
-# Configure NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY and
-# SUPABASE_SERVICE_ROLE_KEY in Firebase App Hosting > Settings > Environment.
-# Keep SUPABASE_SERVICE_ROLE_KEY in Google Cloud Secret Manager.
+# Sensitive values must be configured in Firebase App Hosting / Secret Manager.
+# Never commit SUPABASE_SERVICE_ROLE_KEY or private credentials.
 
 runConfig:
   minInstances: 0
@@ -20,4 +19,13 @@ env:
     value: https://xpcywpvrveweynqvudcr.supabase.co
     availability:
       - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    secret: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+    availability:
       - RUNTIME
