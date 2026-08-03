@@ -1,0 +1,29 @@
+name: Export for Vercel
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare deployable source
+        run: |
+          mkdir -p deploy-source
+          rsync -a --exclude '.git' --exclude 'node_modules' --exclude '.next' --exclude 'deploy-source' ./ deploy-source/
+
+      - name: Upload deployable source
+        uses: actions/upload-artifact@v4
+        with:
+          name: yoyoletrasai-vercel-source
+          path: deploy-source
+          include-hidden-files: true
+          retention-days: 1
