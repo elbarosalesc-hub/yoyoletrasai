@@ -1,0 +1,15 @@
+# Firebase App Hosting configuration for YoYoLetrasAI.
+# Backend target:
+# - repository: elbarosalesc-hub/yoyoletrasai
+# - live branch: main
+# - root directory: apps/web
+#
+# Configure Supabase credentials in Firebase App Hosting / Secret Manager.
+# Never commit service-role keys to this repository.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 10
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
