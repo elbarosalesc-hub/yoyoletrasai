@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './database.types'
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config'
 
 const protectedPrefixes = ['/app', '/cursos', '/seleccionar-institucion']
 const authenticatedPublicPaths = ['/restablecer-contrasena']
@@ -22,15 +23,8 @@ function copyResponseCookies(source: NextResponse, target: NextResponse) {
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-  if (!url || !key) {
-    const isProtected = protectedPrefixes.some((prefix) => request.nextUrl.pathname.startsWith(prefix))
-    return isProtected ? createLoginRedirect(request) : response
-  }
-
-  const supabase = createServerClient<Database>(url, key, {
+  const supabase = createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
