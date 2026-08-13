@@ -1,22 +1,26 @@
 {
   "name": "yoyoletrasai",
-  "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
+  "version": "3.6.0",
+  "type": "module",
   "scripts": {
-    "dev": "npm run dev --workspace=web",
-    "build": "npm run build --workspace=web",
-    "start": "npm run start --workspace=web",
-    "typecheck": "npm run typecheck --workspace=web",
-    "supabase:init": "npx supabase init",
-    "supabase:start": "npx supabase start",
-    "supabase:stop": "npx supabase stop",
-    "supabase:reset": "npx supabase db reset",
-    "supabase:types": "npx supabase gen types typescript --local > apps/web/lib/supabase/database.types.ts"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "npm run build"
   },
-  "engines": {
-    "node": ">=22.0.0"
+  "dependencies": {
+    "@ai-sdk/gateway": "^4.0.46",
+    "@google-cloud/storage": "7.22.0",
+    "@supabase/supabase-js": "2.110.8",
+    "ai": "^7.0.58",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "three": "^0.185.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "5.4.14"
   }
 }
