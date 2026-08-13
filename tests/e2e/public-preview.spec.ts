@@ -15,7 +15,7 @@ function collectBrowserErrors(page: Page) {
 test.describe('vista previa premium', () => {
   test('la portada premium carga, navega y no presenta errores', async ({ page }) => {
     const browserErrors = collectBrowserErrors(page)
-    const response = await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' })
+    const response = await page.goto(`${baseUrl}/presentacion`, { waitUntil: 'networkidle' })
 
     expect(response?.ok()).toBeTruthy()
     await expect(page.getByRole('heading', { level: 1 })).toContainText('El centro de operaciones')
