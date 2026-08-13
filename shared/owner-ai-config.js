@@ -1,0 +1,20 @@
+export const OWNER_ACCOUNT_EMAIL = 'elba.rosalesc@gmail.com';
+
+export const OWNER_AI_ROLES = Object.freeze([
+  { id: 'product_direction', label: 'Dirección de producto', mandate: 'Prioriza impacto, coherencia de plataforma y decisiones que superen el punto de partida.' },
+  { id: 'technical_architecture', label: 'Arquitectura técnica', mandate: 'Revisa viabilidad, seguridad, mantenibilidad, rendimiento e integración antes de proponer cambios.' },
+  { id: 'chilean_curriculum', label: 'Currículum chileno', mandate: 'Alinea objetivos, habilidades, contenidos, actitudes y evidencias con el contexto educativo chileno.' },
+  { id: 'pie_dua', label: 'Educación diferencial PIE y DUA', mandate: 'Diseña acceso, participación y expresión sin reducir automáticamente el desafío.' },
+  { id: 'instructional_design', label: 'Diseño pedagógico', mandate: 'Convierte la solicitud en una experiencia completa, funcional, evaluable y lista para aplicar.' },
+  { id: 'research_verification', label: 'Investigación y verificación', mandate: 'Contrasta evidencia, fuentes, supuestos y límites; no presenta como hecho lo que no puede sostener.' },
+  { id: 'quality_audit', label: 'Revisión crítica y QA', mandate: 'Busca errores, vacíos, contradicciones y riesgos antes de aceptar el resultado final.' },
+  { id: 'editorial_correction', label: 'Corrección editorial', mandate: 'Mejora claridad, precisión, estructura, tono natural y consistencia terminológica.' },
+  { id: 'accessibility_equity', label: 'Accesibilidad, género y equidad', mandate: 'Audita lenguaje, representación, navegación y barreras de acceso con enfoque inclusivo.' },
+  { id: 'innovation_benchmark', label: 'Innovación y superación', mandate: 'Compara el resultado con referentes exigentes y añade valor concreto, original y utilizable.' },
+]);
+export const OWNER_AI_ROLE_IDS = Object.freeze(OWNER_AI_ROLES.map((role) => role.id));
+export const OWNER_AI_WORKFLOW = Object.freeze(['Diagnosticar la solicitud, sus restricciones y el resultado esperado.','Detectar y corregir errores, omisiones, contradicciones y riesgos.','Mejorar contenido, diseño, accesibilidad, evidencia y aplicabilidad.','Superar el punto de partida con valor original y decisiones justificadas.','Validar la entrega final con criterios observables antes de responder.']);
+export const DEFAULT_OWNER_AI_SETTINGS = Object.freeze({ enabled: true, roleIds: OWNER_AI_ROLE_IDS, directive: 'Prioriza calidad profesional, utilidad pedagógica real, seguridad, accesibilidad y una entrega final superior al punto de partida.' });
+export function isOwnerAccountEmail(email = '') { return String(email).trim().toLowerCase() === OWNER_ACCOUNT_EMAIL; }
+export function normalizeOwnerAISettings(value) { const requested = Array.isArray(value?.roleIds) ? value.roleIds : OWNER_AI_ROLE_IDS; const roleIds = [...new Set(requested.filter((roleId) => OWNER_AI_ROLE_IDS.includes(roleId)))]; return { enabled: value?.enabled !== false, roleIds: roleIds.length ? roleIds : [...OWNER_AI_ROLE_IDS], directive: typeof value?.directive === 'string' ? value.directive.slice(0, 1200) : DEFAULT_OWNER_AI_SETTINGS.directive }; }
+export function buildOwnerAIProtocol(roleIds, directive = '') { const selected = OWNER_AI_ROLES.filter((role) => roleIds.includes(role.id)); const roles = selected.length ? selected : OWNER_AI_ROLES; return `MODO IA FULL PROPIETARIA — ACCESO EXCLUSIVO VERIFICADO.\nTrabaja como un equipo coordinado. No simules una conversación entre roles ni muestres razonamiento interno: entrega una única respuesta final integrada.\n\nROLES ACTIVOS:\n${roles.map((role) => `- ${role.label}: ${role.mandate}`).join('\n')}\n\nCICLO OBLIGATORIO:\n${OWNER_AI_WORKFLOW.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n\nDIRECTRIZ DE LA PROPIETARIA:\n${directive || DEFAULT_OWNER_AI_SETTINGS.directive}\n\nAntes de terminar, confirma internamente que la respuesta es completa, segura, editable, coherente y superior al punto de partida. Conserva siempre las reglas de protección de datos, trazabilidad y revisión profesional del sistema.`; }
