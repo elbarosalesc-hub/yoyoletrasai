@@ -30,9 +30,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/yoyo-approved /tmp/yoyo-payload.tar.gz
+          rm -rf /tmp/yoyo-approved /tmp/yoyo-payload.b64 /tmp/yoyo-payload.tar.gz
           mkdir -p /tmp/yoyo-approved
-          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" --jq .content | tr -d '\n' | base64 -d > /tmp/yoyo-payload.tar.gz
+          # GitHub API returns the blob itself base64-encoded. The blob stores the
+          # approved tar.gz as base64 text, so two decoding stages are required.
+          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" --jq .content | tr -d '\n' | base64 -d > /tmp/yoyo-payload.b64
+          tr -d '\r\n' < /tmp/yoyo-payload.b64 | base64 -d > /tmp/yoyo-payload.tar.gz
           echo "Payload SHA256: $(sha256sum /tmp/yoyo-payload.tar.gz | awk '{print $1}')"
           tar -tzf /tmp/yoyo-payload.tar.gz >/tmp/yoyo-payload-files.txt
           tar -xzf /tmp/yoyo-payload.tar.gz -C /tmp/yoyo-approved
