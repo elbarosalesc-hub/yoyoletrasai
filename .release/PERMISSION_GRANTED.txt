@@ -1,0 +1,1 @@
+Usuario autorizo explicitamente en ChatGPT el 13-08-2026 la publicacion de YoYoLetrasAI 3.6.0 desde el archivo YoYoLetrasAI-3.6.0-owner-full-source.zip. Este archivo temporal documenta el flujo de staging y sera eliminado por el commit final exacto del paquete.
