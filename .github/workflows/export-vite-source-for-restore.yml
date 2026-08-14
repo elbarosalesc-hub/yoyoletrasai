@@ -1,0 +1,27 @@
+name: Export Vite Source For Safe Restore
+
+on:
+  push:
+    branches:
+      - agent/publish-v3-6-vite
+    paths:
+      - .github/workflows/export-vite-source-for-restore.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package source without generated dependencies
+        shell: bash
+        run: |
+          rm -rf node_modules dist .vercel
+          tar -czf /tmp/yoyo-vite-source.tar.gz --exclude=.git .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yoyo-vite-source
+          path: /tmp/yoyo-vite-source.tar.gz
+          retention-days: 1
