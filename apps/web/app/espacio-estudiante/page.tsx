@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Espacio estudiante" kicker="EXPERIENCIA ESTUDIANTE" title="Espacio estudiante" description="Acceso guiado a actividades, apoyos, evidencias y progreso con una experiencia accesible y adaptada al contexto educativo." features={['Actividades asignadas','Apoyos visuales y DUA','Progreso por objetivos','Evidencias de aprendizaje','Accesibilidad y autonomía']} primaryHref="/seguimiento" primaryLabel="Ver seguimiento"/>}
