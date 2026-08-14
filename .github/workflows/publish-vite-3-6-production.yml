@@ -2,6 +2,12 @@ name: Publish YoYoLetrasAI 3.6 Production
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/publish-v3-6-vite
+    paths:
+      - .github/workflows/publish-vite-3-6-production.yml
+      - .github/preview-token-ready.txt
 
 permissions:
   contents: read
@@ -13,10 +19,10 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: Production
+    environment: VERCEL_TOKEN
     timeout-minutes: 25
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Checkout release candidate
         uses: actions/checkout@v4
@@ -25,7 +31,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::Falta una credencial Vercel de despliegue en el entorno Production."
+            echo "::error::Falta VERCEL_TOKEN en el Environment VERCEL_TOKEN de GitHub."
             exit 2
           fi
 
