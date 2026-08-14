@@ -1,4 +1,4 @@
-name: Attach Permanent YoYo Domain
+name: Restore Permanent YoYo Production
 
 on:
   push:
@@ -13,11 +13,11 @@ permissions:
 
 env:
   VERCEL_SCOPE: elbarosalesc-pngs-projects
-  TARGET_DEPLOYMENT: yoyoletrasai-9jibw9nim-elbarosalesc-pngs-projects.vercel.app
+  TARGET_DEPLOYMENT: yoyoletrasai-8bx914rfh-elbarosalesc-pngs-projects.vercel.app
   PERMANENT_DOMAIN: yoyoletrasai.vercel.app
 
 jobs:
-  attach:
+  restore:
     runs-on: ubuntu-24.04
     environment: VERCEL_TOKEN
     timeout-minutes: 10
@@ -31,26 +31,28 @@ jobs:
       - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
 
-      - name: Verify target full platform before alias
+      - name: Verify previous stable production before rollback
         shell: bash
         run: |
-          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/caligrafia" > /tmp/caligrafia.html
-          grep -qi 'Caligrafía completa' /tmp/caligrafia.html
-          grep -qi 'Manuscrita minúscula' /tmp/caligrafia.html
-          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/herramientas" > /tmp/herramientas.html
-          grep -qi 'Laboratorio docente\|Herramientas' /tmp/herramientas.html
-          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/yoyo-ia" > /tmp/yoyo.html
-          grep -qi 'YOYO IA' /tmp/yoyo.html
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/" > /tmp/root.html
+          grep -qi 'YoYoLetrasAI' /tmp/root.html
+          health="$(curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/api/health")"
+          printf '%s\n' "$health" | grep -q '"status":"ok"'
+          printf '%s\n' "$health" | grep -q '"version":"3.6.0"'
+          printf '%s\n' "$health" | grep -q '"application":"operational"'
+          printf '%s\n' "$health" | grep -q '"resourcesApi":"operational"'
 
-      - name: Point the existing permanent domain to the validated production deployment
+      - name: Restore existing permanent domain to stable production
         run: vercel alias set "$TARGET_DEPLOYMENT" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Verify permanent domain preserved and updated
+      - name: Verify permanent domain restored
         shell: bash
         run: |
           sleep 4
-          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/caligrafia" > /tmp/permanent-caligrafia.html
-          grep -qi 'Caligrafía completa' /tmp/permanent-caligrafia.html
-          grep -qi 'Manuscrita minúscula' /tmp/permanent-caligrafia.html
-          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/yoyo-ia" > /tmp/permanent-yoyo.html
-          grep -qi 'YOYO IA' /tmp/permanent-yoyo.html
+          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/" > /tmp/permanent-root.html
+          grep -qi 'YoYoLetrasAI' /tmp/permanent-root.html
+          health="$(curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/api/health")"
+          printf '%s\n' "$health" | grep -q '"status":"ok"'
+          printf '%s\n' "$health" | grep -q '"version":"3.6.0"'
+          printf '%s\n' "$health" | grep -q '"application":"operational"'
+          printf '%s\n' "$health" | grep -q '"resourcesApi":"operational"'
