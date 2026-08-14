@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { modules, resources } from './data';
 import { cachedPublicJson } from './platform-cache';
-import { getAIEntitlement, getOwnerContext, isSupabaseConfigured, supabase } from './supabase';
+import { getAIEntitlement, isSupabaseConfigured, supabase } from './supabase';
 import OwnerAccessManager from './features/OwnerAccessManager';
 import OwnerFactoryManager from './features/OwnerFactoryManager';
 import OwnerPlatformManager from './features/OwnerPlatformManager';
@@ -12,13 +12,24 @@ const tabs = [
 
 function StatusPill({ ok, children }) { return <span className={`pill ${ok ? 'pill--ok' : 'pill--warn'}`}>{children}</span>; }
 
+async function verifyOwnerSession(accessToken) {
+  if (!accessToken) return null;
+  const response = await fetch('/api/owner/session', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { owner: false, error: payload.error || 'Acceso propietario no verificado.' };
+  return payload;
+}
+
 export default function App() {
   const [page, setPage] = useState('inicio');
   const [health, setHealth] = useState(null);
   const [apiResources, setApiResources] = useState([]);
   const [resourceCacheSource, setResourceCacheSource] = useState('inicializando');
   const [session, setSession] = useState(null);
-  const [ownerContext, setOwnerContext] = useState(null);
+  const [ownerSession, setOwnerSession] = useState(null);
   const [entitlement, setEntitlement] = useState(null);
   const [auth, setAuth] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
@@ -46,9 +57,11 @@ export default function App() {
 
   useEffect(() => {
     const user = session?.user;
-    if (!user) { setOwnerContext(null); setEntitlement(null); return; }
-    Promise.allSettled([getOwnerContext(user.id), getAIEntitlement(user.id)]).then(([owner, plan]) => {
-      setOwnerContext(owner.status === 'fulfilled' ? owner.value : null);
+    const accessToken = session?.access_token || '';
+    if (!user) { setOwnerSession(null); setEntitlement(null); return; }
+    setOwnerSession(null);
+    Promise.allSettled([verifyOwnerSession(accessToken), getAIEntitlement(user.id)]).then(([owner, plan]) => {
+      setOwnerSession(owner.status === 'fulfilled' ? owner.value : { owner: false, error: 'No fue posible verificar el perfil propietario.' });
       setEntitlement(plan.status === 'fulfilled' ? plan.value : null);
     });
   }, [session]);
@@ -59,7 +72,7 @@ export default function App() {
     return q ? source.filter((item) => `${item.title} ${item.subject} ${item.level} ${item.skill}`.toLowerCase().includes(q)) : source;
   }, [apiResources, query]);
 
-  const ownerFull = Boolean(session?.user && ownerContext?.role === 'platform_admin' && entitlement?.planId === 'propietaria');
+  const ownerFull = Boolean(session?.user && ownerSession?.owner === true);
   const accessToken = session?.access_token || '';
   const toast = (text) => { setMessage(text); setTimeout(() => setMessage(''), 4000); };
 
@@ -69,7 +82,7 @@ export default function App() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword(auth);
     setBusy(false);
-    if (error) toast(error.message); else { setAuth({ email: '', password: '' }); toast('Sesión iniciada.'); }
+    if (error) toast(error.message); else { setAuth({ email: '', password: '' }); toast('Sesión iniciada. Verificando permisos…'); }
   }
 
   async function runAI(event) {
@@ -104,9 +117,9 @@ export default function App() {
 
       {page === 'biblioteca' && <section><div className="section-heading"><div><span className="eyebrow">BIBLIOTECA CURRICULAR</span><h2>Materiales listos para adaptar, imprimir y usar</h2></div><input className="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nivel, asignatura o habilidad" /></div><div className="resource-grid">{visibleResources.map((resource) => <article key={resource.id}><div className="resource-top"><span>{resource.icon}</span><StatusPill ok>{resource.level}</StatusPill></div><h3>{resource.title}</h3><p>{resource.objective}</p><div className="tags"><span>{resource.subject}</span><span>{resource.skill}</span><span>{resource.duration}</span></div></article>)}</div></section>}
 
-      {page === 'ia' && <section className="workspace"><div className="workspace-copy"><span className="eyebrow">YOYO IA</span><h2>Asistente pedagógico con control de acceso y consumo</h2><p>Las solicitudes se autorizan en servidor según usuario, plan, cuota y rol. La clave privada del motor no se expone al navegador.</p>{entitlement && <div className="plan-card"><b>{entitlement.plan?.name || entitlement.planId}</b><span>{entitlement.plan?.description}</span></div>}</div>{!session ? <form className="auth-card" onSubmit={signIn}><h3>Iniciar sesión</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button><small>{isSupabaseConfigured ? 'Identidad Supabase conectada.' : 'Configuración de identidad pendiente.'}</small></form> : <form className="ai-card" onSubmit={runAI}><label>¿Qué quieres crear?<textarea rows="7" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} /></label><button className="button button--primary" disabled={busy}>{busy ? 'Generando…' : 'Crear con YOYO IA'}</button>{aiResult && <pre>{aiResult}</pre>}</form>}</section>}
+      {page === 'ia' && <section className="workspace"><div className="workspace-copy"><span className="eyebrow">YOYO IA EXCLUSIVA</span><h2>Asistente pedagógico con acceso propietario reforzado</h2><p>YOYO IA prioriza el runtime nativo cuando está disponible y conserva fallback controlado mientras se completa la independencia total. La credencial privada nunca se expone al navegador.</p>{entitlement && <div className="plan-card"><b>{entitlement.plan?.name || entitlement.planId}</b><span>{entitlement.plan?.description}</span></div>}{ownerFull && <div className="plan-card"><b>Modo propietaria verificado</b><span>Protocolo experto completo habilitado para esta sesión.</span></div>}</div>{!session ? <form className="auth-card" onSubmit={signIn}><h3>Iniciar sesión</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button><small>{isSupabaseConfigured ? 'Identidad Supabase conectada.' : 'Configuración de identidad pendiente.'}</small></form> : <form className="ai-card" onSubmit={runAI}><label>¿Qué quieres crear?<textarea rows="7" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} /></label><button className="button button--primary" disabled={busy}>{busy ? 'Generando…' : 'Crear con YOYO IA'}</button>{aiResult && <pre>{aiResult}</pre>}</form>}</section>}
 
-      {page === 'propietaria' && <section><div className="section-heading"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Aplicación única para gobernar y mejorar toda la plataforma</h2></div></div>{!session ? <form className="auth-card compact" onSubmit={signIn}><h3>Acceso protegido</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button></form> : ownerFull ? <div className="owner-stack"><OwnerPlatformManager accessToken={accessToken} /><OwnerAccessManager accessToken={accessToken} toast={toast} /><OwnerFactoryManager accessToken={accessToken} toast={toast} /></div> : <div className="notice"><b>Sesión válida, pero sin privilegios de propietaria.</b><p>La vista administrativa exige rol platform_admin y plan propietaria activos.</p></div>}</section>}
+      {page === 'propietaria' && <section><div className="section-heading"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Aplicación única para gobernar y mejorar toda la plataforma</h2></div></div>{!session ? <form className="auth-card compact" onSubmit={signIn}><h3>Acceso protegido</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button></form> : ownerSession === null ? <div className="notice"><b>Verificando perfil propietario…</b><p>La sesión está activa y el servidor está comprobando rol y plan.</p></div> : ownerFull ? <div className="owner-stack"><OwnerPlatformManager accessToken={accessToken} /><OwnerAccessManager accessToken={accessToken} toast={toast} /><OwnerFactoryManager accessToken={accessToken} toast={toast} /></div> : <div className="notice"><b>No fue posible validar el perfil propietario.</b><p>{ownerSession?.error || 'El servidor no confirmó rol platform_admin y plan propietaria.'}</p></div>}</section>}
     </main>
   </div>;
 }
