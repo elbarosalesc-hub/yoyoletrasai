@@ -31,14 +31,7 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/yoyo-approved /tmp/yoyo-payload*
           mkdir -p /tmp/yoyo-approved
-          gh api -H "Accept: application/vnd.github.raw+json" "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" > /tmp/yoyo-payload.b64
-          python - <<'PY'
-          from pathlib import Path
-          import base64
-          raw = Path('/tmp/yoyo-payload.b64').read_bytes()
-          compact = b''.join(raw.split())
-          Path('/tmp/yoyo-payload.tar.gz').write_bytes(base64.b64decode(compact, validate=True))
-          PY
+          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" --jq .content | tr -d '\n' | base64 -d > /tmp/yoyo-payload.tar.gz
           echo "${EXPECTED_SHA256}  /tmp/yoyo-payload.tar.gz" | sha256sum -c -
           tar -xzf /tmp/yoyo-payload.tar.gz -C /tmp/yoyo-approved
           test -f /tmp/yoyo-approved/package.json
