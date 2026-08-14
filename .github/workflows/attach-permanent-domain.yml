@@ -1,0 +1,56 @@
+name: Attach Permanent YoYo Domain
+
+on:
+  push:
+    branches:
+      - agent/restore-full-platform-yoyo-3-6
+    paths:
+      - .github/workflows/attach-permanent-domain.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_SCOPE: elbarosalesc-pngs-projects
+  TARGET_DEPLOYMENT: yoyoletrasai-9jibw9nim-elbarosalesc-pngs-projects.vercel.app
+  PERMANENT_DOMAIN: yoyoletrasai.vercel.app
+
+jobs:
+  attach:
+    runs-on: ubuntu-24.04
+    environment: VERCEL_TOKEN
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Require Vercel credential
+        shell: bash
+        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN"; exit 2; }
+
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Verify target full platform before alias
+        shell: bash
+        run: |
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/caligrafia" > /tmp/caligrafia.html
+          grep -qi 'Caligrafía completa' /tmp/caligrafia.html
+          grep -qi 'Manuscrita minúscula' /tmp/caligrafia.html
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/herramientas" > /tmp/herramientas.html
+          grep -qi 'Laboratorio docente\|Herramientas' /tmp/herramientas.html
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/yoyo-ia" > /tmp/yoyo.html
+          grep -qi 'YOYO IA' /tmp/yoyo.html
+
+      - name: Point the existing permanent domain to the validated production deployment
+        run: vercel alias set "$TARGET_DEPLOYMENT" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Verify permanent domain preserved and updated
+        shell: bash
+        run: |
+          sleep 4
+          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/caligrafia" > /tmp/permanent-caligrafia.html
+          grep -qi 'Caligrafía completa' /tmp/permanent-caligrafia.html
+          grep -qi 'Manuscrita minúscula' /tmp/permanent-caligrafia.html
+          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/yoyo-ia" > /tmp/permanent-yoyo.html
+          grep -qi 'YOYO IA' /tmp/permanent-yoyo.html
