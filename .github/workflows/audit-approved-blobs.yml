@@ -1,0 +1,46 @@
+name: Audit approved exact blobs
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/audit-approved-blobs.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-exact
+          fetch-depth: 0
+      - name: Fetch all refs and audit manifest blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+          git show origin/agent/restore-approved-owner-full-source:.restore/approved-owner-full-manifest.tsv > /tmp/manifest.tsv
+          test "$(wc -l < /tmp/manifest.tsv | tr -d ' ')" = "52"
+          : > MISSING_BLOBS.txt
+          : > PRESENT_BLOBS.txt
+          while IFS=$'\t' read -r path sha; do
+            if git cat-file -e "$sha^{blob}" 2>/dev/null; then
+              printf '%s\t%s\n' "$path" "$sha" >> PRESENT_BLOBS.txt
+            else
+              printf '%s\t%s\n' "$path" "$sha" >> MISSING_BLOBS.txt
+            fi
+          done < /tmp/manifest.tsv
+          printf 'present=%s missing=%s\n' "$(wc -l < PRESENT_BLOBS.txt)" "$(wc -l < MISSING_BLOBS.txt)" > BLOB_AUDIT_SUMMARY.txt
+          cat BLOB_AUDIT_SUMMARY.txt
+          cat MISSING_BLOBS.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add BLOB_AUDIT_SUMMARY.txt MISSING_BLOBS.txt PRESENT_BLOBS.txt
+          git commit -m 'Auditar blobs exactos disponibles para recuperación'
+          git push origin HEAD:recovery/approved-3.6-exact
