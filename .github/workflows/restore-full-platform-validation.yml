@@ -1,0 +1,52 @@
+name: Validate Full Platform + YOYO 3.6
+
+on:
+  push:
+    branches:
+      - agent/restore-full-platform-yoyo-3-6
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck full Next platform
+        run: npm run typecheck
+      - name: Build full Next platform
+        run: npm run build
+      - name: Verify preserved platform routes
+        run: |
+          test -f apps/web/app/app/page.tsx
+          test -f apps/web/app/biblioteca/page.tsx
+          test -f apps/web/app/cursos/page.tsx
+          test -f apps/web/app/evaluaciones/page.tsx
+          test -f apps/web/app/inclusion/page.tsx
+          test -f apps/web/app/informes/page.tsx
+          test -f apps/web/app/integraciones/page.tsx
+          test -f apps/web/app/profesor-virtual/page.tsx
+          test -f apps/web/app/seguimiento/page.tsx
+          test -f apps/web/app/yoyo-ia/page.tsx
+          test -f apps/web/app/investigacion/page.tsx
+          test -f apps/web/app/fuentes-ia/page.tsx
+          test -f apps/web/app/planificaciones/page.tsx
+          test -f apps/web/app/propietaria/page.tsx
+      - name: Verify owner and Google safeguards
+        run: |
+          grep -q "platform_admin" apps/web/app/propietaria/page.tsx
+          grep -q "plan_id','propietaria" apps/web/app/propietaria/page.tsx
+          grep -q "aes-256-gcm" apps/web/app/api/owner/yoyo-key/route.ts
+          grep -q "signInWithOAuth" apps/web/app/auth/google/route.ts
+          grep -q "provider: 'google'" apps/web/app/auth/google/route.ts
+      - name: Verify YOYO runtime safeguards
+        run: |
+          grep -q "ownerUnlimited: true" apps/web/app/api/yoyo/generate/route.ts
+          grep -q "disallowPromptTraining: true" apps/web/app/api/yoyo/generate/route.ts
+          grep -q "YOYO-IA-EDU-CL-001" apps/web/app/api/yoyo/generate/route.ts
