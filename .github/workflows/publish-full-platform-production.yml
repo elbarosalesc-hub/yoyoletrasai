@@ -73,6 +73,9 @@ jobs:
       - name: Pull preview environment
         run: vercel pull --yes --environment=preview --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
+      - name: Ensure local Next dependencies for hermetic Vercel build
+        run: npm install --workspaces=false --prefix apps/web
+
       - name: Build immutable Next preview
         run: vercel build --cwd apps/web --token="$VERCEL_TOKEN"
 
@@ -99,6 +102,9 @@ jobs:
 
       - name: Pull production environment
         run: vercel pull --yes --environment=production --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Ensure local Next dependencies for production build
+        run: npm install --workspaces=false --prefix apps/web
 
       - name: Build production Next artifact
         run: vercel build --prod --cwd apps/web --token="$VERCEL_TOKEN"
