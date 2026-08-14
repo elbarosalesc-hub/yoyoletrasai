@@ -22,7 +22,7 @@ jobs:
   repair:
     runs-on: ubuntu-24.04
     environment: VERCEL_TOKEN
-    timeout-minutes: 35
+    timeout-minutes: 40
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
@@ -39,30 +39,32 @@ jobs:
       - name: Link canonical project
         run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
 
-      - name: Repair public Supabase production configuration
+      - name: Repair public Supabase configuration in preview and production
         shell: bash
         run: |
           set -euo pipefail
-          vercel env rm NEXT_PUBLIC_SUPABASE_URL production --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web >/dev/null 2>&1 || true
-          printf '%s' "$SUPABASE_URL" | vercel env add NEXT_PUBLIC_SUPABASE_URL production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-          vercel env rm NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web >/dev/null 2>&1 || true
-          printf '%s' "$SUPABASE_PUBLISHABLE_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+          for environment in preview production; do
+            vercel env rm NEXT_PUBLIC_SUPABASE_URL "$environment" --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web >/dev/null 2>&1 || true
+            printf '%s' "$SUPABASE_URL" | vercel env add NEXT_PUBLIC_SUPABASE_URL "$environment" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+            vercel env rm NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "$environment" --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web >/dev/null 2>&1 || true
+            printf '%s' "$SUPABASE_PUBLISHABLE_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "$environment" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+          done
 
-      - name: Pull repaired production environment
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+      - name: Pull preview environment
+        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
 
-      - name: Build immutable full Next artifact
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+      - name: Build immutable preview artifact
+        run: vercel build --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
 
-      - name: Deploy candidate without permanent alias
+      - name: Deploy isolated preview candidate
         id: candidate
         shell: bash
         run: |
           url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Candidato: $url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Candidato preview: $url" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Validate full platform before touching permanent domain
+      - name: Validate complete preview before production
         shell: bash
         run: |
           set -euo pipefail
@@ -81,7 +83,13 @@ jobs:
           printf '%s\n' "$health" | grep -q '"configuration":"valid"'
           printf '%s\n' "$health" | grep -q '"database":"reachable"'
 
-      - name: Promote validated artifact to production
+      - name: Pull repaired production environment
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+
+      - name: Build full production artifact after preview passes
+        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+
+      - name: Promote validated full release to production
         id: production
         shell: bash
         run: |
@@ -89,10 +97,10 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Producción validada: $url" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Attach permanent domain only after all validations
+      - name: Attach permanent domain only after validations
         run: vercel alias set "${{ steps.production.outputs.url }}" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Verify permanent domain end to end
+      - name: Verify permanent platform end to end
         shell: bash
         run: |
           set -euo pipefail
