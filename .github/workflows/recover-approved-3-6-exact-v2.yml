@@ -1,0 +1,87 @@
+name: Recover approved 3.6 exact v2
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/recover-approved-3-6-exact-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout isolated recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-exact
+          fetch-depth: 0
+
+      - name: Rehydrate exact approved source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/yoyo-approved /tmp/yoyo-unpack /tmp/yoyo-approved.tar.gz
+          mkdir -p /tmp/yoyo-approved /tmp/yoyo-unpack
+          test -f .recovery/payload.tar.gz
+          tr -d '\r\n' < .recovery/payload.tar.gz | base64 -d > /tmp/yoyo-approved.tar.gz
+          tar -tzf /tmp/yoyo-approved.tar.gz > /tmp/archive-files.txt
+          tar -xzf /tmp/yoyo-approved.tar.gz -C /tmp/yoyo-unpack
+          package_file="$(find /tmp/yoyo-unpack -maxdepth 4 -type f -name package.json | head -n 1)"
+          test -n "$package_file"
+          source_root="$(dirname "$package_file")"
+          cp -a "$source_root"/. /tmp/yoyo-approved/
+          cd /tmp/yoyo-approved
+          test -f package.json
+          test -f src/App.jsx
+          test -f src/features/YoyoAIStudio.jsx
+          test -f src/features/SourceLab.jsx
+          test -f src/features/ImmersiveGames.jsx
+          test -f src/features/ReadingPlan.jsx
+          test -f src/modules.jsx
+          test -f api/health.js
+          test -f vercel.json
+          grep -q '"version": "3.6.0"' package.json
+          grep -q 'YoyoAIStudio' src/App.jsx
+          grep -q 'SourceLab' src/App.jsx
+          grep -q 'ImmersiveGames' src/App.jsx
+          grep -q 'ReadingPlan' src/App.jsx
+          find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum > /tmp/approved-manifest.sha256
+          test "$(wc -l < /tmp/approved-manifest.sha256 | tr -d ' ')" = "52"
+          manifest_hash="$(sha256sum /tmp/approved-manifest.sha256 | awk '{print $1}')"
+          echo "Approved manifest SHA256: ${manifest_hash}"
+          test "$manifest_hash" = "d34ffc251c9c50f6265a1d785f4da8c01612980f490e49119732137e47ec83a3"
+
+      - name: Validate build before changing branch contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/yoyo-approved
+          npm ci
+          npm run build
+          test -s dist/index.html
+
+      - name: Replace only isolated recovery branch with approved source
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          find .github -mindepth 1 -maxdepth 1 ! -name workflows -exec rm -rf {} + || true
+          find .github/workflows -type f ! -name recover-approved-3-6-exact-v2.yml -delete || true
+          cp -a /tmp/yoyo-approved/. .
+          rm -rf node_modules dist .recovery
+
+      - name: Commit recovered baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Recuperar exactamente plataforma aprobada 3.6"
+          git push origin HEAD:recovery/approved-3.6-exact
