@@ -1,0 +1,86 @@
+name: Restore Approved Owner Full From Exact Blobs
+
+on:
+  push:
+    branches:
+      - agent/restore-approved-owner-full-source
+    paths:
+      - .restore/RESTORE-APPROVED
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Restore exact approved source from Git object database
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest='.restore/approved-owner-full-manifest.tsv'
+          test -s "$manifest"
+          cut -f2 "$manifest" > /tmp/approved-paths.txt
+
+          git ls-files | while IFS= read -r file; do
+            case "$file" in
+              .restore/*|.github/workflows/*) continue ;;
+            esac
+            if ! grep -Fxq "$file" /tmp/approved-paths.txt; then
+              rm -rf -- "$file"
+            fi
+          done
+
+          while IFS=$'\t' read -r sha path; do
+            test -n "$sha"
+            test -n "$path"
+            mkdir -p "$(dirname "$path")"
+            gh api "repos/$GITHUB_REPOSITORY/git/blobs/$sha" --jq '.content' | tr -d '\n' | base64 --decode > "$path"
+            actual="$(git hash-object "$path")"
+            if [ "$actual" != "$sha" ]; then
+              echo "::error file=$path::Hash restaurado $actual no coincide con $sha"
+              exit 1
+            fi
+          done < "$manifest"
+      - name: Verify approved visual and functional identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git hash-object src/App.jsx)" = '3fb963dacce0b01874cab7ca5ee44d1e956ac545'
+          test "$(git hash-object src/modules.jsx)" = '0ae9c5906e11ad5c7115a96ceea0b152a76d2551'
+          test "$(git hash-object src/features/YoyoAIStudio.jsx)" = '92e35e779ece33c0923b4772832a6865eca84114'
+          test "$(git hash-object src/features/ImmersiveGames.jsx)" = '5bf6a8023f1ce20280f15bd8f053ec9d55701e03'
+          grep -q 'Educación que incluye' src/App.jsx
+          grep -q 'Control real de YoYoLetrasAI' src/modules.jsx
+          grep -q 'YOYO Play' src/data.js
+          grep -q 'Fuentes IA' src/data.js
+          grep -q 'PIE y DUA' src/data.js
+          grep -q 'THREE.WebGLRenderer' src/features/ImmersiveGames.jsx
+      - name: Build exact approved platform
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Commit exact restoration only if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'yoyo-release-bot'
+          git config user.email 'elba.rosalesc@gmail.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'La fuente aprobada ya coincide exactamente.'
+            exit 0
+          fi
+          git commit -m 'Restaurar exactamente plataforma Owner Full aprobada 3.6.0'
+          git push origin HEAD:agent/restore-approved-owner-full-source
