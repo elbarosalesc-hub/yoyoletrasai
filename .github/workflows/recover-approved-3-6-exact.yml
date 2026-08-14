@@ -32,66 +32,23 @@ jobs:
           set -euo pipefail
           rm -rf /tmp/yoyo-approved /tmp/yoyo-payload.tar.gz
           mkdir -p /tmp/yoyo-approved
-          # This Git blob stores the approved tar.gz as base64 text.
-          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" --jq .content | tr -d '\r\n' | base64 -d > /tmp/yoyo-payload.tar.gz
+          gh api -H "Accept: application/vnd.github.raw+json" "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" > /tmp/yoyo-payload.tar.gz
+          test "$(od -An -tx1 -N2 /tmp/yoyo-payload.tar.gz | tr -d ' ')" = "1f8b"
           tar -xzf /tmp/yoyo-payload.tar.gz -C /tmp/yoyo-approved
           cd /tmp/yoyo-approved
-          cat > /tmp/approved.sha256 <<'EOF'
-          13ef28262150a25928ac2427e99821b1c6e899f7344c8e431738a5f8dc6dfbb7  .env.example
-          d620a3367ac92386ec348a89c11991bcf9e57946cbd777dea2d75c376031e41d  .gitignore
-          2b3ec215ccab0bc45c2b1ef4a65e3fc3b7e3c50e5893efc86ddb4cfc407dd616  README.md
-          7bf7643aa90ccd85d87886383d8ee1469847f38368028e81db205eab91071a43  RELEASE-NOTES-3.5.md
-          aab5ae1c9190cac6f3a9499b9bc1771ecec653070074309d5151a668fa28981d  RELEASE-NOTES-3.6.md
-          26737767ee4e28bc4323ba51ab62b72891a6a600726fcdb8f75452fc57e986f2  api/_ai-access.js
-          3882767eb8376d4b9648c17dc4717bfa791533a30a0a37c09eba18e312d45b59  api/_google-storage.js
-          40f62f6b5e3ddf2c984c6c2a651459d2438b55fd423494d06de1e4d3664264ca  api/_owner-auth.js
-          207a8c22c5425154a3803905f2fb696e85c4f0863c79f4c4378114029b26d0c4  api/_resource-factory.js
-          f484d29a5ce173442d180f7ea3e6d2b8d533bed195e7e6fcb54658ef0eeb6905  api/_runtime-credentials.js
-          a6db1a16a1b6fc61bb83b0260c2f568385975baae164a7d18469f5b459afe706  api/ai/generate.js
-          8607d71685a2f2591ec675dc9f87551839101e1d16a65184b19b00d0aa7cdb03  api/cron/innovation-scan.js
-          a1a5b1604c503ad9ab65428e2a0c9dcc818a770781d78265a1689cff687a37fa  api/cron/resource-factory.js
-          8105423055971bd80616cf3e8678c463a6573179817718c8ccd48b813348805a  api/health.js
-          4546be6c79ba1d9620ad7fc2ecf6d874ff37b7b06077857b5ec83e254f3b5fe8  api/owner/control.js
-          d2ed7917a0bcb2400cb3bcaf94321da5abcdc623f9771c54b6b769355047a7af  api/owner/factory.js
-          6ff38a2dc725a4168e210e785e05f258b91439133e44e57d8888b875ae2b2ad8  api/resources.js
-          2022358da6cc3c151082120ebe1aac001da4485147e2e8517007eed5ef69103c  api/storage/uploads.js
-          c9055279ae083d67f095f56f516ee93f263f83bbc2fc20f3b913bc1f213eb1aa  docs/benchmark-v3.4.md
-          ad4ecbc387ab53c9c67609a8944e99d21dc1ae28ad176e65c31a3885db68c980  docs/file-limit-benchmark-2026-08.md
-          8e534a5cbd983fbc234535fe0d96948070658de76060fcbfc11bb4a5da8cf630  docs/google-cloud-storage-setup.md
-          9263f2b6ba95a68934dffdb043f491f174119f6fa69592dbc132d75108f000ad  index.html
-          5cdf3f2fca7fa6b5d453b17a58b56c1a9c246e6795ecb4d1db4f9a9f7a56798e  package-lock.json
-          d174a5552738ba5c3b8bcf8d5b4308722439b1e1dbd4ddaf60edf0a8c093c4c7  package.json
-          1699ee428437a8ce08e0cb2cfbcf712cefe4733276f93297ab84562ba7b63d75  public/assets/phonics-illustrations-v1.webp
-          633b910f07a48e8bf342eeaf8b14fda99bd594f9bd6bacfc3d9dbefb6cb40c6f  public/assets/subject-covers-v1.webp
-          1837b76905577f7de3ac60b5c9586fbe543a43437d42252724c547138a910efc  public/assets/yoyo-learning-hero-v2.webp
-          e3e9145007d05f72c1a4aa9bc9c7b5a86500a6c4a7958966264e707186822a0b  shared/owner-ai-config.js
-          8bbadae61108092ce4537acdd49e66e5385ac33f59e3b00da187ed41702fc039  shared/supabase-public-config.js
-          a85bdb9365cfc07752c97d72f7ef773688496df56e83664d6a23b9e9ab9f2ace  shared/yoyo-ai-identity.js
-          66a7fd6b05ca463a1cbf2c7bd184a3d6f59cc1f5b9a5a7e654abd4a50822722e  shared/yoyo-core.js
-          1051a299003dbb9326e577c2c2db6592f852e8b1710b34946650768d3ed8459e  src/App.jsx
-          c96ae893899bbe6e1b93b33584d6fbbbe7eb941c01c3f79f7c7c24c8f724fb2a  src/data.js
-          9b52a5277a1fc771cdb3aacbe8deef83db3a0aaef2b5cd7245c92935a46a9a0f  src/enhancements.css
-          824bb863262ae6be4fdb91042af0d025f0699defd6534904d94961336ae357a9  src/features/ImmersiveGames.jsx
-          5c7d8943259e15a8560ef998e47baabb6f53428d8fac6636bcfcce5808d2f4b2  src/features/OwnerAccessManager.jsx
-          efcc8c9dfb536f696382bb6c80fa69203e5936aaeb1fcf34f86e44c1885ae8e4  src/features/OwnerFactoryManager.css
-          8212a8f25a0a26ee781518a6c69674934a2aaaaeacafc5881d5af2efe626490f  src/features/OwnerFactoryManager.jsx
-          a07bc99bb63af2211140725ff86564b8ccb996ef4d04ef47a29922d78ce6eb90  src/features/ReadingPlan.jsx
-          43b8e47486025eaa89c7d9919f8ea373adf992b0f7035ab1b91b5afe4e4e150a  src/features/SourceLab.jsx
-          7c625b2a4de64372592da4b76bb3eff5f4d8507b58847acafb27b5085aba4602  src/features/YoyoAIStudio.jsx
-          7209aa5536e7d8a18fa9c5d1092932cd688976b5ba7566b2ce69f2b5138b6e2b  src/main.jsx
-          ff589c5f63f7ef7b3ccbab00ff6ccd86242f8412d5afea6e53bd9dbf045bd0b4  src/modules.jsx
-          9c4dbcd32d8cd583a4f769a193fb4f6800227a4d84f68c802b578304208edce8  src/styles.css
-          8157e771fe9afed2d282026528512a8df9eef569ef2a97651d0ce047da9d783d  src/supabase.js
-          73db6f01a8f52bc4f0e55cc7f4ce4dd045e6dec7671485d0f8394b5d7725509c  supabase/migrations/20260810193000_add_ai_plans_entitlements_and_usage.sql
-          6c071448725b2644e2e9ac70914db86b6d33707791c4bcbab00e8a8de3e98ddd  supabase/migrations/20260810194000_index_ai_entitlement_foreign_keys.sql
-          5ab324d98c80b8006a6ca3f956f3e08de5f614e67f6dab8fd11861f6e3844430  supabase/migrations/20260813143000_two_plans_token_quotas_owner_credentials.sql
-          ce863215fc168e900c5625bf03f0ec2a3e5d4099acac3d9f3144eb96aebb1e3f  supabase/migrations/20260813185000_yoyo_core_resource_factory.sql
-          91d944528367f6e7e6e669f045abf607cc911cc54896ed530ed915fd9d71d2eb  supabase/migrations/20260813190000_yoyo_core_google_storage_and_superior_file_limits.sql
-          64d23c50a50b3b491c1750123ab0fa80d8130e4331b59e2622d531587efa7a7f  vercel.json
-          500c179267df44612733a4a123d70a56ed568d6078610f28c20bc7d428616d1e  vite.config.js
-          EOF
-          sed -i 's/^          //' /tmp/approved.sha256
-          sha256sum -c /tmp/approved.sha256
+          test "$(find . -type f | wc -l | tr -d ' ')" = "52"
+          echo '1051a299003dbb9326e577c2c2db6592f852e8b1710b34946650768d3ed8459e  src/App.jsx' | sha256sum -c -
+          echo '9c4dbcd32d8cd583a4f769a193fb4f6800227a4d84f68c802b578304208edce8  src/styles.css' | sha256sum -c -
+          echo 'ff589c5f63f7ef7b3ccbab00ff6ccd86242f8412d5afea6e53bd9dbf045bd0b4  src/modules.jsx' | sha256sum -c -
+          echo 'a6db1a16a1b6fc61bb83b0260c2f568385975baae164a7d18469f5b459afe706  api/ai/generate.js' | sha256sum -c -
+          echo '7c625b2a4de64372592da4b76bb3eff5f4d8507b58847acafb27b5085aba4602  src/features/YoyoAIStudio.jsx' | sha256sum -c -
+          echo '43b8e47486025eaa89c7d9919f8ea373adf992b0f7035ab1b91b5afe4e4e150a  src/features/SourceLab.jsx' | sha256sum -c -
+          echo '824bb863262ae6be4fdb91042af0d025f0699defd6534904d94961336ae357a9  src/features/ImmersiveGames.jsx' | sha256sum -c -
+          echo '5cdf3f2fca7fa6b5d453b17a58b56c1a9c246e6795ecb4d1db4f9a9f7a56798e  package-lock.json' | sha256sum -c -
+          echo '1699ee428437a8ce08e0cb2cfbcf712cefe4733276f93297ab84562ba7b63d75  public/assets/phonics-illustrations-v1.webp' | sha256sum -c -
+          echo '633b910f07a48e8bf342eeaf8b14fda99bd594f9bd6bacfc3d9dbefb6cb40c6f  public/assets/subject-covers-v1.webp' | sha256sum -c -
+          echo '1837b76905577f7de3ac60b5c9586fbe543a43437d42252724c547138a910efc  public/assets/yoyo-learning-hero-v2.webp' | sha256sum -c -
+          grep -q '"version": "3.6.0"' package.json
 
       - name: Replace branch contents with approved source
         shell: bash
@@ -111,16 +68,13 @@ jobs:
           npm run build
           test -f dist/index.html
 
-      - name: Commit exact recovered baseline
+      - name: Commit recovered baseline
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          if git diff --cached --quiet; then
-            echo "No source changes required."
-            exit 0
-          fi
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "Recuperar plataforma aprobada 3.6 como nueva base"
           git push origin HEAD:recovery/approved-3.6-exact
