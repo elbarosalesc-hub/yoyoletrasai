@@ -1,0 +1,51 @@
+name: Audit YOYO IA Exclusive
+
+on:
+  push:
+    branches:
+      - agent/yoyo-ai-exclusive-3-6
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify exclusive engine architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f shared/yoyo-ai-engine.js
+          test -f shared/owner-ai-config.js
+          test -f api/ai/generate.js
+          test -f api/_ai-access.js
+          test -f api/_resource-factory.js
+          test -f api/cron/innovation-scan.js
+          test -f api/cron/resource-factory.js
+          grep -q "YOYO-IA-EDU-CL-001" shared/yoyo-ai-engine.js
+          grep -q "provider-agnostic" shared/yoyo-ai-engine.js
+          grep -q "OWNER_AI_ROLES" shared/owner-ai-config.js
+          grep -q "buildOwnerAIProtocol" api/ai/generate.js
+          grep -q "auditYoyoActivity" api/_resource-factory.js
+          grep -q "innovation-scan" vercel.json
+          grep -q "resource-factory" vercel.json
+      - name: Verify safe publication defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "autoPublish" api/owner/factory.js
+          grep -q "review" api/_resource-factory.js
+          ! grep -q -- "--prod" .github/workflows/audit-yoyo-ai-exclusive.yml
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Build 3.6
+        run: npm run build
+      - name: Summary
+        run: echo "YOYO IA exclusive architecture audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
