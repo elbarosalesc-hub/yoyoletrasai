@@ -30,12 +30,12 @@ jobs:
             exit 2
           fi
 
-      - name: Validate preview URL
+      - name: Validate preview URL scope
         shell: bash
         run: |
           case "$PREVIEW_URL" in
-            https://*.vercel.app) ;;
-            *) echo "::error::preview_url debe ser una URL https://*.vercel.app"; exit 3 ;;
+            https://yoyoletrasai-*.vercel.app|https://yoyoletrasai-*-elbarosalesc-pngs-projects.vercel.app) ;;
+            *) echo "::error::preview_url no pertenece al espacio esperado de YoYoLetrasAI."; exit 3 ;;
           esac
 
       - name: Verify preview health before promotion
@@ -43,6 +43,7 @@ jobs:
         run: |
           body="$(curl --fail --silent --show-error "$PREVIEW_URL/api/health")"
           printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"status":"ok"'
           printf '%s' "$body" | grep -q '"version":"3.6.0"'
           printf '%s' "$body" | grep -q '"application":"operational"'
           printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
@@ -57,18 +58,19 @@ jobs:
           resources="$(curl --fail --silent --show-error "$PREVIEW_URL/api/resources")"
           test -n "$resources"
 
-      - name: Install Vercel CLI
+      - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
 
       - name: Promote exact preview artifact
         shell: bash
-        run: vercel promote "$PREVIEW_URL" --yes --token="$VERCEL_TOKEN"
+        run: vercel promote "$PREVIEW_URL" --yes --scope elbarosalesc-pngs-projects --token="$VERCEL_TOKEN"
 
       - name: Verify public production
         shell: bash
         run: |
           body="$(curl --fail --silent --show-error https://yoyoletrasai.vercel.app/api/health)"
           printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"status":"ok"'
           printf '%s' "$body" | grep -q '"version":"3.6.0"'
           printf '%s' "$body" | grep -q '"application":"operational"'
           printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
