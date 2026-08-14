@@ -1,0 +1,45 @@
+name: Materialize Approved Owner Full Source V2
+
+on:
+  push:
+    branches:
+      - agent/restore-approved-owner-full-source
+    paths:
+      - .approved-restore2/READY
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild uploaded approved source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yoyo-approved
+          cat .approved-restore2/chunk-*.b64 | base64 --decode > /tmp/yoyo-approved.tar.gz
+          tar -xzf /tmp/yoyo-approved.tar.gz -C /tmp/yoyo-approved
+          test -f /tmp/yoyo-approved/src/App.jsx
+          test -f /tmp/yoyo-approved/src/modules.jsx
+          test -f /tmp/yoyo-approved/src/features/ImmersiveGames.jsx
+          grep -q 'Educación que incluye' /tmp/yoyo-approved/src/App.jsx
+          grep -q 'Perfil propietario' /tmp/yoyo-approved/src/data.js
+          grep -q 'YOYO Play' /tmp/yoyo-approved/src/data.js
+      - name: Replace isolated branch only
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .approved-restore2 -exec rm -rf {} +
+          cp -a /tmp/yoyo-approved/. .
+          rm -rf .approved-restore2
+          git config user.name 'yoyo-release-bot'
+          git config user.email 'elba.rosalesc@gmail.com'
+          git add -A
+          git commit -m 'Restaurar exactamente la fuente Owner Full aprobada'
+          git push origin HEAD:agent/restore-approved-owner-full-source
