@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Fuentes IA" kicker="YOYO IA · FUENTES" title="Fuentes confiables y verificables" description="Analiza procedencia, vigencia, autoría y evidencia antes de usar información en recursos, informes o investigaciones." features={['Fuentes oficiales prioritarias','Investigación académica','Verificación de vigencia','Rechazo de referencias inventadas','Trazabilidad por afirmación']} primaryHref="/yoyo-ia" primaryLabel="Analizar fuentes"/>}
