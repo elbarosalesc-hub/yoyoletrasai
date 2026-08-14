@@ -1,8 +1,44 @@
 import { YOYO_MODULE_BLUEPRINTS } from './yoyo-core.js';
 import { OWNER_AI_ROLES } from './owner-ai-config.js';
 
+const EXCELLENCE_DIMENSIONS = Object.freeze([
+  ['pedagogy', 'Calidad pedagógica', 'Aprendizajes útiles, observables, transferibles y con alta exigencia cognitiva.'],
+  ['curriculum', 'Currículum chileno', 'Alineación curricular trazable, actualizable y verificable por nivel, asignatura y habilidad.'],
+  ['inclusion', 'PIE, NEE y DUA', 'Accesibilidad e inclusión integradas sin reducir el desafío pedagógico.'],
+  ['content', 'Recursos educativos', 'Material original, imprimible, atractivo, funcional y superior a bancos genéricos.'],
+  ['teacher_productivity', 'Productividad docente', 'Reducir trabajo repetitivo y aumentar tiempo disponible para decisiones pedagógicas.'],
+  ['student_experience', 'Experiencia del estudiante', 'Interacciones claras, motivadoras, seguras y apropiadas para la edad.'],
+  ['family_experience', 'Experiencia de familias', 'Puentes hogar-escuela comprensibles, prácticos y respetuosos de la diversidad.'],
+  ['ux', 'Diseño y usabilidad', 'Interfaz premium, consistente, rápida, accesible y fácil de aprender.'],
+  ['performance', 'Rendimiento', 'Carga rápida, cache versionado y consumo eficiente de red y servidor.'],
+  ['security', 'Seguridad y privacidad', 'Mínimo privilegio, secretos fuera del navegador y protección reforzada del perfil propietario.'],
+  ['ai', 'YOYO IA', 'Asistencia especializada, auditable, contextualizada y progresivamente independiente.'],
+  ['reliability', 'Confiabilidad', 'Validaciones automáticas, recuperación ante fallos y cambios incrementales reversibles.'],
+  ['governance', 'Gobernanza', 'Control central propietario de módulos, contenido, usuarios, planes, legal, pagos y operación.'],
+  ['innovation', 'Innovación continua', 'Benchmark semestral, detección de brechas y mejora continua basada en evidencia.'],
+].map(([id, label, objective]) => Object.freeze({ id, label, objective, continuousImprovement: true })));
+
 export const OWNER_PLATFORM_PROFILE = Object.freeze({
   version: '3.6.0-owner-control',
+  excellence: Object.freeze({
+    ambition: 'category-leading-educational-platform',
+    continuousImprovement: true,
+    benchmarkTargetMultiplier: 1.2,
+    dimensions: EXCELLENCE_DIMENSIONS,
+    neverTradePedagogyForAutomation: true,
+    neverTradeAccessibilityForVisualNovelty: true,
+    neverTradePrivacyForConvenience: true,
+  }),
+  ownerApplication: Object.freeze({
+    singleControlSurface: true,
+    purpose: 'Administrar, actualizar, auditar y mejorar toda la plataforma desde una aplicación propietaria única.',
+    sections: Object.freeze([
+      'platform_health', 'modules', 'design', 'curriculum', 'resource_factory', 'ai', 'users', 'plans',
+      'cache', 'storage', 'security', 'legal', 'payments', 'benchmarks', 'release_readiness',
+    ]),
+    stagedChanges: true,
+    previewBeforeSensitiveApply: true,
+  }),
   protection: Object.freeze({
     ownerOnly: true,
     requirePlatformAdmin: true,
@@ -10,6 +46,18 @@ export const OWNER_PLATFORM_PROFILE = Object.freeze({
     productionWritesByDefault: false,
     domainChangesByDefault: false,
     aliasChangesByDefault: false,
+  }),
+  releasePolicy: Object.freeze({
+    sourceOfTruth: 'github',
+    pushAllChangesBeforeDeploy: true,
+    batchValidatedImprovements: true,
+    deployOnlyWhenReleaseReady: true,
+    requireGreenAudit: true,
+    requireGreenBuild: true,
+    requireFunctionalChecklist: true,
+    productionAutoDeploy: false,
+    productionDeployRequiresExplicitReleaseAction: true,
+    minimizeUnnecessaryDeployments: true,
   }),
   modules: Object.freeze(YOYO_MODULE_BLUEPRINTS.map((module) => Object.freeze({
     id: module.id,
@@ -26,6 +74,7 @@ export const OWNER_PLATFORM_PROFILE = Object.freeze({
     iconControl: true,
     densityControl: true,
     typographyControl: true,
+    accessibilityControl: true,
     ownerPreviewRequired: true,
     safeDefaultTheme: 'premium-academic',
   }),
@@ -40,10 +89,18 @@ export const OWNER_PLATFORM_PROFILE = Object.freeze({
   }),
   cache: Object.freeze({
     configurable: true,
+    implemented: true,
     defaultStrategy: 'versioned-safe-cache',
+    clientVersion: 'yoyo-public-v1',
+    browserTtlSeconds: 300,
+    edgeTtlSeconds: 600,
+    staleWhileRevalidateSeconds: 86400,
+    fallbackToRecentStaleOnNetworkError: true,
     invalidateOnResourceVersionChange: true,
     neverCacheOwnerSecrets: true,
     neverCacheAuthTokens: true,
+    neverCacheOwnerEndpoints: true,
+    neverCacheAIRequests: true,
   }),
   plans: Object.freeze({
     ownerCanManageCatalog: true,
@@ -76,17 +133,22 @@ export const OWNER_PLATFORM_PROFILE = Object.freeze({
 export function ownerProfileChecklist({ runtime, storage, coverage } = {}) {
   const checks = [
     { id: 'owner_access', label: 'Acceso propietario exclusivo', ok: OWNER_PLATFORM_PROFILE.protection.ownerOnly },
+    { id: 'single_control_surface', label: 'Aplicación propietaria única', ok: OWNER_PLATFORM_PROFILE.ownerApplication.singleControlSurface },
+    { id: 'excellence_program', label: 'Mejora continua multidimensional', ok: OWNER_PLATFORM_PROFILE.excellence.dimensions.length >= 12 },
     { id: 'modules', label: '19 módulos administrables', ok: OWNER_PLATFORM_PROFILE.modules.length === 19 },
+    { id: 'cache', label: 'Cache seguro versionado', ok: OWNER_PLATFORM_PROFILE.cache.implemented && OWNER_PLATFORM_PROFILE.cache.neverCacheOwnerSecrets && OWNER_PLATFORM_PROFILE.cache.neverCacheAuthTokens },
     { id: 'factory', label: 'Generador para todos los módulos', ok: OWNER_PLATFORM_PROFILE.automation.resourceFactory && OWNER_PLATFORM_PROFILE.automation.allModules },
     { id: 'refresh', label: 'Actualización y benchmark semestral', ok: OWNER_PLATFORM_PROFILE.automation.curriculumRefreshMonths === 6 && OWNER_PLATFORM_PROFILE.automation.capabilityBenchmarkMonths === 6 },
+    { id: 'release_economy', label: 'Despliegue sólo con lote validado', ok: OWNER_PLATFORM_PROFILE.releasePolicy.deployOnlyWhenReleaseReady && OWNER_PLATFORM_PROFILE.releasePolicy.minimizeUnnecessaryDeployments },
     { id: 'native_runtime', label: 'Motor nativo YOYO conectado', ok: Boolean(runtime?.nativeConfigured) },
     { id: 'storage', label: 'Almacenamiento YOYO conectado', ok: Boolean(storage?.configured) },
     { id: 'capability_parity', label: 'Paridad funcional verificada', ok: Boolean(coverage && coverage.missing?.length === 0) },
-    { id: 'safe_production', label: 'Producción protegida contra promoción automática', ok: !OWNER_PLATFORM_PROFILE.automation.productionAutoPromotion },
+    { id: 'safe_production', label: 'Producción protegida contra promoción automática', ok: !OWNER_PLATFORM_PROFILE.automation.productionAutoPromotion && !OWNER_PLATFORM_PROFILE.releasePolicy.productionAutoDeploy },
   ];
   return {
     checks,
     blocking: checks.filter((check) => !check.ok).map((check) => check.id),
     readyForFullIndependence: checks.filter((check) => ['native_runtime', 'storage', 'capability_parity'].includes(check.id)).every((check) => check.ok),
+    releaseReadyByPolicy: checks.filter((check) => ['owner_access', 'single_control_surface', 'excellence_program', 'modules', 'cache', 'factory', 'refresh', 'release_economy', 'safe_production'].includes(check.id)).every((check) => check.ok),
   };
 }
