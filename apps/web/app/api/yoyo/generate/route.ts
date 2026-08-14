@@ -5,6 +5,7 @@ import { createGateway } from '@ai-sdk/gateway'
 import { generateText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { SUPABASE_URL } from '@/lib/supabase/config'
+import { generateYoyoNative, yoyoRuntimeStatus } from '@/lib/ai/yoyo-runtime'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,6 +45,17 @@ async function verifyOwner() {
   return user
 }
 
+async function externalFallback(system:string,prompt:string,mode:string){
+  const apiKey=await loadGatewayKey()
+  const gateway=createGateway({apiKey})
+  const result=await generateText({
+    model:gateway('openai/gpt-5.6-sol'),system,prompt,maxOutputTokens:32000,temperature:0.2,
+    abortSignal:AbortSignal.timeout(110000),
+    providerOptions:{gateway:{disallowPromptTraining:true,tags:['yoyo-ia','owner-full','external-fallback',`mode:${mode}`]}},
+  })
+  return {text:result.text,usage:result.usage||null,runtime:'external-fallback' as const,modelRoute:'openai/gpt-5.6-sol'}
+}
+
 export async function POST(request: Request) {
   const owner = await verifyOwner()
   if (!owner) return NextResponse.json({ error: 'Acceso propietario requerido.' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
@@ -53,24 +65,29 @@ export async function POST(request: Request) {
   const mode = String(body.mode || 'creation').trim().slice(0, 80)
   if (!prompt) return NextResponse.json({ error: 'Escribe una solicitud para YOYO IA.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
 
+  const system=`Eres YOYO IA, motor educativo exclusivo de YoYoLetrasAI para Chile. Trabajas con rigor pedagógico, currículo chileno, PIE, NEE y DUA. La cuenta actual es propietaria y tiene acceso interno ilimitado. Nunca inventes fuentes, citas, autores, estadísticas ni normativa. Si una afirmación necesita verificación actual y no tienes evidencia, indícalo. En creación pedagógica entrega productos completos, utilizables y profesionalmente estructurados. Modo actual: ${mode}.`
   try {
-    const apiKey = await loadGatewayKey()
-    const gateway = createGateway({ apiKey })
-    const result = await generateText({
-      model: gateway('openai/gpt-5.6-sol'),
-      system: `Eres YOYO IA, motor educativo exclusivo de YoYoLetrasAI para Chile. Trabajas con rigor pedagógico, currículo chileno, PIE, NEE y DUA. La cuenta actual es propietaria y tiene acceso interno ilimitado. Nunca inventes fuentes, citas, autores, estadísticas ni normativa. Si una afirmación necesita verificación actual y no tienes evidencia, indícalo. En creación pedagógica entrega productos completos, utilizables y profesionalmente estructurados. Modo actual: ${mode}.`,
-      prompt,
-      maxOutputTokens: 32000,
-      temperature: 0.2,
-      abortSignal: AbortSignal.timeout(110000),
-      providerOptions: { gateway: { disallowPromptTraining: true, tags: ['yoyo-ia', 'owner-full', `mode:${mode}`] } },
-    })
-    return NextResponse.json({ engine: 'YOYO-IA-EDU-CL-001', version: '3.6.0-full', ownerUnlimited: true, text: result.text, usage: result.usage || null }, { headers: { 'Cache-Control': 'no-store' } })
+    const runtime=yoyoRuntimeStatus()
+    let result
+    if(runtime.configured){
+      try{result=await generateYoyoNative({system,prompt,maxOutputTokens:32000})}
+      catch(nativeError){
+        if(!runtime.fallbackAllowed)throw nativeError
+        console.error('YOYO native runtime unavailable; controlled fallback enabled',{message:nativeError instanceof Error?nativeError.message:'unknown'})
+        result=await externalFallback(system,prompt,mode)
+      }
+    }else{
+      if(!runtime.fallbackAllowed)throw new Error('YOYO_NATIVE_RUNTIME_REQUIRED')
+      result=await externalFallback(system,prompt,mode)
+    }
+    return NextResponse.json({ engine: 'YOYO-IA-EDU-CL-001', version: '3.6.0-full', ownerUnlimited: true, runtime:result.runtime, modelRoute:result.modelRoute, text: result.text, usage: result.usage || null }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'GENERATION_FAILED'
     const friendly = message === 'YOYO_CREDENTIAL_REQUIRED'
       ? 'Falta guardar la clave privada de YOYO IA en el perfil propietario.'
-      : 'YOYO IA no pudo completar la solicitud en este momento.'
+      : message === 'YOYO_NATIVE_RUNTIME_REQUIRED'
+        ? 'YOYO Native Runtime está configurado como obligatorio y todavía no está disponible.'
+        : 'YOYO IA no pudo completar la solicitud en este momento.'
     return NextResponse.json({ error: friendly, code: message }, { status: message === 'YOYO_CREDENTIAL_REQUIRED' ? 503 : 502, headers: { 'Cache-Control': 'no-store' } })
   }
 }
