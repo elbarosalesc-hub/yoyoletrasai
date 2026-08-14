@@ -1,6 +1,9 @@
 name: Deploy YoYoLetrasAI 3.6 Exact Preview
 
 on:
+  push:
+    branches:
+      - staging/v3.6.0-exact-20260814
   workflow_dispatch:
 
 permissions:
@@ -19,6 +22,14 @@ jobs:
     steps:
       - name: Checkout isolated staging branch
         uses: actions/checkout@v4
+
+      - name: Safety guard - never production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF_NAME}" = "staging/v3.6.0-exact-20260814"
+          test "${GITHUB_REF_NAME}" != "main"
+          echo "Staging-only guard active. No production promotion is permitted by this workflow." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Reconstruct exact YoYoLetrasAI 3.6 source
         shell: bash
