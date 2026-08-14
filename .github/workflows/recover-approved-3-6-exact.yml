@@ -1,0 +1,76 @@
+name: Recover approved 3.6 exact
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/recover-approved-3-6-exact.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-exact
+          fetch-depth: 0
+
+      - name: Rehydrate exact approved source from immutable Git blob
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BLOB_SHA: b17860fafad007d7a27305c53556f87651f9e210
+          EXPECTED_SHA256: db9327d278b33881ca17eae48505aa11a082418c4c10189f3a4029cada95c6d3
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/yoyo-approved /tmp/yoyo-payload*
+          mkdir -p /tmp/yoyo-approved
+          gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" --jq .content | tr -d '\n' | base64 -d > /tmp/yoyo-payload.b64
+          base64 -d /tmp/yoyo-payload.b64 > /tmp/yoyo-payload.tar.gz
+          echo "${EXPECTED_SHA256}  /tmp/yoyo-payload.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/yoyo-payload.tar.gz -C /tmp/yoyo-approved
+          test -f /tmp/yoyo-approved/package.json
+          test -f /tmp/yoyo-approved/src/App.jsx
+          test -f /tmp/yoyo-approved/src/features/YoyoAIStudio.jsx
+          test -f /tmp/yoyo-approved/src/features/SourceLab.jsx
+          test -f /tmp/yoyo-approved/src/features/ImmersiveGames.jsx
+          test -f /tmp/yoyo-approved/src/modules.jsx
+
+      - name: Replace branch contents with exact approved source
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          find .github -mindepth 1 -maxdepth 1 ! -name workflows -exec rm -rf {} + || true
+          find .github/workflows -type f ! -name recover-approved-3-6-exact.yml -delete || true
+          cp -a /tmp/yoyo-approved/. .
+          rm -rf node_modules
+
+      - name: Validate recovered source before commit
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+          test -f dist/index.html
+          grep -q "YoyoAIStudio" src/App.jsx
+          grep -q "SourceLab" src/App.jsx
+          grep -q "ImmersiveGames" src/App.jsx
+          grep -q "ReadingPlan" src/App.jsx
+
+      - name: Commit exact recovered baseline
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes required."
+            exit 0
+          fi
+          git commit -m "Recuperar exactamente plataforma aprobada 3.6"
+          git push origin HEAD:recovery/approved-3.6-exact
