@@ -1,0 +1,90 @@
+name: Verify approved canonical source
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-verified-source-20260814
+    paths:
+      - .github/workflows/verify-approved-canonical-source.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-clean-build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-verified-source-20260814
+          fetch-depth: 0
+
+      - name: Verify all 52 approved files against immutable manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST='.restore/approved-owner-full-manifest.tsv'
+          test -f "$MANIFEST"
+          test "$(wc -l < "$MANIFEST" | tr -d ' ')" = '52'
+          rm -rf /tmp/yoyo-approved
+          mkdir -p /tmp/yoyo-approved
+          verified=0
+          while IFS=$'\t' read -r expected path; do
+            test -n "$expected"
+            test -n "$path"
+            test -f "$path"
+            actual="$(git hash-object "$path")"
+            if [ "$actual" != "$expected" ]; then
+              echo "HASH_MISMATCH $path expected=$expected actual=$actual" >&2
+              exit 1
+            fi
+            mkdir -p "/tmp/yoyo-approved/$(dirname "$path")"
+            cp -p "$path" "/tmp/yoyo-approved/$path"
+            verified=$((verified + 1))
+          done < "$MANIFEST"
+          test "$verified" = '52'
+          test "$(find /tmp/yoyo-approved -type f | wc -l | tr -d ' ')" = '52'
+          test -f /tmp/yoyo-approved/package.json
+          test -f /tmp/yoyo-approved/package-lock.json
+          test -f /tmp/yoyo-approved/src/App.jsx
+          test -f /tmp/yoyo-approved/src/features/YoyoAIStudio.jsx
+          test -f /tmp/yoyo-approved/src/features/SourceLab.jsx
+          test -f /tmp/yoyo-approved/src/features/ImmersiveGames.jsx
+          test -f /tmp/yoyo-approved/src/features/ReadingPlan.jsx
+          test -f /tmp/yoyo-approved/public/assets/phonics-illustrations-v1.webp
+          test -f /tmp/yoyo-approved/public/assets/subject-covers-v1.webp
+          test -f /tmp/yoyo-approved/public/assets/yoyo-learning-hero-v2.webp
+          grep -q '"version": "3.6.0"' /tmp/yoyo-approved/package.json
+          echo "VERIFIED_APPROVED_FILES=$verified"
+
+      - name: Build exact approved source before committing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/yoyo-approved
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      - name: Replace branch with only the verified approved source
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/yoyo-approved/. .
+          rm -rf node_modules dist
+          test "$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')" = '52'
+
+      - name: Commit canonical baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Recuperar plataforma aprobada 3.6.0 exacta y verificada'
+          git push origin HEAD:recovery/approved-3.6-verified-source-20260814
