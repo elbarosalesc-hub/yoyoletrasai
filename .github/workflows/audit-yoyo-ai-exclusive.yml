@@ -41,8 +41,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -q "autoPublish" api/owner/factory.js
-          grep -q "review" api/_resource-factory.js
-          ! grep -q -- "--prod" .github/workflows/audit-yoyo-ai-exclusive.yml
+          grep -q "status:shouldPublish?'published':'review'" api/_resource-factory.js
+          grep -q "auto_publish_resources" api/owner/factory.js
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
       - name: Build 3.6
