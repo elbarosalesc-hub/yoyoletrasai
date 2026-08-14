@@ -3,7 +3,7 @@ import { createClient as createAdminSupabase } from '@supabase/supabase-js'
 import { AppShell } from '@/components/AppShell'
 import { createClient } from '@/lib/supabase/server'
 import { SUPABASE_URL } from '@/lib/supabase/config'
-import { OwnerKeyManager } from './OwnerKeyManager'
+import { OwnerCommandCenter } from './OwnerCommandCenter'
 
 export const dynamic='force-dynamic'
 
@@ -26,11 +26,8 @@ export default async function OwnerPage(){
   const owner=await ownerContext()
   return <AppShell active="Propietaria">
     <div className="approved-platform-dashboard">
-      <section className="approved-hero-row"><div><span className="approved-kicker">CONTROL PROPIETARIO</span><h1>Centro de comando de toda la plataforma</h1><p>{owner.email} · plan {owner.plan} · YOYO IA sin cuotas internas.</p></div></section>
-      <section className="approved-main-grid">
-        <OwnerKeyManager/>
-        <aside className="approved-panel" style={{padding:24}}><h2>Gobierno seguro</h2><p>Los cambios sensibles se preparan, validan y revisan antes de llegar a producción. El dominio permanente y la plataforma completa quedan protegidos durante cada mejora.</p><div className="approved-readiness"><div><div><strong>Plataforma completa</strong><small>No se eliminan módulos existentes.</small></div></div><div><div><strong>YOYO IA propietaria</strong><small>Clave cifrada y reutilizable en servidor.</small></div></div><div><div><strong>Publicación controlada</strong><small>Preview, auditoría y build antes de producción.</small></div></div></div></aside>
-      </section>
+      <section className="approved-hero-row"><div><span className="approved-kicker">CONTROL PROPIETARIO</span><h1>Centro de comando de toda la plataforma</h1><p>{owner.email} · plan {owner.plan} · YOYO IA sin cuotas mensuales internas.</p></div></section>
+      <OwnerCommandCenter ownerEmail={owner.email} plan={owner.plan}/>
     </div>
   </AppShell>
 }
