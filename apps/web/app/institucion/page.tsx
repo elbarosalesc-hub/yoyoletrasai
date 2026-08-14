@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Institución" kicker="GESTIÓN INSTITUCIONAL" title="Institución y configuración educativa" description="Centraliza contexto institucional, roles, cursos, criterios curriculares, seguridad y preparación de integraciones." features={['Contexto institucional','Roles y permisos','Configuración curricular','Integraciones seguras','Auditoría y publicación']} primaryHref="/configuracion" primaryLabel="Abrir configuración"/>}
