@@ -38,8 +38,15 @@ jobs:
           rm -rf app
           mkdir -p app
           count="$(find release -maxdepth 1 -name 'exact-v360.part.*' -type f | wc -l | tr -d ' ')"
-          test "$count" = "27"
-          cat release/exact-v360.part.* > /tmp/yoyo360-exact.tar.xz.b64
+          test "$count" = "12"
+          test "$(wc -c < release/exact-v360.tail-12-16 | tr -d ' ')" = "100000"
+          test "$(wc -c < release/exact-v360.tail-17-21 | tr -d ' ')" = "100000"
+          test "$(wc -c < release/exact-v360.tail-22-26 | tr -d ' ')" = "98236"
+          echo "8c19fc91b93501c8716cfafaf386db5c36a574f0b4ef7c577583f4ceb68514bb  release/exact-v360.tail-12-16" | sha256sum -c -
+          echo "3bb9b719af4389f43086c242611a1a33c00833c4d55edfca54aec399fd708d64  release/exact-v360.tail-17-21" | sha256sum -c -
+          echo "0c3ee365c6b3aa1c9f58d4b5bd608ec3229e192d76bc5b0cc4c45088a33dbd12  release/exact-v360.tail-22-26" | sha256sum -c -
+          find release -maxdepth 1 -name 'exact-v360.part.*' -type f | sort | xargs cat > /tmp/yoyo360-exact.tar.xz.b64
+          cat release/exact-v360.tail-12-16 release/exact-v360.tail-17-21 release/exact-v360.tail-22-26 >> /tmp/yoyo360-exact.tar.xz.b64
           test "$(wc -c < /tmp/yoyo360-exact.tar.xz.b64 | tr -d ' ')" = "538236"
           base64 --decode /tmp/yoyo360-exact.tar.xz.b64 > /tmp/yoyo360-exact.tar.xz
           echo "8906010a428e8b5a05254d6888cefa006bde216a874b018b79a13d96103a86a7  /tmp/yoyo360-exact.tar.xz" | sha256sum -c -
