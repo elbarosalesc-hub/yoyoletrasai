@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Pictogramas" kicker="ACCESIBILIDAD" title="Pictogramas y apoyos visuales" description="Crea apoyos visuales accesibles para comunicación, anticipación, rutinas y comprensión pedagógica." features={['Pictogramas educativos','Rutinas visuales','Secuencias de pasos','Apoyos de comunicación','Adaptación PIE y DUA']} primaryHref="/crear" primaryLabel="Crear apoyo visual"/>}
