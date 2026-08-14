@@ -1,12 +1,7 @@
-name: Publish Full YoYoLetrasAI Production
+name: Publish Full YoYoLetrasAI Production - Manual Release
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - agent/restore-full-platform-yoyo-3-6
-    paths:
-      - .github/workflows/publish-full-platform-production.yml
 
 permissions:
   contents: read
@@ -18,112 +13,11 @@ env:
   PERMANENT_URL: https://yoyoletrasai.vercel.app
 
 jobs:
-  validate-and-publish:
+  release-safety-gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    environment: VERCEL_TOKEN
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Checkout full release candidate
-        uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-
-      - name: Require Vercel credential
+      - name: Manual release policy
         shell: bash
         run: |
-          test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN"; exit 2; }
-
-      - name: Validate full application before deployment
-        run: |
-          npm install
-          npm run typecheck
-          npm run build
-
-      - name: Verify non-regression release surface
-        shell: bash
-        run: |
-          test -f apps/web/app/app/page.tsx
-          test -f apps/web/app/caligrafia/page.tsx
-          test -f apps/web/app/herramientas/page.tsx
-          test -f apps/web/app/yoyo-ia/page.tsx
-          test -f apps/web/app/propietaria/page.tsx
-          test -f apps/web/app/biblioteca/page.tsx
-          test -f apps/web/app/evaluaciones/page.tsx
-          test -f apps/web/app/inclusion/page.tsx
-          test -f apps/web/app/informes/page.tsx
-          test -f apps/web/app/integraciones/page.tsx
-          grep -q "Manuscrita minúscula" apps/web/app/caligrafia/page.tsx
-          grep -q "Imprenta mayúscula" apps/web/app/caligrafia/page.tsx
-          grep -q "OFFICIAL_SOURCES_REQUIRED" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "ownerUnlimited: true" apps/web/app/api/yoyo/generate/route.ts
-
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@50.1.6
-
-      - name: Link apps/web to existing permanent project
-        shell: bash
-        run: |
-          mkdir -p apps/web/.vercel
-          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > apps/web/.vercel/project.json
-
-      - name: Pull preview environment
-        run: vercel pull --yes --environment=preview --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
-
-      - name: Ensure local Next dependencies for hermetic Vercel build
-        run: npm install --workspaces=false --prefix apps/web
-
-      - name: Build immutable Next preview
-        run: vercel build --cwd apps/web --token="$VERCEL_TOKEN"
-
-      - name: Deploy immutable preview
-        id: preview
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Preview full platform: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify full preview routes
-        shell: bash
-        run: |
-          url="${{ steps.preview.outputs.url }}"
-          curl --fail --silent --show-error "$url/" > /tmp/root.html
-          grep -qi 'YoYo' /tmp/root.html
-          for path in /acceso /caligrafia /herramientas /yoyo-ia; do
-            code="$(curl --silent --output /tmp/page.html --write-out '%{http_code}' "$url$path")"
-            test "$code" -ge 200 -a "$code" -lt 400
-          done
-          health="$(curl --silent --show-error --write-out '\n%{http_code}' "$url/api/health")"
-          printf '%s\n' "$health" | head -n -1
-
-      - name: Pull production environment
-        run: vercel pull --yes --environment=production --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
-
-      - name: Ensure local Next dependencies for production build
-        run: npm install --workspaces=false --prefix apps/web
-
-      - name: Build production Next artifact
-        run: vercel build --prod --cwd apps/web --token="$VERCEL_TOKEN"
-
-      - name: Deploy validated full release to existing production project
-        id: production
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --prod --cwd apps/web --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Production deployment: $url" >> "$GITHUB_STEP_SUMMARY"
-          echo "Permanent URL preserved: $PERMANENT_URL" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify permanent link and full platform
-        shell: bash
-        run: |
-          for path in / /acceso /caligrafia /herramientas /yoyo-ia; do
-            code="$(curl --retry 8 --retry-delay 3 --silent --output /tmp/permanent.html --write-out '%{http_code}' "$PERMANENT_URL$path")"
-            test "$code" -ge 200 -a "$code" -lt 400
-          done
-          curl --retry 8 --retry-delay 3 --fail --silent --show-error "$PERMANENT_URL/caligrafia" > /tmp/caligrafia.html
-          grep -qi 'Caligraf' /tmp/caligrafia.html
+          echo "Producción no se publica automáticamente desde esta rama."
+          echo "La publicación exige una acción manual posterior a validación completa y aprobación explícita."
