@@ -6,6 +6,8 @@ import { generateText } from 'ai'
 import { createClient } from '@/lib/supabase/server'
 import { SUPABASE_URL } from '@/lib/supabase/config'
 import { generateYoyoNative, yoyoRuntimeStatus } from '@/lib/ai/yoyo-runtime'
+import { OFFICIAL_RESEARCH_POLICY, shouldSearchOfficialSources } from '@/lib/ai/official-sources'
+import { officialSearchStatus, searchOfficialSources } from '@/lib/ai/official-search'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,22 +67,65 @@ export async function POST(request: Request) {
   const mode = String(body.mode || 'creation').trim().slice(0, 80)
   if (!prompt) return NextResponse.json({ error: 'Escribe una solicitud para YOYO IA.' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
 
-  const system=`Eres YOYO IA, motor educativo exclusivo de YoYoLetrasAI para Chile. Trabajas con rigor pedagógico, currículo chileno, PIE, NEE y DUA. La cuenta actual es propietaria y tiene acceso interno ilimitado. Nunca inventes fuentes, citas, autores, estadísticas ni normativa. Si una afirmación necesita verificación actual y no tienes evidencia, indícalo. En creación pedagógica entrega productos completos, utilizables y profesionalmente estructurados. Modo actual: ${mode}.`
+  const mustResearch = shouldSearchOfficialSources(mode, prompt)
+  const searchStatus = officialSearchStatus()
+  let researchContext = ''
+  let sources: { title: string; url: string; domain: string }[] = []
+  let researchState: 'not-needed' | 'verified' | 'unavailable' | 'failed' = mustResearch ? 'unavailable' : 'not-needed'
+
+  if (mustResearch) {
+    if (searchStatus.configured) {
+      try {
+        const search = await searchOfficialSources(prompt)
+        sources = search.sources
+        researchContext = [
+          'EVIDENCIA OFICIAL RECUPERADA PARA ESTA RESPUESTA:',
+          search.text || 'Sin resumen adicional.',
+          sources.length ? `FUENTES OFICIALES RECUPERADAS:\n${sources.map((source, index) => `${index + 1}. ${source.title} — ${source.url}`).join('\n')}` : 'No se recuperaron fuentes oficiales verificables.',
+        ].join('\n\n')
+        researchState = sources.length ? 'verified' : 'unavailable'
+      } catch (error) {
+        console.error('YOYO official research failed', { message: error instanceof Error ? error.message : 'unknown' })
+        researchState = 'failed'
+      }
+    }
+
+    if (researchState !== 'verified') {
+      return NextResponse.json({
+        error: 'YOYO IA necesita fuentes oficiales verificables para esta solicitud y la búsqueda oficial todavía no entregó evidencia suficiente. No generaré una respuesta factual sin respaldo.',
+        code: 'OFFICIAL_SOURCES_REQUIRED',
+        officialResearch: { required: true, state: researchState, searchConfigured: searchStatus.configured, sources: [] },
+      }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
+    }
+  }
+
+  const system=`Eres YOYO IA, motor educativo exclusivo de YoYoLetrasAI para Chile. Trabajas con rigor pedagógico, currículo chileno, PIE, NEE y DUA. La cuenta actual es propietaria y tiene acceso interno ilimitado. ${OFFICIAL_RESEARCH_POLICY} En creación pedagógica entrega productos completos, utilizables y profesionalmente estructurados. Modo actual: ${mode}.`
+  const groundedPrompt = researchContext ? `${researchContext}\n\nSOLICITUD DE LA USUARIA:\n${prompt}` : prompt
+
   try {
     const runtime=yoyoRuntimeStatus()
     let result
     if(runtime.configured){
-      try{result=await generateYoyoNative({system,prompt,maxOutputTokens:32000})}
+      try{result=await generateYoyoNative({system,prompt:groundedPrompt,maxOutputTokens:32000})}
       catch(nativeError){
         if(!runtime.fallbackAllowed)throw nativeError
         console.error('YOYO native runtime unavailable; controlled fallback enabled',{message:nativeError instanceof Error?nativeError.message:'unknown'})
-        result=await externalFallback(system,prompt,mode)
+        result=await externalFallback(system,groundedPrompt,mode)
       }
     }else{
       if(!runtime.fallbackAllowed)throw new Error('YOYO_NATIVE_RUNTIME_REQUIRED')
-      result=await externalFallback(system,prompt,mode)
+      result=await externalFallback(system,groundedPrompt,mode)
     }
-    return NextResponse.json({ engine: 'YOYO-IA-EDU-CL-001', version: '3.6.0-full', ownerUnlimited: true, runtime:result.runtime, modelRoute:result.modelRoute, text: result.text, usage: result.usage || null }, { headers: { 'Cache-Control': 'no-store' } })
+    return NextResponse.json({
+      engine: 'YOYO-IA-EDU-CL-001',
+      version: '3.6.0-full',
+      ownerUnlimited: true,
+      runtime:result.runtime,
+      modelRoute:result.modelRoute,
+      text: result.text,
+      usage: result.usage || null,
+      officialResearch: { required: mustResearch, state: researchState, searchConfigured: searchStatus.configured, sources },
+    }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'GENERATION_FAILED'
     const friendly = message === 'YOYO_CREDENTIAL_REQUIRED'
