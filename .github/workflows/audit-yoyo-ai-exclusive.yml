@@ -25,6 +25,7 @@ jobs:
           test -f shared/yoyo-ai-engine.js
           test -f shared/yoyo-capability-benchmark.js
           test -f shared/owner-ai-config.js
+          test -f shared/owner-platform-config.js
           test -f api/_yoyo-native-runtime.js
           test -f api/_yoyo-storage.js
           test -f api/ai/generate.js
@@ -53,6 +54,30 @@ jobs:
           test "$count" -ge 19
           grep -q "nineteen_module_resource_factory" shared/yoyo-capability-benchmark.js
           grep -q "pickModules" api/_resource-factory.js
+      - name: Verify owner master application
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/features/OwnerPlatformManager.jsx
+          grep -q "singleControlSurface: true" shared/owner-platform-config.js
+          grep -q "category-leading-educational-platform" shared/owner-platform-config.js
+          grep -q "deployOnlyWhenReleaseReady: true" shared/owner-platform-config.js
+          grep -q "productionAutoDeploy: false" shared/owner-platform-config.js
+          grep -q "minimizeUnnecessaryDeployments: true" shared/owner-platform-config.js
+      - name: Verify cache safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f src/platform-cache.js
+          grep -q "stale-while-revalidate=86400" api/resources.js
+          grep -q "If-None-Match" src/platform-cache.js
+          grep -q "neverCacheOwnerSecrets: true" shared/owner-platform-config.js
+          grep -q "neverCacheAuthTokens: true" shared/owner-platform-config.js
+          grep -q "neverCacheOwnerEndpoints: true" shared/owner-platform-config.js
+          grep -q "neverCacheAIRequests: true" shared/owner-platform-config.js
+          grep -q "no-store" api/owner/profile.js
+          grep -q "no-store" api/owner/control.js
+          grep -q "no-store" api/ai/generate.js
       - name: Verify safe publication defaults
         shell: bash
         run: |
@@ -66,4 +91,4 @@ jobs:
       - name: Build 3.6
         run: npm run build
       - name: Summary
-        run: echo "YOYO IA exclusive architecture, native-runtime adapter, own-storage adapter, 19-module factory and semiannual benchmark audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "YOYO master owner application, safe cache, exclusive AI architecture, 19-module factory and release-economy policy audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
