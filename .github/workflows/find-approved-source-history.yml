@@ -1,0 +1,37 @@
+name: Find Approved Owner Full History
+
+on:
+  push:
+    branches: [agent/publish-v3-6-vite]
+    paths: [.github/workflows/find-approved-source-history.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  locate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Find commits containing approved source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --all --tags --prune
+          echo 'APP_BLOB=3fb963dacce0b01874cab7ca5ee44d1e956ac545'
+          echo 'MODULES_BLOB=0ae9c5906e11ad5c7115a96ceea0b152a76d2551'
+          echo 'AI_BLOB=92e35e779ece33c0923b4772832a6865eca84114'
+          echo 'IMMERSIVE_BLOB=5bf6a8023f1ce20280f15bd8f053ec9d55701e03'
+          for blob in 3fb963dacce0b01874cab7ca5ee44d1e956ac545 0ae9c5906e11ad5c7115a96ceea0b152a76d2551 92e35e779ece33c0923b4772832a6865eca84114 5bf6a8023f1ce20280f15bd8f053ec9d55701e03; do
+            echo "--- $blob ---"
+            git log --all --find-object="$blob" --format='%H %ad %s' --date=iso-strict | head -20 || true
+          done
+          echo '--- candidate commits where App blob is exact ---'
+          for c in $(git rev-list --all); do
+            b=$(git ls-tree "$c" src/App.jsx 2>/dev/null | awk '{print $3}')
+            if [ "$b" = '3fb963dacce0b01874cab7ca5ee44d1e956ac545' ]; then
+              echo "$c $(git show -s --format='%ad %s' --date=iso-strict "$c")"
+            fi
+          done | head -50
