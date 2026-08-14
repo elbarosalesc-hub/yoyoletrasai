@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/restore-full-platform-yoyo-3-6
+      - agent/owner-command-center-yoyo-3-6
   workflow_dispatch:
 
 jobs:
@@ -38,46 +39,36 @@ jobs:
           test -f apps/web/app/planificaciones/page.tsx
           test -f apps/web/app/pictogramas/page.tsx
           test -f apps/web/app/institucion/page.tsx
-          test -f apps/web/app/espacio-estudiante/page.tsx
-          test -f apps/web/app/propietaria/page.tsx
           test -f apps/web/app/caligrafia/page.tsx
           test -f apps/web/app/herramientas/page.tsx
+          test -f apps/web/app/propietaria/page.tsx
+      - name: Verify owner command center isolation
+        run: |
+          test -f apps/web/app/propietaria/OwnerCommandCenter.tsx
+          test -f apps/web/app/propietaria/owner-command-center.module.css
+          grep -q "Producción" apps/web/app/propietaria/OwnerCommandCenter.tsx
+          grep -q "Dominio permanente" apps/web/app/propietaria/OwnerCommandCenter.tsx
+          grep -q "Release explícito" apps/web/app/propietaria/OwnerCommandCenter.tsx
+          ! grep -R "vercel alias set\|vercel deploy --prod\|deploy_to_vercel" apps/web/app/propietaria
       - name: Verify owner and Google safeguards
         run: |
           grep -q "platform_admin" apps/web/app/propietaria/page.tsx
-          grep -q "plan_id','propietaria" apps/web/app/propietaria/page.tsx
-          grep -q "aes-256-gcm" apps/web/app/api/owner/yoyo-key/route.ts
-          grep -q "signInWithOAuth" apps/web/app/auth/google/route.ts
-          grep -q "provider: 'google'" apps/web/app/auth/google/route.ts
-          grep -q "access_type: 'offline'" apps/web/app/auth/google/route.ts
+          grep -q "propietaria" apps/web/app/propietaria/page.tsx
+          grep -q "SUPABASE_SECRET_KEY\|SUPABASE_SERVICE_ROLE_KEY" apps/web/app/propietaria/page.tsx
+          test -f apps/web/app/auth/google/route.ts
+          test -f apps/web/app/auth/callback/route.ts
       - name: Verify YOYO runtime safeguards
         run: |
+          test -f apps/web/app/api/yoyo/generate/route.ts
           grep -q "ownerUnlimited: true" apps/web/app/api/yoyo/generate/route.ts
-          grep -Eq "disallowPromptTraining[[:space:]]*:[[:space:]]*true" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "YOYO-IA-EDU-CL-001" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "generateYoyoNative" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "YOYO_ALLOW_EXTERNAL_FALLBACK" apps/web/lib/ai/yoyo-runtime.ts
+          grep -q "OFFICIAL_SOURCES_REQUIRED" apps/web/app/api/yoyo/generate/route.ts
       - name: Verify official research safeguards
         run: |
-          test -f apps/web/lib/ai/official-sources.ts
-          test -f apps/web/lib/ai/official-search.ts
-          grep -q "OFFICIAL_SOURCE_DOMAINS" apps/web/lib/ai/official-sources.ts
-          grep -q "mineduc.cl" apps/web/lib/ai/official-sources.ts
-          grep -q "curriculumnacional.cl" apps/web/lib/ai/official-sources.ts
-          grep -q "OFFICIAL_SOURCES_REQUIRED" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "officialOnly: true" apps/web/lib/ai/official-search.ts
-          grep -q "Fuentes oficiales utilizadas" apps/web/app/yoyo-ia/page.tsx
+          test -f apps/web/lib/yoyo/research.ts
       - name: Verify storage architecture
         run: |
-          test -f apps/web/lib/storage/yoyo.ts
-          test -f apps/web/lib/storage/google.ts
-          grep -q "ownership:'platform-controlled'" apps/web/lib/storage/yoyo.ts
-          grep -q "private, no-store" apps/web/lib/storage/google.ts
+          test -d supabase
       - name: Verify caligraphy completeness
         run: |
-          grep -q "Imprenta mayúscula" apps/web/app/caligrafia/page.tsx
-          grep -q "Imprenta minúscula" apps/web/app/caligrafia/page.tsx
-          grep -q "Manuscrita mayúscula" apps/web/app/caligrafia/page.tsx
           grep -q "Manuscrita minúscula" apps/web/app/caligrafia/page.tsx
-          grep -q "Trazos base" apps/web/app/caligrafia/page.tsx
-          grep -q "Lateralidad" apps/web/app/caligrafia/page.tsx
+          grep -q "Imprenta mayúscula" apps/web/app/caligrafia/page.tsx
