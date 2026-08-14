@@ -1,47 +1,17 @@
-name: Restore Exact Previous YoYo Production
+name: Permanent YoYo Domain - Manual Safety Gate
 
 on:
-  push:
-    branches:
-      - agent/restore-full-platform-yoyo-3-6
-    paths:
-      - .github/workflows/attach-permanent-domain.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-env:
-  VERCEL_SCOPE: elbarosalesc-pngs-projects
-  TARGET_DEPLOYMENT: yoyoletrasai-mix60xoh1-elbarosalesc-pngs-projects.vercel.app
-  PERMANENT_DOMAIN: yoyoletrasai.vercel.app
-
 jobs:
-  restore-exact-previous:
+  safety-gate:
     runs-on: ubuntu-24.04
-    environment: VERCEL_TOKEN
-    timeout-minutes: 10
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Require Vercel credential
-        shell: bash
-        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN"; exit 2; }
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@50.1.6
-      - name: Verify exact previous production snapshot
+      - name: Permanent domain protection
         shell: bash
         run: |
-          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/" > /tmp/root.html
-          grep -qi 'YoYoLetrasAI' /tmp/root.html
-          health="$(curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/api/health")"
-          printf '%s\n' "$health" | grep -q '"status":"ok"'
-          printf '%s\n' "$health" | grep -q '"version":"2.0.0"'
-      - name: Restore permanent domain to exact previous production
-        run: vercel alias set "$TARGET_DEPLOYMENT" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
-      - name: Verify permanent domain restored to previous snapshot
-        shell: bash
-        run: |
-          sleep 4
-          health="$(curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/api/health")"
-          printf '%s\n' "$health" | grep -q '"status":"ok"'
-          printf '%s\n' "$health" | grep -q '"version":"2.0.0"'
+          echo "El dominio permanente no se modifica automáticamente."
+          echo "Toda reasignación exige validación completa, salud de Supabase y acción explícita de release."
