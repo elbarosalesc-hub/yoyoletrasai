@@ -1,9 +1,7 @@
 name: Deploy YoYoLetrasAI 3.6 Exact Preview
 
 on:
-  push:
-    branches:
-      - staging/v3.6.0-exact-20260814
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,7 +20,7 @@ jobs:
       - name: Checkout isolated staging branch
         uses: actions/checkout@v4
 
-      - name: Reconstruct YoYoLetrasAI 3.6 overlay safely
+      - name: Reconstruct exact YoYoLetrasAI 3.6 overlay safely
         shell: bash
         run: |
           set -euo pipefail
@@ -31,7 +29,9 @@ jobs:
           rsync -a --exclude '.git' --exclude '.github' --exclude 'release' ./ app/
           test -n "$(find release -maxdepth 1 -name 'overlay-v360.part.*' -print -quit)"
           cat release/overlay-v360.part.* > /tmp/yoyo360-overlay.tar.xz.b64
+          test "$(wc -c < /tmp/yoyo360-overlay.tar.xz.b64 | tr -d ' ')" = "509712"
           base64 --decode /tmp/yoyo360-overlay.tar.xz.b64 > /tmp/yoyo360-overlay.tar.xz
+          echo "44917705a600b0b9f7d132dd8318e5150d791c389fa651b9c025e74e9ab43c5f  /tmp/yoyo360-overlay.tar.xz" | sha256sum -c -
           xz -t /tmp/yoyo360-overlay.tar.xz
           tar -xJf /tmp/yoyo360-overlay.tar.xz -C app
           grep -Eq '"version"[[:space:]]*:[[:space:]]*"3\.6\.0"' app/package.json
@@ -46,7 +46,7 @@ jobs:
           test -f app/vercel.json
           grep -q 'THREE.WebGLRenderer' app/src/features/ImmersiveGames.jsx
           grep -q 'YOYO_MODULE_BLUEPRINTS' app/shared/yoyo-core.js
-          echo "3.6 overlay reconstructed in isolated app directory." >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact 3.6 overlay checksum validated in isolated app directory." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Require Vercel credential
         shell: bash
@@ -63,7 +63,7 @@ jobs:
           rm -rf .vercel
           vercel pull --yes --environment=preview --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Build 3.6 preview artifact
+      - name: Build exact 3.6 preview artifact
         working-directory: app
         run: vercel build --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
