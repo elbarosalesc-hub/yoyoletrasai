@@ -1,0 +1,221 @@
+.commandCenter {
+  display: grid;
+  gap: 22px;
+}
+
+.statusBar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.statusCard,
+.controlCard,
+.detailPanel,
+.navPanel {
+  border: 1px solid rgba(30, 45, 85, 0.12);
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  box-shadow: 0 12px 34px rgba(28, 42, 75, 0.07);
+}
+
+.statusCard {
+  padding: 16px;
+  display: grid;
+  gap: 5px;
+}
+
+.statusCard strong {
+  font-size: 0.96rem;
+  color: #18223f;
+}
+
+.statusCard span {
+  font-size: 0.82rem;
+  color: #65708a;
+  line-height: 1.4;
+}
+
+.statusDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #23a36d;
+  box-shadow: 0 0 0 4px rgba(35, 163, 109, 0.12);
+  margin-bottom: 5px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.navPanel {
+  padding: 12px;
+  position: sticky;
+  top: 84px;
+}
+
+.navButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 12px 13px;
+  border-radius: 13px;
+  color: #4d5873;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.navButton:hover {
+  background: #f5f7fb;
+  color: #202a48;
+}
+
+.navButtonActive {
+  background: #ece9ff;
+  color: #5543c7;
+}
+
+.detailPanel {
+  padding: 24px;
+  min-width: 0;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.detailHeader h2 {
+  margin: 0 0 7px;
+  color: #17213e;
+  font-size: 1.35rem;
+}
+
+.detailHeader p {
+  margin: 0;
+  color: #68738d;
+  line-height: 1.55;
+  max-width: 760px;
+}
+
+.badge {
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #eef8f3;
+  color: #1d7d55;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.controlsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.controlCard {
+  padding: 18px;
+  display: grid;
+  gap: 10px;
+  box-shadow: none;
+}
+
+.controlCard h3 {
+  margin: 0;
+  color: #1c2745;
+  font-size: 1rem;
+}
+
+.controlCard p {
+  margin: 0;
+  color: #6b7590;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.controlFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+}
+
+.controlStatus {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #4d5873;
+}
+
+.controlLink {
+  color: #5b49ce;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.controlLink:hover {
+  text-decoration: underline;
+}
+
+.safetyNote {
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: #f7f8fc;
+  color: #505b76;
+  line-height: 1.55;
+  font-size: 0.88rem;
+  margin-top: 16px;
+}
+
+.aiGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1050px) {
+  .statusBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace,
+  .aiGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .navPanel {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+}
+
+@media (max-width: 720px) {
+  .statusBar,
+  .controlsGrid,
+  .navPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .detailPanel {
+    padding: 18px;
+  }
+
+  .detailHeader {
+    display: grid;
+  }
+}
