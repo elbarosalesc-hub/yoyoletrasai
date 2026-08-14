@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Planificaciones" kicker="YOYO IA · PLANIFICACIONES" title="Planificaciones curriculares y accesibles" description="Diseña experiencias alineadas al currículum chileno con objetivos evaluables, DUA, PIE y seguimiento de evidencias." features={['Objetivos con habilidad, contenido y actitud','Alineación curricular chilena','DUA transversal','Adecuaciones NEE','Evaluación y metacognición']} primaryHref="/crear" primaryLabel="Crear planificación"/>}
