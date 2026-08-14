@@ -5,7 +5,10 @@ import { buildOwnerAIProtocol, normalizeOwnerAISettings } from '../../shared/own
 import { YOYO_AI_ENGINE, buildYoyoSystemPrompt } from '../../shared/yoyo-ai-engine.js';
 import { generateWithYoyoRuntime, yoyoRuntimeStatus } from '../_yoyo-native-runtime.js';
 
-const GENERATION_MODES = new Set(['activity', 'image', 'report', 'presentation', 'video', 'summary', 'reading_plan', 'research', 'sources']);
+const GENERATION_MODES = new Set([
+  'activity', 'writing', 'assessment', 'guide', 'analysis', 'image', 'report',
+  'presentation', 'video', 'summary', 'reading_plan', 'research', 'sources',
+]);
 
 function normalizeMode(value) {
   const mode = String(value || '').trim();
@@ -15,7 +18,7 @@ function normalizeMode(value) {
 
 function routeForMode(route, mode) {
   if (mode === 'research') return route.research;
-  if (mode === 'sources') return route.sources;
+  if (mode === 'sources' || mode === 'analysis') return route.sources;
   return route.creation;
 }
 
@@ -73,7 +76,12 @@ export default async function handler(req, res) {
           prompt,
           maxOutputTokens,
           abortSignal: AbortSignal.timeout(110_000),
-          providerOptions: { gateway: { disallowPromptTraining: true, tags: ['yoyo-ia', `mode:${input.mode}`, access.ownerFull ? 'owner-full' : `tier:${access.access?.modelTier || 'essential'}`] } },
+          providerOptions: {
+            gateway: {
+              disallowPromptTraining: true,
+              tags: ['yoyo-ia', `mode:${input.mode}`, access.ownerFull ? 'owner-full' : `tier:${access.access?.modelTier || 'essential'}`],
+            },
+          },
         });
         return { text: result.text, usage: result.usage || null, response: result.response || null, modelRoute: fallbackModelRoute };
       },
