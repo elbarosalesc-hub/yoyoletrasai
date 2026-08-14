@@ -1,0 +1,116 @@
+name: Restore exact approved 3.6 from backup
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/restore-approved-from-backup.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-exact
+          fetch-depth: 0
+
+      - name: Fetch backup branch and restore payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/restore-approved-owner-full-source:refs/remotes/origin/agent/restore-approved-owner-full-source
+          rm -rf .restore /tmp/yoyo-approved /tmp/yoyo-bundle.b64 /tmp/yoyo-bundle
+          git checkout origin/agent/restore-approved-owner-full-source -- .restore
+          test -f .restore/approved-owner-full-manifest.tsv
+          test "$(wc -l < .restore/approved-owner-full-manifest.tsv | tr -d ' ')" = "52"
+          find .restore -maxdepth 1 -type f -name 'part-*.b64' -print0 | sort -z | xargs -0 cat | tr -d '\r\n' > /tmp/yoyo-bundle.b64
+          base64 -d /tmp/yoyo-bundle.b64 > /tmp/yoyo-bundle
+          mkdir -p /tmp/yoyo-approved
+          if tar -tzf /tmp/yoyo-bundle >/dev/null 2>&1; then
+            tar -xzf /tmp/yoyo-bundle -C /tmp/yoyo-approved
+          elif tar -tJf /tmp/yoyo-bundle >/dev/null 2>&1; then
+            tar -xJf /tmp/yoyo-bundle -C /tmp/yoyo-approved
+          else
+            echo 'Backup bundle is not a valid supported tar archive.' >&2
+            exit 1
+          fi
+
+      - name: Locate and verify exact 52-file source
+        shell: bash
+        run: |
+          set -euo pipefail
+          MANIFEST="$GITHUB_WORKSPACE/.restore/approved-owner-full-manifest.tsv"
+          ROOT=/tmp/yoyo-approved
+          if [ ! -f "$ROOT/package.json" ]; then
+            CANDIDATE="$(find "$ROOT" -type f -name package.json -print -quit | xargs -r dirname)"
+            test -n "$CANDIDATE"
+            ROOT="$CANDIDATE"
+          fi
+          test -f "$ROOT/src/App.jsx"
+          test -f "$ROOT/src/styles.css"
+          test -f "$ROOT/src/modules.jsx"
+          while IFS=$'\t' read -r path expected; do
+            test -f "$ROOT/$path"
+            actual="$(git hash-object "$ROOT/$path")"
+            if [ "$actual" != "$expected" ]; then
+              echo "Hash mismatch: $path expected=$expected actual=$actual" >&2
+              exit 1
+            fi
+          done < "$MANIFEST"
+          printf '%s\n' "$ROOT" > /tmp/yoyo-root
+          node -e "const p=require('$ROOT/package.json'); if(p.version!=='3.6.0') process.exit(1)"
+
+      - name: Build exact approved source before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$(cat /tmp/yoyo-root)"
+          cd "$ROOT"
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      - name: Replace recovery branch with exact manifest files only
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="$(cat /tmp/yoyo-root)"
+          MANIFEST="$GITHUB_WORKSPACE/.restore/approved-owner-full-manifest.tsv"
+          STAGE=/tmp/yoyo-clean
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          while IFS=$'\t' read -r path expected; do
+            mkdir -p "$STAGE/$(dirname "$path")"
+            cp -p "$ROOT/$path" "$STAGE/$path"
+          done < "$MANIFEST"
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$STAGE"/. .
+          test "$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')" = "52"
+
+      - name: Final manifest verification and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/agent/restore-approved-owner-full-source:.restore/approved-owner-full-manifest.tsv > /tmp/manifest.tsv
+          while IFS=$'\t' read -r path expected; do
+            actual="$(git hash-object "$path")"
+            test "$actual" = "$expected"
+          done < /tmp/manifest.tsv
+          npm ci
+          npm run build
+          test -f dist/index.html
+          rm -rf node_modules dist
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Recuperar exactamente plataforma aprobada 3.6 desde respaldo verificado"
+          git push origin HEAD:recovery/approved-3.6-exact
