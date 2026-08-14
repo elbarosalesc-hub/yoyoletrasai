@@ -1,0 +1,82 @@
+name: Promote YoYoLetrasAI 3.6 Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: "Preview Vercel 3.6 validado"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
+      VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
+      PREVIEW_URL: ${{ inputs.preview_url }}
+      PRODUCTION_URL: https://yoyoletrasai.vercel.app
+    steps:
+      - name: Require existing Vercel token
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::No se encontro un token Vercel utilizable en el entorno Production."
+            exit 2
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Verify preview health before promotion
+        shell: bash
+        run: |
+          body="$(curl --fail --silent --show-error "$PREVIEW_URL/api/health")"
+          printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"application":"operational"'
+          printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
+          if printf '%s' "$body" | grep -q '"probe"'; then
+            echo "::error::El preview contiene marcador probe y no puede promoverse."
+            exit 3
+          fi
+
+      - name: Verify preview resources
+        shell: bash
+        run: |
+          curl --fail --silent --show-error "$PREVIEW_URL/api/resources" > /tmp/resources.json
+          test -s /tmp/resources.json
+
+      - name: Promote validated preview
+        shell: bash
+        run: vercel promote "$PREVIEW_URL" --yes --token="$VERCEL_TOKEN"
+
+      - name: Verify production health after promotion
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            body="$(curl --silent --show-error "$PRODUCTION_URL/api/health" || true)"
+            if printf '%s' "$body" | grep -q '"version":"3.6.0"' \
+              && printf '%s' "$body" | grep -q '"application":"operational"' \
+              && printf '%s' "$body" | grep -q '"resourcesApi":"operational"' \
+              && ! printf '%s' "$body" | grep -q '"probe"'; then
+              printf '%s\n' "$body"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Produccion no quedo saludable en 3.6.0 despues de la promocion."
+          printf '%s\n' "$body"
+          exit 4
+
+      - name: Verify production resources
+        shell: bash
+        run: |
+          curl --fail --silent --show-error "$PRODUCTION_URL/api/resources" > /tmp/resources-production.json
+          test -s /tmp/resources-production.json
