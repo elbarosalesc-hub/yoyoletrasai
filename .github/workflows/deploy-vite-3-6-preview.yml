@@ -12,11 +12,12 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-latest
+    environment: Production
     timeout-minutes: 20
     env:
       VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
       VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,7 +26,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::VERCEL_TOKEN no esta configurado como secreto del repositorio."
+            echo "::error::No se encontro un token Vercel utilizable en secretos o variables del entorno Production."
             exit 2
           fi
 
