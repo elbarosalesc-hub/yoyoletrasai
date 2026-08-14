@@ -19,25 +19,34 @@ jobs:
       VERCEL_SCOPE: elbarosalesc-pngs-projects
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
     steps:
-      - name: Checkout staging carrier
+      - name: Checkout isolated staging branch
         uses: actions/checkout@v4
 
-      - name: Reconstruct exact 3.6 source
+      - name: Reconstruct YoYoLetrasAI 3.6 overlay safely
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf app
           mkdir -p app
-          cat release/yoyo360.part.* > /tmp/yoyo360.tar.gz.b64
-          base64 --decode /tmp/yoyo360.tar.gz.b64 > /tmp/yoyo360.tar.gz
-          echo "d558a3ca97af279ac9f3c50bae9c6361da7eb97ca6e6700f1e8a893049d142f7  /tmp/yoyo360.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/yoyo360.tar.gz -C app
-          test "$(find app -type f | wc -l | tr -d ' ')" = "52"
-          grep -q '"version":"3.6.0"' app/package.json
+          rsync -a --exclude '.git' --exclude '.github' --exclude 'release' ./ app/
+          test -n "$(find release -maxdepth 1 -name 'overlay-v360.part.*' -print -quit)"
+          cat release/overlay-v360.part.* > /tmp/yoyo360-overlay.tar.xz.b64
+          base64 --decode /tmp/yoyo360-overlay.tar.xz.b64 > /tmp/yoyo360-overlay.tar.xz
+          xz -t /tmp/yoyo360-overlay.tar.xz
+          tar -xJf /tmp/yoyo360-overlay.tar.xz -C app
+          grep -Eq '"version"[[:space:]]*:[[:space:]]*"3\.6\.0"' app/package.json
           test -f app/src/features/ImmersiveGames.jsx
           test -f app/src/features/OwnerFactoryManager.jsx
+          test -f app/src/features/YoyoAIStudio.jsx
+          test -f app/src/features/SourceLab.jsx
+          test -f app/src/features/ReadingPlan.jsx
+          test -f app/src/modules.jsx
           test -f app/api/owner/factory.js
           test -f app/api/ai/generate.js
           test -f app/vercel.json
+          grep -q 'THREE.WebGLRenderer' app/src/features/ImmersiveGames.jsx
+          grep -q 'YOYO_MODULE_BLUEPRINTS' app/shared/yoyo-core.js
+          echo "3.6 overlay reconstructed in isolated app directory." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Require Vercel credential
         shell: bash
@@ -54,7 +63,7 @@ jobs:
           rm -rf .vercel
           vercel pull --yes --environment=preview --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Build exact 3.6 preview
+      - name: Build 3.6 preview artifact
         working-directory: app
         run: vercel build --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
@@ -66,6 +75,22 @@ jobs:
           set -euo pipefail
           url="$(vercel deploy --prebuilt --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "### YoYoLetrasAI 3.6 exact preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "### YoYoLetrasAI 3.6 isolated preview" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
-          echo "Preview only. Production and custom domain were not promoted or changed." >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview only. Production, custom domain and aliases were not promoted or changed." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate preview APIs and app
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="${{ steps.deploy.outputs.url }}"
+          health="$(curl --fail --silent --show-error "$url/api/health")"
+          printf '%s\n' "$health"
+          printf '%s' "$health" | grep -q '"status":"ok"'
+          printf '%s' "$health" | grep -q '"version":"3.6.0"'
+          resources="$(curl --fail --silent --show-error "$url/api/resources")"
+          test -n "$resources"
+          curl --fail --silent --show-error "$url/" > /tmp/root.html
+          test -s /tmp/root.html
+          grep -qi 'YoYo' /tmp/root.html
+          echo "Preview 3.6 validated without production promotion." >> "$GITHUB_STEP_SUMMARY"
