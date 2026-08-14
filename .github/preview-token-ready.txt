@@ -1,1 +1,1 @@
-Trigger fresh YoYoLetrasAI 3.6 preview after VERCEL_TOKEN configuration.
+Release c4150e041c78f7d8b3a8408c254397af0ae19e38 validated for production on 2026-08-14.
