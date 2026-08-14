@@ -1,0 +1,67 @@
+name: Deploy YoYoLetrasAI 3.6 Preview
+
+on:
+  push:
+    branches:
+      - agent/publish-v3-6-vite
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
+      VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require existing Vercel token
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::VERCEL_TOKEN no esta configurado como secreto del repositorio."
+            exit 2
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Pull preview environment
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Build preview
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Deploy preview
+        id: deploy
+        shell: bash
+        run: |
+          url="$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Preview YoYoLetrasAI 3.6" >> "$GITHUB_STEP_SUMMARY"
+          echo "$url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify preview health
+        shell: bash
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          body="$(curl --fail --silent --show-error "$url/api/health")"
+          printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          if printf '%s' "$body" | grep -q '"probe"'; then
+            echo "::error::El health contiene un marcador probe y no es publicable."
+            exit 3
+          fi
+
+      - name: Verify resources endpoint
+        shell: bash
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          curl --fail --silent --show-error "$url/api/resources" > /tmp/resources.json
+          test -s /tmp/resources.json
