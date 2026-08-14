@@ -1,0 +1,72 @@
+name: Verify canonical premium source
+
+on:
+  push:
+    branches:
+      - agent/verify-canonical-52
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
+
+      - name: Verify exact 52-file source baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git ls-files | grep -v '^.github/workflows/' | LC_ALL=C sort > /tmp/yoyo-canonical-files.txt
+          file_count="$(wc -l < /tmp/yoyo-canonical-files.txt | tr -d ' ')"
+          echo "Canonical source files: $file_count"
+          test "$file_count" = "52"
+          while IFS= read -r file; do sha256sum "$file"; done < /tmp/yoyo-canonical-files.txt > /tmp/yoyo-canonical-52.sha256
+          manifest_sha="$(sha256sum /tmp/yoyo-canonical-52.sha256 | awk '{print $1}')"
+          tree_sha="$(git rev-parse HEAD^{tree})"
+          echo "Git tree: $tree_sha"
+          echo "Manifest SHA-256: $manifest_sha"
+          {
+            echo "### Canonical premium source"
+            echo "- Source files: $file_count"
+            echo "- Git tree: $tree_sha"
+            echo "- Manifest SHA-256: $manifest_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify premium feature files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f apps/web/app/app/page.tsx
+          test -f apps/web/app/juegos/page.tsx
+          test -f apps/web/components/games/Bosque3D.tsx
+          test -f apps/web/components/games/ThreeForest.tsx
+          test -f apps/web/app/game3d.css
+          test -f apps/web/app/integrations-3d.css
+          test -f apps/web/components/PremiumIllustration.tsx
+          test -f apps/web/components/dashboard/DashboardIllustrations.tsx
+          grep -q "three" apps/web/package.json
+          grep -qi "3D" apps/web/app/juegos/page.tsx
+          grep -qi "animation\|transform\|transition" apps/web/app/game3d.css
+          echo "Premium dashboard, 3D game source and animation styles are present."
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Typecheck premium source
+        run: npm run typecheck -- --pretty false
+
+      - name: Build premium source
+        run: npm run build
+
+      - name: Record validation only
+        run: echo "Validation completed. No Vercel deployment, production promotion, domain or alias change was executed." >> "$GITHUB_STEP_SUMMARY"
