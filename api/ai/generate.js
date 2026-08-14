@@ -1,9 +1,9 @@
 import { generateText } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
 import { authorizeAIRequest, completeAIRequest, publicAccess, routeForAccess } from '../_ai-access.js';
-import { loadGatewayCredential } from '../_runtime-credentials.js';
 import { buildOwnerAIProtocol, normalizeOwnerAISettings } from '../../shared/owner-ai-config.js';
 import { YOYO_AI_ENGINE, buildYoyoSystemPrompt } from '../../shared/yoyo-ai-engine.js';
+import { generateWithYoyoRuntime, yoyoRuntimeStatus } from '../_yoyo-native-runtime.js';
 
 const GENERATION_MODES = new Set(['activity', 'image', 'report', 'presentation', 'video', 'summary', 'reading_plan', 'research', 'sources']);
 
@@ -39,15 +39,9 @@ export default async function handler(req, res) {
   const access = await authorizeAIRequest(req, input);
   if (!access.ok) return res.status(access.status).json(access.body);
   const route = routeForAccess(access.access);
-  const modelRoute = routeForMode(route, input.mode);
+  const fallbackModelRoute = routeForMode(route, input.mode);
 
   try {
-    const credential = await loadGatewayCredential();
-    if (!credential.apiKey && credential.source !== 'vercel_oidc') {
-      await completeAIRequest(access, { status: 'error', modelRoute, usage: {}, errorCode: 'AI_NOT_CONFIGURED' });
-      return res.status(503).json({ error: 'YOYO IA está esperando una credencial privada del motor.', code: 'AI_NOT_CONFIGURED' });
-    }
-
     const ownerSettings = normalizeOwnerAISettings(input.ownerAI);
     const ownerProtocol = access.ownerFull && ownerSettings.enabled
       ? buildOwnerAIProtocol(ownerSettings.roleIds, ownerSettings.directive)
@@ -64,30 +58,43 @@ export default async function handler(req, res) {
       `Solicitud: ${input.prompt}`,
     ].filter(Boolean).join('\n');
 
-    const gateway = createGateway(credential.apiKey ? { apiKey: credential.apiKey } : {});
     const planMax = Number(access.access?.limits?.maxOutputTokens || 8000);
     const maxOutputTokens = Math.max(1000, Math.min(planMax, access.ownerFull ? 64000 : 24000));
-    const result = await generateText({
-      model: gateway(modelRoute),
+    const runtimeResult = await generateWithYoyoRuntime({
       system,
       prompt,
       maxOutputTokens,
-      abortSignal: AbortSignal.timeout(110_000),
-      providerOptions: { gateway: { disallowPromptTraining: true, tags: ['yoyo-ia', `mode:${input.mode}`, access.ownerFull ? 'owner-full' : `tier:${access.access?.modelTier || 'essential'}`] } },
+      temperature: 0.2,
+      gatewayGenerate: async (credential) => {
+        const gateway = createGateway(credential.apiKey ? { apiKey: credential.apiKey } : {});
+        const result = await generateText({
+          model: gateway(fallbackModelRoute),
+          system,
+          prompt,
+          maxOutputTokens,
+          abortSignal: AbortSignal.timeout(110_000),
+          providerOptions: { gateway: { disallowPromptTraining: true, tags: ['yoyo-ia', `mode:${input.mode}`, access.ownerFull ? 'owner-full' : `tier:${access.access?.modelTier || 'essential'}`] } },
+        });
+        return { text: result.text, usage: result.usage || null, response: result.response || null, modelRoute: fallbackModelRoute };
+      },
     });
 
-    await completeAIRequest(access, { status: 'complete', modelRoute, usage: result.usage || {} });
+    const modelRoute = runtimeResult.modelRoute || fallbackModelRoute;
+    await completeAIRequest(access, { status: 'complete', modelRoute, usage: runtimeResult.usage || {} });
     return res.status(200).json({
       engine: YOYO_AI_ENGINE,
+      runtime: runtimeResult.runtime,
+      runtimeStatus: yoyoRuntimeStatus(),
       mode: input.mode,
-      text: result.text,
+      text: runtimeResult.text,
       modelRoute,
       entitlement: publicAccess(access.access, access.ownerFull),
-      usage: result.usage || null,
+      usage: runtimeResult.usage || null,
     });
   } catch (error) {
     console.error('YOYO IA generation failed', { name: error?.name, message: error?.message });
-    await completeAIRequest(access, { status: 'error', modelRoute, usage: {}, errorCode: 'GENERATION_FAILED' });
-    return res.status(502).json({ error: 'YOYO IA no pudo completar la generación en este momento.', code: 'GENERATION_FAILED' });
+    const code = error?.message === 'YOYO_NATIVE_RUNTIME_REQUIRED' ? 'NATIVE_RUNTIME_REQUIRED' : 'GENERATION_FAILED';
+    await completeAIRequest(access, { status: 'error', modelRoute: fallbackModelRoute, usage: {}, errorCode: code });
+    return res.status(502).json({ error: code === 'NATIVE_RUNTIME_REQUIRED' ? 'YOYO Native Runtime está configurado como obligatorio y todavía no está disponible.' : 'YOYO IA no pudo completar la generación en este momento.', code });
   }
 }
