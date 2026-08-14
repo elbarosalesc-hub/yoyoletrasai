@@ -18,28 +18,34 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Rebuild exact approved archive
+      - name: Rebuild and commit exact approved source package
         shell: bash
         run: |
           set -euo pipefail
+          if [ ! -f .restore/READY ]; then
+            echo 'No hay paquete de restauración pendiente; salida segura.'
+            exit 0
+          fi
           mkdir -p /tmp/yoyo-approved
           cat .restore/part-*.b64 | base64 --decode > /tmp/yoyo-approved.tar.gz
           tar -xzf /tmp/yoyo-approved.tar.gz -C /tmp/yoyo-approved
           test -f /tmp/yoyo-approved/src/App.jsx
           test -f /tmp/yoyo-approved/src/modules.jsx
           test -f /tmp/yoyo-approved/src/features/ImmersiveGames.jsx
+          test -f /tmp/yoyo-approved/src/features/CalligraphyStudio.jsx
+          test -f /tmp/yoyo-approved/src/features/ClassroomTools.jsx
+          test -f /tmp/yoyo-approved/src/features/OwnerCommandCenter.jsx
           grep -q 'Educación que incluye' /tmp/yoyo-approved/src/App.jsx
           grep -q 'Perfil propietario' /tmp/yoyo-approved/src/data.js
           grep -q 'YOYO Play' /tmp/yoyo-approved/src/data.js
-      - name: Replace only this isolated branch
-        shell: bash
-        run: |
-          set -euo pipefail
+          grep -q 'Imprenta mayúscula' /tmp/yoyo-approved/src/features/CalligraphyStudio.jsx
+          grep -q 'Fuentes oficiales verificables' /tmp/yoyo-approved/src/features/YoyoAIStudio.jsx
+          grep -q 'Centro de comando' /tmp/yoyo-approved/src/modules.jsx
           find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .restore -exec rm -rf {} +
           cp -a /tmp/yoyo-approved/. .
           rm -rf .restore
           git config user.name 'yoyo-release-bot'
           git config user.email 'elba.rosalesc@gmail.com'
           git add -A
-          git commit -m 'Restaurar fuente Owner Full aprobada por propietaria'
+          git commit -m 'Restaurar plataforma Owner Full aprobada y sumar mejoras 3.6.1'
           git push origin HEAD:agent/restore-approved-owner-full-source
