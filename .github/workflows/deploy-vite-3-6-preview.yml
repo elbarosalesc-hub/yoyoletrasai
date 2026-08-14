@@ -27,27 +27,58 @@ jobs:
         shell: bash
         run: |
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::El environment VERCEL_TOKEN existe, pero no contiene un secreto utilizable llamado VERCEL_TOKEN."
+            echo "::error::El environment VERCEL_TOKEN existe, pero no contiene una credencial Vercel utilizable."
             exit 2
           fi
+
+      - name: Verify source integrity and 3.6 markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          tree_sha="$(git rev-parse HEAD^{tree})"
+          tracked_files="$(git ls-files | wc -l | tr -d ' ')"
+          git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum > /tmp/yoyoletrasai-3.6.sha256
+          manifest_sha="$(sha256sum /tmp/yoyoletrasai-3.6.sha256 | awk '{print $1}')"
+          test -f package.json
+          test -f vercel.json
+          test -f src/App.jsx
+          test -f src/features/OwnerAccessManager.jsx
+          test -f src/features/OwnerFactoryManager.jsx
+          test -f api/health.js
+          test -f api/resources.js
+          test -f shared/yoyo-core.js
+          grep -q '"version": "3.6.0"' package.json
+          grep -q "version: '3.6.0'" api/health.js
+          {
+            echo "### Integridad YoYoLetrasAI 3.6"
+            echo "- Commit: $GITHUB_SHA"
+            echo "- Git tree: $tree_sha"
+            echo "- Archivos versionados: $tracked_files"
+            echo "- SHA-256 del manifiesto: $manifest_sha"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
 
-      - name: Reset local Vercel link
-        run: rm -rf .vercel
+      - name: Link only the existing Vercel project locally
+        shell: bash
+        run: |
+          rm -rf .vercel
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
 
-      - name: Pull preview environment by explicit project
-        run: vercel pull --yes --environment=preview --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+      - name: Pull preview environment
+        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
       - name: Build preview artifact
-        run: vercel build --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+        run: vercel build --target=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Deploy immutable preview
+      - name: Deploy immutable preview only
         id: deploy
         shell: bash
         run: |
-          url="$(vercel deploy --prebuilt --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
+          url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN")"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "### Preview YoYoLetrasAI 3.6" >> "$GITHUB_STEP_SUMMARY"
           echo "$url" >> "$GITHUB_STEP_SUMMARY"
@@ -85,4 +116,4 @@ jobs:
       - name: Record preview only
         shell: bash
         run: |
-          echo "Preview validado. No se promueve automaticamente a produccion." >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview validado. No se usa --prod y no se promueve automaticamente a produccion." >> "$GITHUB_STEP_SUMMARY"
