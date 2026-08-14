@@ -1,121 +1,18 @@
-name: Repair Next Production Once
+name: Repair Next Production - Closed Safety Gate
 
 on:
-  push:
-    branches:
-      - agent/restore-full-platform-yoyo-3-6
-    paths:
-      - .github/workflows/repair-next-production-once.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-env:
-  VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
-  VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
-  VERCEL_SCOPE: elbarosalesc-pngs-projects
-  SUPABASE_URL: https://xpcywpvrveweynqvudcr.supabase.co
-  SUPABASE_PUBLISHABLE: sb_publishable_9FJ4V6Z58NAOaFQw6cJLKg_JnDjj9_9
-
 jobs:
-  repair-and-restore:
+  safety-gate:
     runs-on: ubuntu-24.04
-    environment: VERCEL_TOKEN
-    timeout-minutes: 35
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Checkout validated Next platform
-        uses: actions/checkout@v4
-
-      - name: Require deployment credential
-        shell: bash
-        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN. Producción queda intacta."; exit 2; }
-
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@50.1.6
-
-      - name: Link canonical project
-        run: vercel link --yes --project="$VERCEL_PROJECT_ID" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Repair public Supabase environment
+      - name: Production protection active
         shell: bash
         run: |
-          set_env() {
-            name="$1"
-            environment="$2"
-            value="$3"
-            if vercel env ls "$environment" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web 2>/dev/null | grep -q "$name"; then
-              printf '%s' "$value" | vercel env update "$name" "$environment" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-            else
-              printf '%s' "$value" | vercel env add "$name" "$environment" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-            fi
-          }
-          for env_name in preview production; do
-            set_env NEXT_PUBLIC_SUPABASE_URL "$env_name" "$SUPABASE_URL"
-            set_env NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "$env_name" "$SUPABASE_PUBLISHABLE"
-          done
-
-      - name: Pull repaired preview environment
-        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Build immutable Next preview
-        run: vercel build --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Deploy immutable preview
-        id: preview
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Preview validado: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify preview before any production change
-        shell: bash
-        run: |
-          url="${{ steps.preview.outputs.url }}"
-          for path in /acceso /caligrafia /herramientas /yoyo-ia /biblioteca /evaluaciones /inclusion /informes /integraciones; do
-            code="$(curl --location --silent --output /tmp/page.html --write-out '%{http_code}' "$url$path")"
-            test "$code" -ge 200 -a "$code" -lt 400
-          done
-          curl --fail --location --silent --show-error "$url/caligrafia" > /tmp/caligrafia.html
-          grep -qi 'Caligrafía completa' /tmp/caligrafia.html
-          grep -qi 'Imprenta' /tmp/caligrafia.html
-          grep -qi 'Manuscrita' /tmp/caligrafia.html
-          curl --fail --location --silent --show-error "$url/yoyo-ia" > /tmp/yoyo.html
-          grep -qi 'YOYO IA' /tmp/yoyo.html
-          health="$(curl --fail --silent --show-error "$url/api/health")"
-          printf '%s\n' "$health"
-          printf '%s' "$health" | grep -q '"status":"ok"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
-
-      - name: Pull repaired production environment
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Build production artifact
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Deploy validated Next platform to production
-        id: production
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Producción Next: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify permanent platform after release
-        shell: bash
-        run: |
-          permanent='https://yoyoletrasai.vercel.app'
-          for path in /acceso /caligrafia /herramientas /yoyo-ia /biblioteca /inclusion /informes /integraciones; do
-            code="$(curl --retry 8 --retry-delay 2 --location --silent --output /tmp/prod.html --write-out '%{http_code}' "$permanent$path")"
-            test "$code" -ge 200 -a "$code" -lt 400
-          done
-          curl --retry 8 --retry-delay 2 --fail --location --silent --show-error "$permanent/caligrafia" > /tmp/prod-caligrafia.html
-          grep -qi 'Caligrafía completa' /tmp/prod-caligrafia.html
-          curl --retry 8 --retry-delay 2 --fail --location --silent --show-error "$permanent/yoyo-ia" > /tmp/prod-yoyo.html
-          grep -qi 'YOYO IA' /tmp/prod-yoyo.html
-          health="$(curl --retry 8 --retry-delay 2 --fail --silent --show-error "$permanent/api/health")"
-          printf '%s\n' "$health"
-          printf '%s' "$health" | grep -q '"status":"ok"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
+          echo "La reparación única ya terminó."
+          echo "No se ejecutan cambios automáticos sobre producción, dominios ni aliases."
+          echo "Toda futura publicación exige validación completa y acción manual explícita."
