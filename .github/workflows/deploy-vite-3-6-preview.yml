@@ -82,4 +82,4 @@ jobs:
         shell: bash
         run: |
           echo "Preview validado. No se promueve automaticamente a produccion." >> "$GITHUB_STEP_SUMMARY"
-          echo "Credential retry: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Fresh secret snapshot run." >> "$GITHUB_STEP_SUMMARY"
