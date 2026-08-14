@@ -55,6 +55,16 @@ jobs:
           grep -q "YOYO-IA-EDU-CL-001" apps/web/app/api/yoyo/generate/route.ts
           grep -q "generateYoyoNative" apps/web/app/api/yoyo/generate/route.ts
           grep -q "YOYO_ALLOW_EXTERNAL_FALLBACK" apps/web/lib/ai/yoyo-runtime.ts
+      - name: Verify official research safeguards
+        run: |
+          test -f apps/web/lib/ai/official-sources.ts
+          test -f apps/web/lib/ai/official-search.ts
+          grep -q "OFFICIAL_SOURCE_DOMAINS" apps/web/lib/ai/official-sources.ts
+          grep -q "mineduc.cl" apps/web/lib/ai/official-sources.ts
+          grep -q "curriculumnacional.cl" apps/web/lib/ai/official-sources.ts
+          grep -q "OFFICIAL_SOURCES_REQUIRED" apps/web/app/api/yoyo/generate/route.ts
+          grep -q "officialOnly: true" apps/web/lib/ai/official-search.ts
+          grep -q "Fuentes oficiales utilizadas" apps/web/app/yoyo-ia/page.tsx
       - name: Verify storage architecture
         run: |
           test -f apps/web/lib/storage/yoyo.ts
