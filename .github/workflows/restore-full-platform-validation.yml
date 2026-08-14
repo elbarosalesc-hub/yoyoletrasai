@@ -64,7 +64,9 @@ jobs:
           grep -q "OFFICIAL_SOURCES_REQUIRED" apps/web/app/api/yoyo/generate/route.ts
       - name: Verify official research safeguards
         run: |
-          test -f apps/web/lib/yoyo/research.ts
+          test -f apps/web/lib/ai/official-search.ts
+          test -f apps/web/lib/ai/official-sources.ts
+          grep -q "OFFICIAL_RESEARCH_POLICY" apps/web/app/api/yoyo/generate/route.ts
       - name: Verify storage architecture
         run: |
           test -d supabase
