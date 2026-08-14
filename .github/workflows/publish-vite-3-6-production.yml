@@ -29,7 +29,7 @@ jobs:
             exit 2
           fi
 
-      - name: Install Vercel CLI
+      - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
 
       - name: Pull preview environment
@@ -38,7 +38,7 @@ jobs:
       - name: Build preview artifact
         run: vercel build --token="$VERCEL_TOKEN"
 
-      - name: Deploy preview artifact
+      - name: Deploy immutable preview
         id: preview
         shell: bash
         run: |
@@ -52,8 +52,10 @@ jobs:
           url="${{ steps.preview.outputs.url }}"
           body="$(curl --fail --silent --show-error "$url/api/health")"
           printf '%s\n' "$body"
-          printf '%s' "$body" | grep -q '"version":"3.6.0"'
           printf '%s' "$body" | grep -q '"status":"ok"'
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"application":"operational"'
+          printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
           if printf '%s' "$body" | grep -q '"probe"'; then
             echo "::error::Preview de prueba detectado; se cancela la promocion."
             exit 3
@@ -86,8 +88,10 @@ jobs:
         run: |
           body="$(curl --fail --silent --show-error https://yoyoletrasai.vercel.app/api/health)"
           printf '%s\n' "$body"
-          printf '%s' "$body" | grep -q '"version":"3.6.0"'
           printf '%s' "$body" | grep -q '"status":"ok"'
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"application":"operational"'
+          printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
           if printf '%s' "$body" | grep -q '"probe"'; then
             echo "::error::Produccion contiene marcador probe."
             exit 4
