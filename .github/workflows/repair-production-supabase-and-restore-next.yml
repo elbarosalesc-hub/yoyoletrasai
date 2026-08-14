@@ -1,91 +1,18 @@
-name: Repair Production Supabase and Restore Full Next Once
+name: Production Repair - Archived Safety Record
 
 on:
-  push:
-    branches:
-      - agent/restore-full-platform-yoyo-3-6
-    paths:
-      - .github/workflows/repair-production-supabase-and-restore-next.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-env:
-  VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
-  VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
-  VERCEL_SCOPE: elbarosalesc-pngs-projects
-  SUPABASE_URL: https://xpcywpvrveweynqvudcr.supabase.co
-  SUPABASE_PUBLISHABLE_KEY: sb_publishable_9FJ4V6Z58NAOaFQw6cJLKg_JnDjj9_9
-  PERMANENT_DOMAIN: yoyoletrasai.vercel.app
-
 jobs:
-  repair-and-restore:
+  archived:
     runs-on: ubuntu-24.04
-    environment: VERCEL_TOKEN
-    timeout-minutes: 35
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Checkout validated full platform
-        uses: actions/checkout@v4
-
-      - name: Require Vercel credential
-        shell: bash
-        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN. No se tocará producción."; exit 2; }
-
-      - name: Install pinned Vercel CLI
-        run: npm install --global vercel@50.1.6
-
-      - name: Link existing canonical project
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Repair public Supabase production variables
+      - name: One-time repair completed
         shell: bash
         run: |
-          vercel env rm NEXT_PUBLIC_SUPABASE_URL production --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web || true
-          printf '%s' "$SUPABASE_URL" | vercel env add NEXT_PUBLIC_SUPABASE_URL production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-          vercel env rm NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web || true
-          printf '%s' "$SUPABASE_PUBLISHABLE_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Pull repaired production environment
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Build immutable full Next artifact
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Deploy repaired full Next production
-        id: production
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Repaired full Next deployment: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify database and preserved modules before alias
-        shell: bash
-        run: |
-          url="${{ steps.production.outputs.url }}"
-          health="$(curl --retry 8 --retry-delay 2 --fail --silent --show-error "$url/api/health")"
-          printf '%s\n' "$health"
-          printf '%s' "$health" | grep -q '"status":"ok"'
-          printf '%s' "$health" | grep -q '"application":"operational"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
-          for path in /acceso /caligrafia /herramientas /yoyo-ia /biblioteca /evaluaciones /inclusion /informes /integraciones; do
-            code="$(curl --location --silent --output /tmp/page.html --write-out '%{http_code}' "$url$path")"
-            test "$code" -ge 200 -a "$code" -lt 400
-          done
-          curl --fail --location --silent --show-error "$url/caligrafia" | grep -qi 'Caligrafía completa'
-          curl --fail --location --silent --show-error "$url/yoyo-ia" | grep -qi 'YOYO IA'
-
-      - name: Restore permanent domain only after all checks pass
-        run: vercel alias set "${{ steps.production.outputs.url }}" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
-
-      - name: Verify permanent domain after correction
-        shell: bash
-        run: |
-          sleep 5
-          health="$(curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/api/health")"
-          printf '%s' "$health" | grep -q '"status":"ok"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
-          curl --retry 10 --retry-delay 2 --fail --location --silent --show-error "https://$PERMANENT_DOMAIN/caligrafia" | grep -qi 'Caligrafía completa'
-          curl --retry 10 --retry-delay 2 --fail --location --silent --show-error "https://$PERMANENT_DOMAIN/yoyo-ia" | grep -qi 'YOYO IA'
+          echo "La reparación única de producción ya fue completada y verificada."
+          echo "Este workflow está archivado y no modifica variables, despliegues, dominios ni aliases."
+          echo "Los cambios futuros deben pasar por validación aislada y release explícito."
