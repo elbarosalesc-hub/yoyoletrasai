@@ -1,0 +1,94 @@
+name: Publish YoYoLetrasAI 3.6 Production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
+  VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 25
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
+    steps:
+      - name: Checkout release candidate
+        uses: actions/checkout@v4
+
+      - name: Require Vercel credential
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::error::Falta una credencial Vercel de despliegue en el entorno Production."
+            exit 2
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Pull preview environment
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Build preview artifact
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Deploy preview artifact
+        id: preview
+        shell: bash
+        run: |
+          url="$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify health is publishable 3.6.0
+        shell: bash
+        run: |
+          url="${{ steps.preview.outputs.url }}"
+          body="$(curl --fail --silent --show-error "$url/api/health")"
+          printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"status":"ok"'
+          if printf '%s' "$body" | grep -q '"probe"'; then
+            echo "::error::Preview de prueba detectado; se cancela la promocion."
+            exit 3
+          fi
+
+      - name: Verify resources API
+        shell: bash
+        run: |
+          url="${{ steps.preview.outputs.url }}"
+          body="$(curl --fail --silent --show-error "$url/api/resources")"
+          test -n "$body"
+          printf '%s\n' "$body" | head -c 2000
+
+      - name: Verify root application
+        shell: bash
+        run: |
+          url="${{ steps.preview.outputs.url }}"
+          curl --fail --silent --show-error "$url/" > /tmp/root.html
+          test -s /tmp/root.html
+          grep -qi 'YoYo' /tmp/root.html
+
+      - name: Promote validated preview to production
+        shell: bash
+        run: |
+          url="${{ steps.preview.outputs.url }}"
+          vercel promote "$url" --yes --token="$VERCEL_TOKEN"
+
+      - name: Verify public production
+        shell: bash
+        run: |
+          body="$(curl --fail --silent --show-error https://yoyoletrasai.vercel.app/api/health)"
+          printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"status":"ok"'
+          if printf '%s' "$body" | grep -q '"probe"'; then
+            echo "::error::Produccion contiene marcador probe."
+            exit 4
+          fi
