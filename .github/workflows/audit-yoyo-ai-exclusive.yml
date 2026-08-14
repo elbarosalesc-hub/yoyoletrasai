@@ -23,19 +23,36 @@ jobs:
         run: |
           set -euo pipefail
           test -f shared/yoyo-ai-engine.js
+          test -f shared/yoyo-capability-benchmark.js
           test -f shared/owner-ai-config.js
+          test -f api/_yoyo-native-runtime.js
+          test -f api/_yoyo-storage.js
           test -f api/ai/generate.js
           test -f api/_ai-access.js
           test -f api/_resource-factory.js
           test -f api/cron/innovation-scan.js
+          test -f api/cron/capability-benchmark.js
           test -f api/cron/resource-factory.js
           grep -q "YOYO-IA-EDU-CL-001" shared/yoyo-ai-engine.js
           grep -q "provider-agnostic" shared/yoyo-ai-engine.js
+          grep -q "qualityMultiplierTarget: 1.2" shared/yoyo-capability-benchmark.js
+          grep -q "nativeInferenceRequiredForFullIndependence: true" shared/yoyo-capability-benchmark.js
+          grep -q "YOYO Native Runtime" api/_yoyo-native-runtime.js
+          grep -q "YOYO Storage" api/_yoyo-storage.js
           grep -q "OWNER_AI_ROLES" shared/owner-ai-config.js
           grep -q "buildOwnerAIProtocol" api/ai/generate.js
           grep -q "auditYoyoActivity" api/_resource-factory.js
-          grep -q "innovation-scan" vercel.json
+          grep -q "capability-benchmark" vercel.json
+          grep -q '30 6 1 1,7 \*' vercel.json
           grep -q "resource-factory" vercel.json
+      - name: Verify all-module factory
+        shell: bash
+        run: |
+          set -euo pipefail
+          count="$(grep -c "id: '" shared/yoyo-core.js)"
+          test "$count" -ge 19
+          grep -q "nineteen_module_resource_factory" shared/yoyo-capability-benchmark.js
+          grep -q "pickModules" api/_resource-factory.js
       - name: Verify safe publication defaults
         shell: bash
         run: |
@@ -43,9 +60,10 @@ jobs:
           grep -q "autoPublish" api/owner/factory.js
           grep -q "status:shouldPublish?'published':'review'" api/_resource-factory.js
           grep -q "auto_publish_resources" api/owner/factory.js
+          grep -q "productionAutoPromotion: false" shared/yoyo-capability-benchmark.js
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
       - name: Build 3.6
         run: npm run build
       - name: Summary
-        run: echo "YOYO IA exclusive architecture audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "YOYO IA exclusive architecture, native-runtime adapter, own-storage adapter, 19-module factory and semiannual benchmark audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
