@@ -1,0 +1,19 @@
+name: Export Restore Base
+on:
+  push:
+    branches: [agent/restore-approved-owner-full-source]
+    paths: [.restore/export-base.txt]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive current branch
+        run: tar --exclude=.git -czf /tmp/yoyo-restore-base.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yoyo-restore-base
+          path: /tmp/yoyo-restore-base.tar.gz
+          retention-days: 1
