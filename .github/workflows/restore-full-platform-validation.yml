@@ -40,6 +40,8 @@ jobs:
           test -f apps/web/app/institucion/page.tsx
           test -f apps/web/app/espacio-estudiante/page.tsx
           test -f apps/web/app/propietaria/page.tsx
+          test -f apps/web/app/caligrafia/page.tsx
+          test -f apps/web/app/herramientas/page.tsx
       - name: Verify owner and Google safeguards
         run: |
           grep -q "platform_admin" apps/web/app/propietaria/page.tsx
@@ -51,7 +53,7 @@ jobs:
       - name: Verify YOYO runtime safeguards
         run: |
           grep -q "ownerUnlimited: true" apps/web/app/api/yoyo/generate/route.ts
-          grep -q "disallowPromptTraining: true" apps/web/app/api/yoyo/generate/route.ts
+          grep -Eq "disallowPromptTraining[[:space:]]*:[[:space:]]*true" apps/web/app/api/yoyo/generate/route.ts
           grep -q "YOYO-IA-EDU-CL-001" apps/web/app/api/yoyo/generate/route.ts
           grep -q "generateYoyoNative" apps/web/app/api/yoyo/generate/route.ts
           grep -q "YOYO_ALLOW_EXTERNAL_FALLBACK" apps/web/lib/ai/yoyo-runtime.ts
@@ -71,3 +73,11 @@ jobs:
           test -f apps/web/lib/storage/google.ts
           grep -q "ownership:'platform-controlled'" apps/web/lib/storage/yoyo.ts
           grep -q "private, no-store" apps/web/lib/storage/google.ts
+      - name: Verify caligraphy completeness
+        run: |
+          grep -q "Imprenta mayúscula" apps/web/app/caligrafia/page.tsx
+          grep -q "Imprenta minúscula" apps/web/app/caligrafia/page.tsx
+          grep -q "Manuscrita mayúscula" apps/web/app/caligrafia/page.tsx
+          grep -q "Manuscrita minúscula" apps/web/app/caligrafia/page.tsx
+          grep -q "Trazos base" apps/web/app/caligrafia/page.tsx
+          grep -q "Lateralidad" apps/web/app/caligrafia/page.tsx
