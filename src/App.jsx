@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { modules, resources } from './data';
+import { cachedPublicJson } from './platform-cache';
 import { getAIEntitlement, getOwnerContext, isSupabaseConfigured, supabase } from './supabase';
 import OwnerAccessManager from './features/OwnerAccessManager';
 import OwnerFactoryManager from './features/OwnerFactoryManager';
@@ -15,6 +16,7 @@ export default function App() {
   const [page, setPage] = useState('inicio');
   const [health, setHealth] = useState(null);
   const [apiResources, setApiResources] = useState([]);
+  const [resourceCacheSource, setResourceCacheSource] = useState('inicializando');
   const [session, setSession] = useState(null);
   const [ownerContext, setOwnerContext] = useState(null);
   const [entitlement, setEntitlement] = useState(null);
@@ -27,7 +29,15 @@ export default function App() {
 
   useEffect(() => {
     fetch('/api/health').then((r) => r.json()).then(setHealth).catch(() => setHealth({ status: 'error' }));
-    fetch('/api/resources').then((r) => r.json()).then((payload) => setApiResources(Array.isArray(payload) ? payload : payload.resources || [])).catch(() => setApiResources([]));
+    cachedPublicJson('/api/resources', { key: 'public-resources' })
+      .then(({ data, source }) => {
+        setApiResources(Array.isArray(data) ? data : data.resources || []);
+        setResourceCacheSource(source);
+      })
+      .catch(() => {
+        setApiResources([]);
+        setResourceCacheSource('fallback-local');
+      });
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
@@ -88,7 +98,7 @@ export default function App() {
 
       {page === 'inicio' && <>
         <section className="hero"><div><span className="eyebrow">YOYO LETRAS AI · 3.6.0</span><h2>Recursos útiles, accesibles y listos para el aula.</h2><p>Un espacio para docentes, PIE, estudiantes y familias, con herramientas pedagógicas, biblioteca curricular y administración segura.</p><div className="hero-actions"><button className="button button--primary" onClick={() => setPage('biblioteca')}>Explorar biblioteca</button><button className="button button--secondary" onClick={() => setPage('ia')}>Abrir YOYO IA</button></div></div><img src="https://yoyoletrasai.vercel.app/assets/yoyo-learning-hero-v2.webp" alt="Niñas y niños aprendiendo con recursos educativos" /></section>
-        <section className="metrics"><article><strong>{visibleResources.length}</strong><span>recursos iniciales</span></article><article><strong>{modules.length}</strong><span>módulos pedagógicos</span></article><article><strong>PIE + DUA</strong><span>enfoque transversal</span></article><article><strong>{health?.checks?.planAuthorization === 'configured' ? 'Conectado' : 'Pendiente'}</strong><span>control de planes</span></article></section>
+        <section className="metrics"><article><strong>{visibleResources.length}</strong><span>recursos iniciales</span></article><article><strong>{modules.length}</strong><span>módulos pedagógicos</span></article><article><strong>PIE + DUA</strong><span>enfoque transversal</span></article><article><strong>{resourceCacheSource.startsWith('cache') ? 'Optimizado' : 'Activo'}</strong><span>cache de biblioteca</span></article></section>
         <section><div className="section-heading"><div><span className="eyebrow">MÓDULOS</span><h2>Todo el trabajo pedagógico en un solo lugar</h2></div></div><div className="module-grid">{modules.slice(0, 12).map((module) => <article key={module.id}><span className="module-icon">{module.icon}</span><h3>{module.label}</h3><p>{module.description}</p></article>)}</div></section>
       </>}
 
@@ -96,7 +106,7 @@ export default function App() {
 
       {page === 'ia' && <section className="workspace"><div className="workspace-copy"><span className="eyebrow">YOYO IA</span><h2>Asistente pedagógico con control de acceso y consumo</h2><p>Las solicitudes se autorizan en servidor según usuario, plan, cuota y rol. La clave privada del motor no se expone al navegador.</p>{entitlement && <div className="plan-card"><b>{entitlement.plan?.name || entitlement.planId}</b><span>{entitlement.plan?.description}</span></div>}</div>{!session ? <form className="auth-card" onSubmit={signIn}><h3>Iniciar sesión</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button><small>{isSupabaseConfigured ? 'Identidad Supabase conectada.' : 'Configuración de identidad pendiente.'}</small></form> : <form className="ai-card" onSubmit={runAI}><label>¿Qué quieres crear?<textarea rows="7" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} /></label><button className="button button--primary" disabled={busy}>{busy ? 'Generando…' : 'Crear con YOYO IA'}</button>{aiResult && <pre>{aiResult}</pre>}</form>}</section>}
 
-      {page === 'propietaria' && <section><div className="section-heading"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Gobernanza, configuración, cuentas y fábrica de recursos</h2></div></div>{!session ? <form className="auth-card compact" onSubmit={signIn}><h3>Acceso protegido</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button></form> : ownerFull ? <div className="owner-stack"><OwnerPlatformManager accessToken={accessToken} /><OwnerAccessManager accessToken={accessToken} toast={toast} /><OwnerFactoryManager accessToken={accessToken} toast={toast} /></div> : <div className="notice"><b>Sesión válida, pero sin privilegios de propietaria.</b><p>La vista administrativa exige rol platform_admin y plan propietaria activos.</p></div>}</section>}
+      {page === 'propietaria' && <section><div className="section-heading"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Aplicación única para gobernar y mejorar toda la plataforma</h2></div></div>{!session ? <form className="auth-card compact" onSubmit={signIn}><h3>Acceso protegido</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button></form> : ownerFull ? <div className="owner-stack"><OwnerPlatformManager accessToken={accessToken} /><OwnerAccessManager accessToken={accessToken} toast={toast} /><OwnerFactoryManager accessToken={accessToken} toast={toast} /></div> : <div className="notice"><b>Sesión válida, pero sin privilegios de propietaria.</b><p>La vista administrativa exige rol platform_admin y plan propietaria activos.</p></div>}</section>}
     </main>
   </div>;
 }
