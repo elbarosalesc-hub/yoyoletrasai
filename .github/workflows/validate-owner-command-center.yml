@@ -1,0 +1,52 @@
+name: Validate Owner Command Center
+
+on:
+  push:
+    branches:
+      - agent/owner-command-center-yoyo-3-6
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm install
+      - name: Typecheck full platform
+        run: npm run typecheck
+      - name: Build full platform
+        run: npm run build
+      - name: Verify owner command center only adds isolated controls
+        shell: bash
+        run: |
+          test -f apps/web/app/propietaria/OwnerCommandCenter.tsx
+          test -f apps/web/app/propietaria/owner-command-center.module.css
+          grep -q "OwnerCommandCenter" apps/web/app/propietaria/page.tsx
+          grep -q "YOYO IA" apps/web/app/propietaria/OwnerCommandCenter.tsx
+          grep -q "Dominio permanente" apps/web/app/propietaria/OwnerCommandCenter.tsx
+          grep -q "release" apps/web/app/propietaria/OwnerCommandCenter.tsx
+      - name: Verify preserved platform routes
+        shell: bash
+        run: |
+          for path in app biblioteca cursos evaluaciones inclusion informes integraciones profesor-virtual seguimiento yoyo-ia investigacion fuentes-ia planificaciones pictogramas institucion familias espacio-estudiante caligrafia herramientas qa estado configuracion; do
+            test -f "apps/web/app/$path/page.tsx"
+          done
+      - name: Verify production protection workflows remain manual
+        shell: bash
+        run: |
+          grep -q "workflow_dispatch" .github/workflows/attach-permanent-domain.yml
+          ! grep -q "branches:" .github/workflows/attach-permanent-domain.yml
+          grep -q "workflow_dispatch" .github/workflows/deploy-full-next-production.yml
+          ! grep -q "branches:" .github/workflows/deploy-full-next-production.yml
+          grep -q "workflow_dispatch" .github/workflows/publish-full-platform-production.yml
+          ! grep -q "branches:" .github/workflows/publish-full-platform-production.yml
+          grep -q "workflow_dispatch" .github/workflows/restore-full-next-once.yml
+          ! grep -q "branches:" .github/workflows/restore-full-next-once.yml
