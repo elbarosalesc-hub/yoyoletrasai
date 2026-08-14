@@ -1,81 +1,101 @@
 import { useEffect, useMemo, useState } from 'react';
-import { modules, resources as seedResources } from './data';
-import { isSupabaseConfigured, supabase } from './supabase';
+import { modules, resources } from './data';
+import { getAIEntitlement, getOwnerContext, isSupabaseConfigured, supabase } from './supabase';
 import OwnerAccessManager from './features/OwnerAccessManager';
 import OwnerFactoryManager from './features/OwnerFactoryManager';
 
-function Login({ onReady }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  async function submit(event) {
-    event.preventDefault();
-    if (!supabase) return;
-    setBusy(true); setError('');
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (authError) return setError(authError.message);
-    onReady(data.session);
-  }
-  return <section className="login-card"><span className="eyebrow">ACCESO SEGURO</span><h2>Ingresa a YoYo Letras AI</h2><p>Acceso para propietaria y usuarios autorizados.</p><form onSubmit={submit}><label>Correo<input type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} /></label><label>Contraseña<input type="password" required value={password} onChange={(e)=>setPassword(e.target.value)} /></label><button disabled={busy}>{busy?'Ingresando…':'Ingresar'}</button>{error&&<small className="error">{error}</small>}</form></section>;
-}
+const tabs = [
+  ['inicio', 'Inicio'], ['biblioteca', 'Biblioteca'], ['ia', 'YOYO IA'], ['propietaria', 'Propietaria'],
+];
 
-function ResourceCard({ resource }) {
-  return <article className="resource-card"><div className="resource-icon">{resource.icon || '✦'}</div><div><small>{resource.level} · {resource.subject}</small><h3>{resource.title}</h3><p>{resource.objective}</p><span>{resource.type}</span></div></article>;
-}
+function StatusPill({ ok, children }) { return <span className={`pill ${ok ? 'pill--ok' : 'pill--warn'}`}>{children}</span>; }
 
 export default function App() {
+  const [page, setPage] = useState('inicio');
+  const [health, setHealth] = useState(null);
+  const [apiResources, setApiResources] = useState([]);
   const [session, setSession] = useState(null);
-  const [view, setView] = useState('dashboard');
-  const [resources, setResources] = useState(seedResources);
-  const [status, setStatus] = useState(null);
-  const [toast, setToast] = useState('');
-  const token = session?.access_token || '';
-  const visibleResources = useMemo(() => resources.slice(0, 12), [resources]);
+  const [ownerContext, setOwnerContext] = useState(null);
+  const [entitlement, setEntitlement] = useState(null);
+  const [auth, setAuth] = useState({ email: '', password: '' });
+  const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('Crea una actividad breve y accesible de comprensión lectora para 4° básico.');
+  const [aiResult, setAiResult] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    fetch('/api/health').then(r=>r.json()).then(setStatus).catch(()=>{});
-    fetch('/api/resources').then(r=>r.ok?r.json():Promise.reject()).then((payload)=>{
-      const next = Array.isArray(payload) ? payload : payload.resources;
-      if (Array.isArray(next) && next.length) setResources(next);
-    }).catch(()=>{});
+    fetch('/api/health').then((r) => r.json()).then(setHealth).catch(() => setHealth({ status: 'error' }));
+    fetch('/api/resources').then((r) => r.json()).then((payload) => setApiResources(Array.isArray(payload) ? payload : payload.resources || [])).catch(() => setApiResources([]));
     if (!supabase) return;
-    supabase.auth.getSession().then(({data})=>setSession(data.session || null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next)=>setSession(next));
+    supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  function notify(message){ setToast(message); window.setTimeout(()=>setToast(''), 2800); }
-  async function signOut(){ if (supabase) await supabase.auth.signOut(); setSession(null); setView('dashboard'); }
+  useEffect(() => {
+    const user = session?.user;
+    if (!user) { setOwnerContext(null); setEntitlement(null); return; }
+    Promise.allSettled([getOwnerContext(user.id), getAIEntitlement(user.id)]).then(([owner, plan]) => {
+      setOwnerContext(owner.status === 'fulfilled' ? owner.value : null);
+      setEntitlement(plan.status === 'fulfilled' ? plan.value : null);
+    });
+  }, [session]);
+
+  const visibleResources = useMemo(() => {
+    const source = apiResources.length ? apiResources : resources;
+    const q = query.trim().toLowerCase();
+    return q ? source.filter((item) => `${item.title} ${item.subject} ${item.level} ${item.skill}`.toLowerCase().includes(q)) : source;
+  }, [apiResources, query]);
+
+  const ownerFull = Boolean(session?.user && ownerContext?.role === 'platform_admin' && entitlement?.planId === 'propietaria');
+  const accessToken = session?.access_token || '';
+  const toast = (text) => { setMessage(text); setTimeout(() => setMessage(''), 4000); };
+
+  async function signIn(event) {
+    event.preventDefault();
+    if (!supabase) return toast('Supabase no está configurado.');
+    setBusy(true);
+    const { error } = await supabase.auth.signInWithPassword(auth);
+    setBusy(false);
+    if (error) toast(error.message); else { setAuth({ email: '', password: '' }); toast('Sesión iniciada.'); }
+  }
+
+  async function runAI(event) {
+    event.preventDefault();
+    if (!accessToken) return toast('Inicia sesión para usar YOYO IA.');
+    setBusy(true); setAiResult('');
+    try {
+      const response = await fetch('/api/ai/generate', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` }, body: JSON.stringify({ mode: 'creation', prompt: aiPrompt, level: '4° básico', subject: 'Lenguaje', objective: 'Aprendizaje significativo e inclusivo', support: 'DUA y PIE', files: [], ownerAI: { enabled: ownerFull } }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'No fue posible generar.');
+      setAiResult(payload.text || payload.result?.text || JSON.stringify(payload, null, 2));
+    } catch (error) { toast(error.message); }
+    finally { setBusy(false); }
+  }
 
   return <div className="app-shell">
     <aside className="sidebar">
-      <div className="brand"><div className="brand-mark">YO</div><div><b>YoYo Letras AI</b><small>Educación inclusiva · Chile</small></div></div>
-      <nav>
-        <button className={view==='dashboard'?'active':''} onClick={()=>setView('dashboard')}>⌂ Inicio</button>
-        <button className={view==='library'?'active':''} onClick={()=>setView('library')}>▦ Biblioteca</button>
-        {session && <button className={view==='owner'?'active':''} onClick={()=>setView('owner')}>⚙ Perfil propietario</button>}
-      </nav>
-      <div className="sidebar-foot"><small>Versión {status?.version || '3.6.0'}</small><span className={status?.status==='ok'?'ok':''}>● {status?.status==='ok'?'Operativa':'Comprobando'}</span></div>
+      <div className="brand"><b>YOYO</b><span>Letras AI</span><small>v3.6.0</small></div>
+      <nav>{tabs.map(([id, label]) => <button key={id} className={page === id ? 'active' : ''} onClick={() => setPage(id)}>{label}</button>)}</nav>
+      <div className="sidebar-status"><StatusPill ok={health?.status === 'ok'}>{health?.status === 'ok' ? 'Sistema operativo' : 'Verificando sistema'}</StatusPill><small>{session?.user?.email || 'Modo visitante'}</small></div>
     </aside>
     <main>
-      <header><div><span className="eyebrow">PLATAFORMA EDUCATIVA</span><h1>{view==='owner'?'Perfil propietario':view==='library'?'Biblioteca pedagógica':'Hola, bienvenida a YoYo Letras AI'}</h1></div><div className="header-actions">{session?<><small>{session.user?.email}</small><button className="ghost" onClick={signOut}>Salir</button></>:<button onClick={()=>setView('login')}>Ingresar</button>}</div></header>
+      <header><div><span className="eyebrow">PLATAFORMA EDUCATIVA CHILENA</span><h1>{page === 'inicio' ? 'Aprender, crear y acompañar con sentido' : tabs.find(([id]) => id === page)?.[1]}</h1></div><div className="header-actions">{health && <StatusPill ok={health.version === '3.6.0'}>API {health.version || 'sin versión'}</StatusPill>}{session && <button className="button button--ghost" onClick={() => supabase?.auth.signOut()}>Cerrar sesión</button>}</div></header>
 
-      {view==='login' && <Login onReady={(next)=>{setSession(next);setView('dashboard');}} />}
+      {message && <div className="toast">{message}</div>}
 
-      {view==='dashboard' && <>
-        <section className="hero"><div><span className="eyebrow">YOYO CORE 3.6</span><h2>Recursos reales, IA educativa y herramientas para PIE/NEE</h2><p>Una plataforma creada para planificar, adaptar, enseñar y evaluar con foco en el currículum chileno, DUA y participación de todo el curso.</p><div className="hero-actions"><button onClick={()=>setView('library')}>Explorar recursos</button>{!session&&<button className="ghost" onClick={()=>setView('login')}>Acceder</button>}</div></div><img src="/assets/yoyo-learning-hero-v2.webp" alt="YoYo Letras AI" /></section>
-        <section><div className="section-head"><div><span className="eyebrow">MÓDULOS</span><h2>Todo tu espacio docente</h2></div><b>{modules.length} herramientas</b></div><div className="module-grid">{modules.map(m=><article key={m.id}><span>{m.icon}</span><div><h3>{m.label}</h3><p>{m.description}</p></div></article>)}</div></section>
-        <section><div className="section-head"><div><span className="eyebrow">RECURSOS DESTACADOS</span><h2>Listos para usar y adaptar</h2></div><button className="ghost" onClick={()=>setView('library')}>Ver biblioteca</button></div><div className="resource-grid">{visibleResources.slice(0,6).map(r=><ResourceCard key={r.id} resource={r}/>)}</div></section>
+      {page === 'inicio' && <>
+        <section className="hero"><div><span className="eyebrow">YOYO LETRAS AI · 3.6.0</span><h2>Recursos útiles, accesibles y listos para el aula.</h2><p>Un espacio para docentes, PIE, estudiantes y familias, con herramientas pedagógicas, biblioteca curricular y administración segura.</p><div className="hero-actions"><button className="button button--primary" onClick={() => setPage('biblioteca')}>Explorar biblioteca</button><button className="button button--secondary" onClick={() => setPage('ia')}>Abrir YOYO IA</button></div></div><img src="https://yoyoletrasai.vercel.app/assets/yoyo-learning-hero-v2.webp" alt="Niñas y niños aprendiendo con recursos educativos" /></section>
+        <section className="metrics"><article><strong>{visibleResources.length}</strong><span>recursos iniciales</span></article><article><strong>{modules.length}</strong><span>módulos pedagógicos</span></article><article><strong>PIE + DUA</strong><span>enfoque transversal</span></article><article><strong>{health?.checks?.planAuthorization === 'configured' ? 'Conectado' : 'Pendiente'}</strong><span>control de planes</span></article></section>
+        <section><div className="section-heading"><div><span className="eyebrow">MÓDULOS</span><h2>Todo el trabajo pedagógico en un solo lugar</h2></div></div><div className="module-grid">{modules.slice(0, 12).map((module) => <article key={module.id}><span className="module-icon">{module.icon}</span><h3>{module.label}</h3><p>{module.description}</p></article>)}</div></section>
       </>}
 
-      {view==='library' && <section><div className="section-head"><div><span className="eyebrow">BIBLIOTECA</span><h2>{resources.length} recursos disponibles</h2></div></div><div className="resource-grid">{resources.map(r=><ResourceCard key={r.id} resource={r}/>)}</div></section>}
+      {page === 'biblioteca' && <section><div className="section-heading"><div><span className="eyebrow">BIBLIOTECA CURRICULAR</span><h2>Materiales listos para adaptar, imprimir y usar</h2></div><input className="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nivel, asignatura o habilidad" /></div><div className="resource-grid">{visibleResources.map((resource) => <article key={resource.id}><div className="resource-top"><span>{resource.icon}</span><StatusPill ok>{resource.level}</StatusPill></div><h3>{resource.title}</h3><p>{resource.objective}</p><div className="tags"><span>{resource.subject}</span><span>{resource.skill}</span><span>{resource.duration}</span></div></article>)}</div></section>}
 
-      {view==='owner' && session && <section className="owner-stack"><div className="owner-banner"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Gobernanza, accesos y fábrica de recursos</h2><p>Herramientas privadas protegidas por tu sesión autenticada.</p></div></div><OwnerAccessManager accessToken={token} toast={notify}/><OwnerFactoryManager accessToken={token} toast={notify}/></section>}
+      {page === 'ia' && <section className="workspace"><div className="workspace-copy"><span className="eyebrow">YOYO IA</span><h2>Asistente pedagógico con control de acceso y consumo</h2><p>Las solicitudes se autorizan en servidor según usuario, plan, cuota y rol. La clave privada del motor no se expone al navegador.</p>{entitlement && <div className="plan-card"><b>{entitlement.plan?.name || entitlement.planId}</b><span>{entitlement.plan?.description}</span></div>}</div>{!session ? <form className="auth-card" onSubmit={signIn}><h3>Iniciar sesión</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button><small>{isSupabaseConfigured ? 'Identidad Supabase conectada.' : 'Configuración de identidad pendiente.'}</small></form> : <form className="ai-card" onSubmit={runAI}><label>¿Qué quieres crear?<textarea rows="7" value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} /></label><button className="button button--primary" disabled={busy}>{busy ? 'Generando…' : 'Crear con YOYO IA'}</button>{aiResult && <pre>{aiResult}</pre>}</form>}</section>}
 
-      {!isSupabaseConfigured && <p className="notice">Supabase público no está configurado en el navegador. Las APIs de servidor continúan protegidas.</p>}
+      {page === 'propietaria' && <section><div className="section-heading"><div><span className="eyebrow">CONTROL PROPIETARIO</span><h2>Gobernanza, cuentas y fábrica de recursos</h2></div></div>{!session ? <form className="auth-card compact" onSubmit={signIn}><h3>Acceso protegido</h3><label>Correo<input type="email" value={auth.email} onChange={(e) => setAuth({ ...auth, email: e.target.value })} required /></label><label>Contraseña<input type="password" value={auth.password} onChange={(e) => setAuth({ ...auth, password: e.target.value })} required /></label><button className="button button--primary" disabled={busy}>Ingresar</button></form> : ownerFull ? <div className="owner-stack"><OwnerAccessManager accessToken={accessToken} toast={toast} /><OwnerFactoryManager accessToken={accessToken} toast={toast} /></div> : <div className="notice"><b>Sesión válida, pero sin privilegios de propietaria.</b><p>La vista administrativa exige rol platform_admin y plan propietaria activos.</p></div>}</section>}
     </main>
-    {toast && <div className="toast">{toast}</div>}
   </div>;
 }
