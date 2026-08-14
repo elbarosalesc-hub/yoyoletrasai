@@ -46,6 +46,20 @@ jobs:
           grep -q "capability-benchmark" vercel.json
           grep -q '30 6 1 1,7 \*' vercel.json
           grep -q "resource-factory" vercel.json
+      - name: Verify owner login and persistent credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f api/owner/session.js
+          test -f api/_runtime-credentials.js
+          grep -q "plan_id.*propietaria" api/owner/session.js
+          grep -q "model_tier.*owner" api/owner/session.js
+          grep -q "platform_secret_store" api/_runtime-credentials.js
+          grep -q "aes-256-gcm" api/_runtime-credentials.js
+          grep -q "encrypted_owner_store" api/_runtime-credentials.js
+          grep -q "saveGatewayCredential" api/owner/control.js
+          grep -q "/api/owner/session" src/App.jsx
+          grep -q "ownerSession?.owner === true" src/App.jsx
       - name: Verify all-module factory
         shell: bash
         run: |
@@ -77,6 +91,7 @@ jobs:
           grep -q "neverCacheAIRequests: true" shared/owner-platform-config.js
           grep -q "no-store" api/owner/profile.js
           grep -q "no-store" api/owner/control.js
+          grep -q "no-store" api/owner/session.js
           grep -q "no-store" api/ai/generate.js
       - name: Verify safe publication defaults
         shell: bash
@@ -91,4 +106,4 @@ jobs:
       - name: Build 3.6
         run: npm run build
       - name: Summary
-        run: echo "YOYO master owner application, safe cache, exclusive AI architecture, 19-module factory and release-economy policy audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
+        run: echo "YOYO owner login, encrypted persistent credential, exclusive AI architecture, safe cache, 19-module factory and release policy audited. No production, domain or alias change performed." >> "$GITHUB_STEP_SUMMARY"
