@@ -27,14 +27,11 @@ jobs:
     steps:
       - name: Checkout validated release branch
         uses: actions/checkout@v4
-
       - name: Require Vercel credential
         shell: bash
         run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN; producción no se modifica"; exit 2; }
-
       - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
-
       - name: Verify current permanent production before release
         shell: bash
         run: |
@@ -45,13 +42,10 @@ jobs:
           printf '%s\n' "$health" | grep -q '"configuration":"valid"'
           printf '%s\n' "$health" | grep -q '"database":"reachable"'
           curl --retry 8 --retry-delay 2 --fail --location --silent --show-error "$base/caligrafia" | grep -qi 'Caligrafía completa'
-
       - name: Pull preview environment
         run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
       - name: Build isolated preview
         run: vercel build --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
       - name: Deploy isolated preview
         id: preview
         shell: bash
@@ -59,7 +53,6 @@ jobs:
           url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Preview validable: $url" >> "$GITHUB_STEP_SUMMARY"
-
       - name: Validate complete preview
         shell: bash
         run: |
@@ -75,13 +68,10 @@ jobs:
           done
           curl --retry 8 --retry-delay 2 --fail --location --silent --show-error "$base/caligrafia" | grep -qi 'Manuscrita'
           curl --retry 8 --retry-delay 2 --fail --location --silent --show-error "$base/yoyo-ia" | grep -qi 'YOYO IA'
-
       - name: Pull production environment
         run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
       - name: Build immutable production artifact
         run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
       - name: Deploy validated production candidate without changing permanent domain
         id: production
         shell: bash
@@ -89,7 +79,6 @@ jobs:
           url="$(vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Producción candidata: $url" >> "$GITHUB_STEP_SUMMARY"
-
       - name: Validate direct production candidate before alias
         shell: bash
         run: |
@@ -103,7 +92,6 @@ jobs:
             code="$(curl --retry 8 --retry-delay 2 --silent --location --output /tmp/page.html --write-out '%{http_code}' "$base$path")"
             test "$code" -ge 200 -a "$code" -lt 400
           done
-
       - name: Attach permanent domain with automatic rollback on verification failure
         shell: bash
         run: |
