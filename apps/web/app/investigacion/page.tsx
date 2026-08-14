@@ -1,0 +1,2 @@
+import { YoyoModulePage } from '@/components/YoyoModulePage'
+export default function Page(){return <YoyoModulePage active="Investigación" kicker="YOYO IA · INVESTIGACIÓN" title="Investigación educativa confiable" description="Busca, contrasta y organiza evidencia con prioridad en fuentes oficiales, académicas y curriculares verificables." features={['Búsqueda profunda','Contraste de fuentes','Citas trazables','Síntesis con incertidumbre explícita','Actualización de información cambiante']} primaryHref="/yoyo-ia" primaryLabel="Investigar con YOYO"/>}
