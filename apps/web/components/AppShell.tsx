@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import {
   Accessibility, BarChart3, Bell, BookOpen, BookOpenCheck, Bot, CalendarDays, Check,
-  ChevronDown, ChevronRight, ClipboardList, Cloud, Command, FileText, FlaskConical,
-  Gamepad2, Home, Images, Mail, Menu, PenTool, Search, Settings, ShieldCheck,
-  Sparkles, Users, UsersRound, Wrench, X,
+  ChevronDown, ChevronRight, ClipboardList, Cloud, Command, FileSearch, FileText, FlaskConical,
+  Gamepad2, GraduationCap, Home, Images, Landmark, Mail, Menu, PenTool, Search, Settings, ShieldCheck,
+  Sparkles, Users, UsersRound, WandSparkles, Wrench, X,
 } from 'lucide-react'
 import { SessionMenu } from '@/components/SessionMenu'
 
@@ -19,14 +19,19 @@ const groups: NavGroup[] = [
   { label: 'Principal', items: [
     ['Inicio', '/app', Home], ['Cursos', '/cursos', BookOpen], ['Estudiantes', '/seguimiento', Users], ['Evaluaciones', '/evaluaciones', ClipboardList],
   ]},
+  { label: 'YOYO IA', items: [
+    ['YOYO IA', '/yoyo-ia', Bot], ['Investigación', '/investigacion', FileSearch], ['Fuentes IA', '/fuentes-ia', ShieldCheck],
+    ['Planificaciones', '/planificaciones', CalendarDays], ['Crear con IA', '/crear', WandSparkles],
+  ]},
   { label: 'Enseñanza', items: [
     ['Centros Premium', '/centros', Sparkles], ['Biblioteca', '/biblioteca', BookOpen], ['Plan Lector', '/plan-lector', BookOpenCheck],
-    ['Crear con IA', '/crear', Sparkles], ['Profesor Virtual', '/profesor-virtual', Bot], ['Herramientas', '/herramientas', Wrench],
-    ['Caligrafía', '/caligrafia', PenTool], ['Apoyos PIE y DUA', '/inclusion', Accessibility], ['Simuladores', '/simuladores', FlaskConical], ['Juegos', '/juegos', Gamepad2],
+    ['Profesor Virtual', '/profesor-virtual', Bot], ['Herramientas', '/herramientas', Wrench], ['Caligrafía', '/caligrafia', PenTool],
+    ['Pictogramas', '/pictogramas', Images], ['Apoyos PIE y DUA', '/inclusion', Accessibility], ['Simuladores', '/simuladores', FlaskConical], ['Juegos', '/juegos', Gamepad2],
   ]},
   { label: 'Gestión', items: [
     ['Progreso por OA', '/progreso', BarChart3], ['Evidencias', '/seguimiento/evidencias', ClipboardList], ['Familias', '/familias', UsersRound],
-    ['Informes', '/informes', FileText], ['Multimedia', '/multimedia', Images], ['Integraciones', '/integraciones', Cloud], ['Calendario', '/herramientas', CalendarDays],
+    ['Informes', '/informes', FileText], ['Multimedia', '/multimedia', Images], ['Integraciones', '/integraciones', Cloud],
+    ['Institución', '/institucion', Landmark], ['Espacio estudiante', '/espacio-estudiante', GraduationCap], ['Calendario', '/herramientas', CalendarDays],
   ]},
   { label: 'Sistema', items: [
     ['Estado del sistema', '/estado', ShieldCheck], ['QA y publicación', '/qa', ShieldCheck], ['Configuración', '/configuracion', Settings],
@@ -35,12 +40,12 @@ const groups: NavGroup[] = [
 
 const allItems: NavItem[] = groups.flatMap((group) => group.items)
 const mobile: NavItem[] = [
-  ['Inicio', '/app', Home], ['Cursos', '/cursos', BookOpen], ['Crear', '/crear', Sparkles], ['Centros', '/centros', Images], ['Perfil', '/configuracion', UsersRound],
+  ['Inicio', '/app', Home], ['Cursos', '/cursos', BookOpen], ['YOYO IA', '/yoyo-ia', Bot], ['Crear', '/crear', Sparkles], ['Perfil', '/configuracion', UsersRound],
 ]
 const notifications = [
-  { title: 'Centros Premium activos', detail: 'Matemática, Ciencias, Caligrafía, Grafomotricidad, Pictogramas y Plan Lector están integrados.', time: 'Ahora' },
+  { title: 'Plataforma completa protegida', detail: 'La restauración conserva módulos, rutas y experiencias pedagógicas existentes.', time: 'Ahora' },
+  { title: 'YOYO IA integrada', detail: 'Los módulos de IA, investigación, fuentes y planificación se incorporan sin reemplazar la plataforma base.', time: 'Ahora' },
   { title: 'Cursos conectados', detail: 'Los cursos se filtran por institución y rol mediante Supabase.', time: 'Hoy' },
-  { title: 'Recursos accesibles', detail: 'Los materiales incorporan apoyos PIE, DUA y opciones de adaptación.', time: 'Hoy' },
 ]
 
 export function AppShell({ children, active }: { children: React.ReactNode; active: string }) {
@@ -54,7 +59,7 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
   const [query, setQuery] = useState('')
   const [readCount, setReadCount] = useState(0)
   const searchInput = useRef<HTMLInputElement>(null)
-  const results = useMemo(() => allItems.filter(([label]) => label.toLowerCase().includes(query.toLowerCase())).slice(0, 8), [query])
+  const results = useMemo(() => allItems.filter(([label]) => label.toLowerCase().includes(query.toLowerCase())).slice(0, 10), [query])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -85,7 +90,7 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
         <button className="desktop-menu-button" aria-label="Contraer menú" onClick={() => setCollapsed((value) => !value)}><Menu size={21} /></button>
         <button className="approved-search" type="button" onClick={() => setSearchOpen(true)} aria-label="Abrir buscador"><Search size={18} /><span>Buscar en la plataforma...</span><kbd>⌘ K</kbd></button>
         <div className="approved-top-actions">
-          <Link href="/crear" className="approved-create-button"><Sparkles size={16} /> Crear</Link>
+          <Link href="/yoyo-ia" className="approved-create-button"><Bot size={16} /> YOYO IA</Link>
           <button aria-label="Mensajes" onClick={() => router.push('/familias')}><Mail size={18} /></button>
           <div className="top-action-wrap">
             <button aria-label="Notificaciones" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen((value) => !value); setSidebarProfileOpen(false); setTopProfileOpen(false) }}><Bell size={18} />{readCount < notifications.length && <i>{notifications.length - readCount}</i>}</button>
@@ -97,6 +102,6 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
       <div className="approved-content">{children}</div>
     </main>
     <nav className="approved-mobile-nav" aria-label="Navegación móvil">{mobile.map(([label,href,Icon])=><Link key={label} href={href} className={label===active?'active':''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
-    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con centros, biblioteca, evaluación o informes.</span></div>}</div></section></div>}
+    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con YOYO IA, biblioteca, evaluación o informes.</span></div>}</div></section></div>}
   </div>
 }
