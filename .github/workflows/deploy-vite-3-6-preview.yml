@@ -12,7 +12,7 @@ permissions:
 jobs:
   preview:
     runs-on: ubuntu-latest
-    environment: Production
+    environment: VERCEL_TOKEN
     timeout-minutes: 25
     env:
       VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::No se encontro VERCEL_TOKEN en el entorno Production."
+            echo "::error::El environment VERCEL_TOKEN existe, pero no contiene un secreto utilizable llamado VERCEL_TOKEN."
             exit 2
           fi
 
@@ -82,4 +82,3 @@ jobs:
         shell: bash
         run: |
           echo "Preview validado. No se promueve automaticamente a produccion." >> "$GITHUB_STEP_SUMMARY"
-          echo "Fresh secret snapshot run." >> "$GITHUB_STEP_SUMMARY"
