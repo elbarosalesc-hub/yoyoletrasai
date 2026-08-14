@@ -1,4 +1,4 @@
-name: Deploy YoYoLetrasAI 3.6 Preview
+name: Deploy YoYoLetrasAI 3.6 Preview and Promote
 
 on:
   push:
@@ -10,36 +10,37 @@ permissions:
   contents: read
 
 jobs:
-  preview:
+  publish:
     runs-on: ubuntu-latest
     environment: Production
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
       VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || secrets.VERCEL_ACCESS_TOKEN || secrets.VERCEL_DEPLOY_TOKEN || vars.VERCEL_TOKEN || vars.VERCEL_ACCESS_TOKEN || vars.VERCEL_DEPLOY_TOKEN }}
+      PRODUCTION_URL: https://yoyoletrasai.vercel.app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Require existing Vercel token
+      - name: Require Vercel credential
         shell: bash
         run: |
           if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::No se encontro un token Vercel utilizable en secretos o variables del entorno Production."
+            echo "::error::No se encontro VERCEL_TOKEN en el entorno Production."
             exit 2
           fi
 
-      - name: Install Vercel CLI
+      - name: Install pinned Vercel CLI
         run: npm install --global vercel@50.1.6
 
       - name: Pull preview environment
         run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
 
-      - name: Build preview
+      - name: Build preview artifact
         run: vercel build --token="$VERCEL_TOKEN"
 
-      - name: Deploy preview
+      - name: Deploy immutable preview
         id: deploy
         shell: bash
         run: |
@@ -54,15 +55,51 @@ jobs:
           url="${{ steps.deploy.outputs.url }}"
           body="$(curl --fail --silent --show-error "$url/api/health")"
           printf '%s\n' "$body"
+          printf '%s' "$body" | grep -q '"status":"ok"'
           printf '%s' "$body" | grep -q '"version":"3.6.0"'
+          printf '%s' "$body" | grep -q '"application":"operational"'
+          printf '%s' "$body" | grep -q '"resourcesApi":"operational"'
           if printf '%s' "$body" | grep -q '"probe"'; then
-            echo "::error::El health contiene un marcador probe y no es publicable."
+            echo "::error::El preview contiene marcador probe y no puede publicarse."
             exit 3
           fi
 
-      - name: Verify resources endpoint
+      - name: Verify preview resources
         shell: bash
         run: |
           url="${{ steps.deploy.outputs.url }}"
-          curl --fail --silent --show-error "$url/api/resources" > /tmp/resources.json
-          test -s /tmp/resources.json
+          body="$(curl --fail --silent --show-error "$url/api/resources")"
+          test -n "$body"
+
+      - name: Verify preview application root
+        shell: bash
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          curl --fail --silent --show-error "$url/" > /tmp/root.html
+          test -s /tmp/root.html
+          grep -qi 'YoYo' /tmp/root.html
+
+      - name: Promote validated preview to production
+        shell: bash
+        run: |
+          url="${{ steps.deploy.outputs.url }}"
+          vercel promote "$url" --yes --token="$VERCEL_TOKEN"
+
+      - name: Verify public production
+        shell: bash
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            body="$(curl --silent --show-error "$PRODUCTION_URL/api/health" || true)"
+            if printf '%s' "$body" | grep -q '"status":"ok"' \
+              && printf '%s' "$body" | grep -q '"version":"3.6.0"' \
+              && printf '%s' "$body" | grep -q '"application":"operational"' \
+              && printf '%s' "$body" | grep -q '"resourcesApi":"operational"' \
+              && ! printf '%s' "$body" | grep -q '"probe"'; then
+              printf '%s\n' "$body"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Produccion no quedo saludable en 3.6.0 despues de la promocion."
+          printf '%s\n' "$body"
+          exit 4
