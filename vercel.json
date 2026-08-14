@@ -5,6 +5,7 @@
     "api/owner/control.js": { "maxDuration": 30 },
     "api/owner/factory.js": { "maxDuration": 120 },
     "api/cron/innovation-scan.js": { "maxDuration": 300 },
+    "api/cron/capability-benchmark.js": { "maxDuration": 300 },
     "api/cron/resource-factory.js": { "maxDuration": 300 },
     "api/storage/uploads.js": { "maxDuration": 60 }
   },
@@ -20,6 +21,7 @@
   ],
   "crons": [
     { "path": "/api/cron/innovation-scan", "schedule": "0 6 1 * *" },
+    { "path": "/api/cron/capability-benchmark", "schedule": "30 6 1 1,7 *" },
     { "path": "/api/cron/resource-factory", "schedule": "0 7 * * 1" }
   ],
   "rewrites": [
