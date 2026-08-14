@@ -84,7 +84,13 @@ jobs:
           test -s /tmp/root.html
           grep -qi 'YoYo' /tmp/root.html
 
-      - name: Deploy validated artifact to production
+      - name: Pull production environment
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Build production artifact
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy validated release to production
         id: production
         shell: bash
         run: |
