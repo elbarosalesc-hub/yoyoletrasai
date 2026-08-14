@@ -1,11 +1,6 @@
-name: Deploy Full Next Platform Production
+name: Deploy Full Next Platform Production - Manual Release
 
 on:
-  push:
-    branches:
-      - agent/restore-full-platform-yoyo-3-6
-    paths:
-      - .github/release-full-next-ready.txt
   workflow_dispatch:
 
 permissions:
@@ -17,87 +12,11 @@ env:
   VERCEL_SCOPE: elbarosalesc-pngs-projects
 
 jobs:
-  deploy:
+  release-safety-gate:
     runs-on: ubuntu-24.04
-    environment: VERCEL_TOKEN
-    timeout-minutes: 30
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Checkout validated release
-        uses: actions/checkout@v4
-
-      - name: Require Vercel credential
+      - name: Production release policy
         shell: bash
         run: |
-          if [ -z "${VERCEL_TOKEN:-}" ]; then
-            echo "::error::Falta VERCEL_TOKEN. No se modificará producción."
-            exit 2
-          fi
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@50.1.6
-
-      - name: Pull preview environment for existing project
-        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Build immutable Next preview
-        run: vercel build --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Deploy immutable preview
-        id: preview
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Preview Next completo: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify full-platform preview before production
-        shell: bash
-        run: |
-          url="${{ steps.preview.outputs.url }}"
-          curl --fail --location --silent --show-error "$url/" > /tmp/root.html
-          grep -qi "YoYo" /tmp/root.html
-          curl --fail --location --silent --show-error "$url/acceso" > /tmp/access.html
-          grep -qi "acceso\|ingresar\|YoYo" /tmp/access.html
-          curl --fail --location --silent --show-error "$url/caligrafia" > /tmp/caligrafia.html
-          grep -qi "Caligrafía completa" /tmp/caligrafia.html
-          grep -qi "Imprenta" /tmp/caligrafia.html
-          grep -qi "Manuscrita" /tmp/caligrafia.html
-          curl --fail --location --silent --show-error "$url/herramientas" > /tmp/tools.html
-          grep -qi "Laboratorio docente\|Herramientas" /tmp/tools.html
-          curl --fail --location --silent --show-error "$url/yoyo-ia" > /tmp/yoyo.html
-          grep -qi "YOYO IA" /tmp/yoyo.html
-          health="$(curl --fail --silent --show-error "$url/api/health")"
-          printf '%s\n' "$health"
-          printf '%s' "$health" | grep -q '"application":"operational"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
-
-      - name: Pull production environment without changing domains or aliases
-        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Build production Next artifact
-        run: vercel build --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
-
-      - name: Deploy validated Next release to existing production project
-        id: production
-        shell: bash
-        run: |
-          url="$(vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Production Next completo: $url" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify permanent domain after deploy
-        shell: bash
-        run: |
-          permanent="https://yoyoletrasai.vercel.app"
-          curl --fail --location --silent --show-error "$permanent/" > /tmp/prod-root.html
-          grep -qi "YoYo" /tmp/prod-root.html
-          curl --fail --location --silent --show-error "$permanent/caligrafia" > /tmp/prod-caligrafia.html
-          grep -qi "Caligrafía completa" /tmp/prod-caligrafia.html
-          curl --fail --location --silent --show-error "$permanent/herramientas" > /tmp/prod-tools.html
-          grep -qi "Laboratorio docente\|Herramientas" /tmp/prod-tools.html
-          health="$(curl --fail --silent --show-error "$permanent/api/health")"
-          printf '%s\n' "$health"
-          printf '%s' "$health" | grep -q '"application":"operational"'
-          printf '%s' "$health" | grep -q '"database":"reachable"'
+          echo "Este workflow no despliega automáticamente."
+          echo "El release de producción sólo se ejecuta manualmente tras aprobar build, rutas, Supabase, YOYO IA y checklist funcional."
