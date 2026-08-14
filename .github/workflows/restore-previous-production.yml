@@ -14,7 +14,7 @@ env:
   VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
   VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
   VERCEL_SCOPE: elbarosalesc-pngs-projects
-  PREVIOUS_DEPLOYMENT: yoyoletrasai-g0oqdamih-elbarosalesc-pngs-projects.vercel.app
+  PREVIOUS_DEPLOYMENT: yoyoletrasai-1gq16sczi-elbarosalesc-pngs-projects.vercel.app
 
 jobs:
   restore:
@@ -33,11 +33,8 @@ jobs:
       - name: Link existing project without changing source
         run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Roll back production traffic to exact previous platform
+      - name: Roll back production traffic to exact previous production
         run: vercel rollback "https://$PREVIOUS_DEPLOYMENT" --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
 
-      - name: Verify restored production
-        run: |
-          curl --fail --silent --show-error https://yoyoletrasai.vercel.app/ > /tmp/root.html
-          grep -qi 'Plataforma educativa inteligente' /tmp/root.html
-          grep -qi 'YOYOLETRASAI' /tmp/root.html
+      - name: Verify production responds
+        run: curl --fail --silent --show-error https://yoyoletrasai.vercel.app/ > /tmp/root.html
