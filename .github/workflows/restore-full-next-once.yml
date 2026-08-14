@@ -1,17 +1,57 @@
-name: Restore Full Next Platform - Manual Only
+name: Restore Full Next Platform Once
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - agent/restore-full-platform-yoyo-3-6
+    paths:
+      - .github/workflows/restore-full-next-once.yml
 
 permissions:
   contents: read
 
+env:
+  VERCEL_SCOPE: elbarosalesc-pngs-projects
+  TARGET_DEPLOYMENT: yoyoletrasai-9jibw9nim-elbarosalesc-pngs-projects.vercel.app
+  PERMANENT_DOMAIN: yoyoletrasai.vercel.app
+
 jobs:
-  safety-gate:
+  restore-full-platform:
     runs-on: ubuntu-24.04
+    environment: VERCEL_TOKEN
+    timeout-minutes: 12
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
-      - name: Restoration safety policy
+      - name: Require Vercel credential
+        shell: bash
+        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN"; exit 2; }
+
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Verify complete Next platform before restore
         shell: bash
         run: |
-          echo "La restauración del dominio permanente es exclusivamente manual."
-          echo "Antes de una restauración se exige validación completa de rutas, build, Supabase y YOYO IA."
+          for path in /acceso /caligrafia /herramientas /yoyo-ia /biblioteca /evaluaciones /inclusion /informes /integraciones; do
+            code="$(curl --silent --output /tmp/page.html --write-out '%{http_code}' "https://$TARGET_DEPLOYMENT$path")"
+            test "$code" -ge 200 -a "$code" -lt 400
+          done
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/caligrafia" > /tmp/caligrafia.html
+          grep -qi 'Caligrafía completa' /tmp/caligrafia.html
+          grep -qi 'Manuscrita minúscula' /tmp/caligrafia.html
+          curl --fail --silent --show-error "https://$TARGET_DEPLOYMENT/yoyo-ia" > /tmp/yoyo.html
+          grep -qi 'YOYO IA' /tmp/yoyo.html
+
+      - name: Restore permanent domain to complete Next platform
+        run: vercel alias set "$TARGET_DEPLOYMENT" "$PERMANENT_DOMAIN" --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Verify permanent domain after restore
+        shell: bash
+        run: |
+          sleep 5
+          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/caligrafia" > /tmp/permanent-caligrafia.html
+          grep -qi 'Caligrafía completa' /tmp/permanent-caligrafia.html
+          grep -qi 'Manuscrita minúscula' /tmp/permanent-caligrafia.html
+          curl --retry 10 --retry-delay 2 --fail --silent --show-error "https://$PERMANENT_DOMAIN/yoyo-ia" > /tmp/permanent-yoyo.html
+          grep -qi 'YOYO IA' /tmp/permanent-yoyo.html
