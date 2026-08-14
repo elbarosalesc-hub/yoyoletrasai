@@ -1,0 +1,46 @@
+name: Vite 3.6 preview validation
+
+on:
+  push:
+    branches:
+      - agent/publish-v3-6-vite
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Validate source syntax
+        run: |
+          find api shared src -type f \( -name '*.js' -o -name '*.jsx' \) -print0 | while IFS= read -r -d '' file; do
+            case "$file" in
+              *.jsx) continue ;;
+              *) node --check "$file" ;;
+            esac
+          done
+
+      - name: Build Vite application
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          grep -q '3.6.0' package.json
+          echo 'YoYoLetrasAI Vite 3.6 build OK'
