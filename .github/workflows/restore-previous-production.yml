@@ -1,0 +1,39 @@
+name: Restore Previous YoYoLetrasAI Production
+
+on:
+  push:
+    branches:
+      - agent/publish-v3-6-vite
+    paths:
+      - .github/workflows/restore-previous-production.yml
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
+  VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
+  VERCEL_SCOPE: elbarosalesc-pngs-projects
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    environment: VERCEL_TOKEN
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout only for Vercel project context
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Link existing project without changing source
+        run: vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Roll back production traffic to previous deployment
+        run: vercel rollback --yes --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
+
+      - name: Show rollback status
+        run: vercel rollback status --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN"
