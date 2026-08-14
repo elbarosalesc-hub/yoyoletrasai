@@ -1,0 +1,104 @@
+name: Canonicalize approved source
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-verified-source-20260814
+    paths:
+      - .github/workflows/canonicalize-approved-source.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  canonicalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-verified-source-20260814
+          fetch-depth: 0
+
+      - name: Fetch immutable approved manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/restore-approved-owner-full-source
+          git show origin/agent/restore-approved-owner-full-source:.restore/approved-owner-full-manifest.tsv > /tmp/approved.tsv
+          test "$(wc -l < /tmp/approved.tsv | tr -d ' ')" = '52'
+
+      - name: Verify and stage only canonical files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/canonical
+          mkdir -p /tmp/canonical
+          count=0
+          while IFS=$'\t' read -r expected path; do
+            test -f "$path"
+            actual="$(git hash-object "$path")"
+            if [ "$actual" != "$expected" ]; then
+              echo "Canonical hash mismatch: $path expected=$expected actual=$actual" >&2
+              exit 1
+            fi
+            mkdir -p "/tmp/canonical/$(dirname "$path")"
+            cp -p "$path" "/tmp/canonical/$path"
+            count=$((count + 1))
+          done < /tmp/approved.tsv
+          test "$count" = '52'
+          test "$(find /tmp/canonical -type f | wc -l | tr -d ' ')" = '52'
+          grep -q '"version": "3.6.0"' /tmp/canonical/package.json
+          for path in \
+            src/App.jsx \
+            src/modules.jsx \
+            src/features/YoyoAIStudio.jsx \
+            src/features/SourceLab.jsx \
+            src/features/ImmersiveGames.jsx \
+            src/features/ReadingPlan.jsx \
+            public/assets/phonics-illustrations-v1.webp \
+            public/assets/subject-covers-v1.webp \
+            public/assets/yoyo-learning-hero-v2.webp \
+            api/health.js \
+            vercel.json; do
+            test -f "/tmp/canonical/$path"
+          done
+          echo "CANONICAL_FILES=$count"
+
+      - name: Build verified canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd /tmp/canonical
+          npm ci
+          npm run build
+          test -f dist/index.html
+
+      - name: Replace branch with exactly 52 approved files
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/canonical/. .
+          rm -rf node_modules dist
+          test "$(find . -type f ! -path './.git/*' | wc -l | tr -d ' ')" = '52'
+          while IFS=$'\t' read -r expected path; do
+            test "$(git hash-object "$path")" = "$expected"
+          done < /tmp/approved.tsv
+
+      - name: Commit clean canonical baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Canonical branch already clean.'
+            exit 0
+          fi
+          git commit -m 'Consolidar plataforma aprobada 3.6.0 exacta'
+          git push origin HEAD:recovery/approved-3.6-verified-source-20260814
