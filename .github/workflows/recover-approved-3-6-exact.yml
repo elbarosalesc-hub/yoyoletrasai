@@ -30,10 +30,40 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/yoyo-approved /tmp/yoyo-payload.tar.gz
+          rm -rf /tmp/yoyo-approved /tmp/yoyo-raw /tmp/yoyo-blob.json /tmp/yoyo-stage1 /tmp/yoyo-payload.tar.gz
           mkdir -p /tmp/yoyo-approved
-          gh api -H "Accept: application/vnd.github.raw+json" "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" > /tmp/yoyo-payload.tar.gz
+
+          gh api -H "Accept: application/vnd.github.raw+json" "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" > /tmp/yoyo-raw
+          RAW_HEX="$(od -An -tx1 -N2 /tmp/yoyo-raw | tr -d ' ')"
+          RAW_PREFIX="$(head -c 16 /tmp/yoyo-raw | tr -cd '[:print:]' || true)"
+          echo "raw_bytes=$(wc -c < /tmp/yoyo-raw | tr -d ' ') raw_hex=${RAW_HEX} raw_prefix=${RAW_PREFIX}"
+
+          if [ "$RAW_HEX" = "1f8b" ]; then
+            cp /tmp/yoyo-raw /tmp/yoyo-payload.tar.gz
+          elif [ "${RAW_PREFIX#H4sI}" != "$RAW_PREFIX" ]; then
+            tr -d '\r\n' < /tmp/yoyo-raw | base64 -d > /tmp/yoyo-payload.tar.gz
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/git/blobs/${BLOB_SHA}" > /tmp/yoyo-blob.json
+            ENCODING="$(jq -r '.encoding // empty' /tmp/yoyo-blob.json)"
+            JSON_PREFIX="$(jq -r '.content // empty' /tmp/yoyo-blob.json | tr -d '\r\n' | head -c 16)"
+            echo "json_encoding=${ENCODING} json_prefix=${JSON_PREFIX}"
+            test "$ENCODING" = "base64"
+            jq -r '.content' /tmp/yoyo-blob.json | tr -d '\r\n' | base64 -d > /tmp/yoyo-stage1
+            STAGE_HEX="$(od -An -tx1 -N2 /tmp/yoyo-stage1 | tr -d ' ')"
+            STAGE_PREFIX="$(head -c 16 /tmp/yoyo-stage1 | tr -cd '[:print:]' || true)"
+            echo "stage1_bytes=$(wc -c < /tmp/yoyo-stage1 | tr -d ' ') stage1_hex=${STAGE_HEX} stage1_prefix=${STAGE_PREFIX}"
+            if [ "$STAGE_HEX" = "1f8b" ]; then
+              cp /tmp/yoyo-stage1 /tmp/yoyo-payload.tar.gz
+            elif [ "${STAGE_PREFIX#H4sI}" != "$STAGE_PREFIX" ]; then
+              tr -d '\r\n' < /tmp/yoyo-stage1 | base64 -d > /tmp/yoyo-payload.tar.gz
+            else
+              echo "Formato de payload no reconocido" >&2
+              exit 1
+            fi
+          fi
+
           test "$(od -An -tx1 -N2 /tmp/yoyo-payload.tar.gz | tr -d ' ')" = "1f8b"
+          tar -tzf /tmp/yoyo-payload.tar.gz >/dev/null
           tar -xzf /tmp/yoyo-payload.tar.gz -C /tmp/yoyo-approved
           cd /tmp/yoyo-approved
           test "$(find . -type f | wc -l | tr -d ' ')" = "52"
