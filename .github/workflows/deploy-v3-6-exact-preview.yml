@@ -20,20 +20,21 @@ jobs:
       - name: Checkout isolated staging branch
         uses: actions/checkout@v4
 
-      - name: Reconstruct exact YoYoLetrasAI 3.6 overlay safely
+      - name: Reconstruct exact YoYoLetrasAI 3.6 source
         shell: bash
         run: |
           set -euo pipefail
           rm -rf app
           mkdir -p app
-          rsync -a --exclude '.git' --exclude '.github' --exclude 'release' ./ app/
-          test -n "$(find release -maxdepth 1 -name 'overlay-v360.part.*' -print -quit)"
-          cat release/overlay-v360.part.* > /tmp/yoyo360-overlay.tar.xz.b64
-          test "$(wc -c < /tmp/yoyo360-overlay.tar.xz.b64 | tr -d ' ')" = "509712"
-          base64 --decode /tmp/yoyo360-overlay.tar.xz.b64 > /tmp/yoyo360-overlay.tar.xz
-          echo "44917705a600b0b9f7d132dd8318e5150d791c389fa651b9c025e74e9ab43c5f  /tmp/yoyo360-overlay.tar.xz" | sha256sum -c -
-          xz -t /tmp/yoyo360-overlay.tar.xz
-          tar -xJf /tmp/yoyo360-overlay.tar.xz -C app
+          count="$(find release -maxdepth 1 -name 'exact-v360.part.*' -type f | wc -l | tr -d ' ')"
+          test "$count" = "27"
+          cat release/exact-v360.part.* > /tmp/yoyo360-exact.tar.xz.b64
+          test "$(wc -c < /tmp/yoyo360-exact.tar.xz.b64 | tr -d ' ')" = "538236"
+          base64 --decode /tmp/yoyo360-exact.tar.xz.b64 > /tmp/yoyo360-exact.tar.xz
+          echo "8906010a428e8b5a05254d6888cefa006bde216a874b018b79a13d96103a86a7  /tmp/yoyo360-exact.tar.xz" | sha256sum -c -
+          xz -t /tmp/yoyo360-exact.tar.xz
+          tar -xJf /tmp/yoyo360-exact.tar.xz -C app
+          test "$(find app -type f | wc -l | tr -d ' ')" = "52"
           grep -Eq '"version"[[:space:]]*:[[:space:]]*"3\.6\.0"' app/package.json
           test -f app/src/features/ImmersiveGames.jsx
           test -f app/src/features/OwnerFactoryManager.jsx
@@ -46,7 +47,7 @@ jobs:
           test -f app/vercel.json
           grep -q 'THREE.WebGLRenderer' app/src/features/ImmersiveGames.jsx
           grep -q 'YOYO_MODULE_BLUEPRINTS' app/shared/yoyo-core.js
-          echo "Exact 3.6 overlay checksum validated in isolated app directory." >> "$GITHUB_STEP_SUMMARY"
+          echo "Exact 3.6 source checksum and 52-file package validated in isolated app directory." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Require Vercel credential
         shell: bash
