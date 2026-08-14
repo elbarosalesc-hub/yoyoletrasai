@@ -1,12 +1,16 @@
 import { z } from 'zod';
 import { authorizeOwnerRequest } from '../_owner-auth.js';
 import { googleStorageStatus } from '../_google-storage.js';
+import { yoyoStorageStatus } from '../_yoyo-storage.js';
+import { yoyoRuntimeStatus } from '../_yoyo-native-runtime.js';
 import { runResourceFactoryForOrganization } from '../_resource-factory.js';
 import { YOYO_CORE, YOYO_MODULE_BLUEPRINTS } from '../../shared/yoyo-core.js';
+import { benchmarkCoverage } from '../../shared/yoyo-capability-benchmark.js';
+import { OWNER_PLATFORM_PROFILE, ownerProfileChecklist } from '../../shared/owner-platform-config.js';
 
 const requestSchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('run_now') }),
-  z.object({ action: z.literal('update_profile'), enabled: z.boolean(), resourceFactoryEnabled: z.boolean(), autoPublish: z.boolean(), batchSize: z.number().int().min(1).max(5), qualityThreshold: z.number().int().min(86).max(98) }),
+  z.object({ action: z.literal('update_profile'), enabled: z.boolean(), resourceFactoryEnabled: z.boolean(), autoPublish: z.boolean(), batchSize: z.number().int().min(1).max(5), qualityThreshold: z.number().int().min(90).max(98) }),
   z.object({ action: z.literal('review_candidate'), candidateId: z.string().uuid(), decision: z.enum(['publish', 'dismiss']) }),
 ]);
 
@@ -21,7 +25,25 @@ async function dashboard(context) {
   if (runsResult.error) throw runsResult.error;
   if (candidatesResult.error) throw candidatesResult.error;
   if (findingsResult.error) throw findingsResult.error;
-  return { engine: YOYO_CORE, modules: YOYO_MODULE_BLUEPRINTS, storage: googleStorageStatus(), profile: profileResult.data, runs: runsResult.data || [], candidates: candidatesResult.data || [], findings: findingsResult.data || [] };
+
+  const runtime = yoyoRuntimeStatus();
+  const storage = yoyoStorageStatus();
+  const coverage = benchmarkCoverage();
+  const checklist = ownerProfileChecklist({ runtime, storage, coverage });
+  return {
+    engine: YOYO_CORE,
+    modules: YOYO_MODULE_BLUEPRINTS,
+    storage,
+    legacyStorage: googleStorageStatus(),
+    runtime,
+    coverage,
+    ownerProfile: OWNER_PLATFORM_PROFILE,
+    checklist,
+    profile: profileResult.data,
+    runs: runsResult.data || [],
+    candidates: candidatesResult.data || [],
+    findings: findingsResult.data || [],
+  };
 }
 
 export default async function handler(req, res) {
