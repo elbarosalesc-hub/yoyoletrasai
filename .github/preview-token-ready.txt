@@ -1,0 +1,1 @@
+Trigger fresh YoYoLetrasAI 3.6 preview after VERCEL_TOKEN configuration.
