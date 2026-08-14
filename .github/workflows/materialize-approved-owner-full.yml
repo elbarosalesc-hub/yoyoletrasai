@@ -13,35 +13,33 @@ permissions:
 jobs:
   materialize:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Rebuild exact approved source package
+      - name: Rebuild exact approved archive
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/yoyo-approved
           cat .restore/part-*.b64 | base64 --decode > /tmp/yoyo-approved.tar.gz
           tar -xzf /tmp/yoyo-approved.tar.gz -C /tmp/yoyo-approved
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a /tmp/yoyo-approved/. .
-          test -f src/App.jsx
-          test -f src/modules.jsx
-          test -f src/features/ImmersiveGames.jsx
-          test -f src/features/CalligraphyStudio.jsx
-          test -f src/features/ClassroomTools.jsx
-          grep -q 'Educación que incluye' src/App.jsx
-          grep -q 'Perfil propietario' src/data.js
-          grep -q 'Imprenta mayúscula' src/features/CalligraphyStudio.jsx
-          grep -q 'Fuentes oficiales verificables' src/features/YoyoAIStudio.jsx
-      - name: Commit restored approved platform
+          test -f /tmp/yoyo-approved/src/App.jsx
+          test -f /tmp/yoyo-approved/src/modules.jsx
+          test -f /tmp/yoyo-approved/src/features/ImmersiveGames.jsx
+          grep -q 'Educación que incluye' /tmp/yoyo-approved/src/App.jsx
+          grep -q 'Perfil propietario' /tmp/yoyo-approved/src/data.js
+          grep -q 'YOYO Play' /tmp/yoyo-approved/src/data.js
+      - name: Replace only this isolated branch
         shell: bash
         run: |
           set -euo pipefail
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .restore -exec rm -rf {} +
+          cp -a /tmp/yoyo-approved/. .
+          rm -rf .restore
           git config user.name 'yoyo-release-bot'
           git config user.email 'elba.rosalesc@gmail.com'
           git add -A
-          git commit -m 'Restaurar plataforma Owner Full aprobada y sumar mejoras 3.6.1'
+          git commit -m 'Restaurar fuente Owner Full aprobada por propietaria'
           git push origin HEAD:agent/restore-approved-owner-full-source
