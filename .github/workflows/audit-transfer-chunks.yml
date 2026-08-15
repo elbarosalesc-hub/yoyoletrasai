@@ -1,0 +1,63 @@
+name: Audit recovery transfer chunks
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/audit-transfer-chunks.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Audit exact transfer blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/expected.txt <<'EOF'
+33120b23daf36af8a1cab4be20d5033be9c35384 part-005
+7c2757bb547e296ef78af04a0f1399c8e032f3e8 part-006
+75df5547492fb2fe2f014d67fefda3c27dce1412 part-007
+9e4e2539787e8482d4e831ed56643910a9b27c6e part-008
+fc481608084016bdd1b554bad5439666adc7282d part-009
+68d585434fb3734806ff7356c73e66fede17848c part-010
+cd5bd05bdd2794c814b2310b2809343cc0f5779a part-011
+0c93dd47b33cc31075fc4b514adddb55340039ac part-012
+b3167a78d8be04fbd00841af81100da20b31ccb7 part-013
+cd60cc6b3a061d5f3aa674e2537f7aa2e357986d part-014
+ebb004b461ffcd949cfba958ac19c956b57a78c6 part-015
+7e78bdc93752dd97c3042e79dd55c7641941bcd3 part-016
+d7ed8233c1dd90de0b0bd887adf33f84b5af5644 part-017
+c4803513d53c95c467f3b23fb6f0f2138877fac2 part-018
+596299e01396708186481011585f3146a6b17708 part-019
+01297480be8a93bb79c9560356bd42aa0fabf936 part-020
+6b3fe693dde06e8148d9989ba1de9a4f9591e4cf part-021
+b99bd87c0b811b1a629259c16695701da797fd3d part-022
+EOF
+          : > TRANSFER_CHUNK_AUDIT.txt
+          ok=0
+          missing=0
+          while read -r sha name; do
+            if git cat-file -e "$sha^{blob}" 2>/dev/null; then
+              echo "OK $name $sha" >> TRANSFER_CHUNK_AUDIT.txt
+              ok=$((ok+1))
+            else
+              echo "MISSING $name $sha" >> TRANSFER_CHUNK_AUDIT.txt
+              missing=$((missing+1))
+            fi
+          done < /tmp/expected.txt
+          echo "ok=$ok missing=$missing" > TRANSFER_CHUNK_AUDIT_SUMMARY.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add TRANSFER_CHUNK_AUDIT.txt TRANSFER_CHUNK_AUDIT_SUMMARY.txt
+          git commit -m 'Auditar fragmentos exactos de transferencia' || exit 0
+          git push origin HEAD:recovery/approved-3.6-exact
