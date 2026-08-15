@@ -29,11 +29,11 @@ jobs:
           test "$(wc -l < /tmp/manifest.tsv | tr -d ' ')" = "52"
           : > MISSING_BLOBS.txt
           : > PRESENT_BLOBS.txt
-          while IFS=$'\t' read -r path sha; do
+          while IFS=$'\t' read -r sha path; do
             if git cat-file -e "$sha^{blob}" 2>/dev/null; then
-              printf '%s\t%s\n' "$path" "$sha" >> PRESENT_BLOBS.txt
+              printf '%s\t%s\n' "$sha" "$path" >> PRESENT_BLOBS.txt
             else
-              printf '%s\t%s\n' "$path" "$sha" >> MISSING_BLOBS.txt
+              printf '%s\t%s\n' "$sha" "$path" >> MISSING_BLOBS.txt
             fi
           done < /tmp/manifest.tsv
           printf 'present=%s missing=%s\n' "$(wc -l < PRESENT_BLOBS.txt)" "$(wc -l < MISSING_BLOBS.txt)" > BLOB_AUDIT_SUMMARY.txt
@@ -42,5 +42,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add BLOB_AUDIT_SUMMARY.txt MISSING_BLOBS.txt PRESENT_BLOBS.txt
-          git commit -m 'Auditar blobs exactos disponibles para recuperación'
+          git commit -m 'Corregir auditoría de blobs exactos aprobados'
           git push origin HEAD:recovery/approved-3.6-exact
