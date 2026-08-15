@@ -1,0 +1,168 @@
+name: Recover approved exact controller
+
+on:
+  push:
+    branches:
+      - recovery/approved-3.6-exact
+    paths:
+      - .github/workflows/recover-approved-exact-controller.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  recover:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: recovery/approved-3.6-exact
+          fetch-depth: 0
+
+      - name: Reconstruct approved archive from exact Git blobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/chunks.tsv <<'EOF'
+0dca868da6f0359894bcf145fd4f7fe97f799c28 part-00
+ba0aa8804d95050549459a332e642591fe833286 part-01
+48cd485acca9ede6a64a21c84f00bb3ba3fbb241 part-02
+0a67d9e8197208904a927e048cc502cdf3af6a28 part-03
+028e3fe6bfa1595026cdf12f1402a94ff7be9603 part-04
+771fab1fcbe7f554391fb06b21b73dc28361eee5 part-05
+69ba83d70d342af5cd10e693a49f3f3d87d3d0ef part-06
+5d5a86cb8c767908319878e4ea9b14ab7b3a2c7a part-07
+56242117ce2064b4216aa8d6fed5ed2a486a88b0 part-08
+ef8b380091b712c74270ed8a0a39477dcbe028a0 part-09
+c7704355315e3bfcec96a94d1495d72d4033654d part-10
+5441e0b714cc06618659ef1f2d42ea9b08c0a2d3 part-11
+ccba52c9478e80f34f75099c7bbbebf86948466a part-12
+ff03a9080d78ad6841a593a81e4ff6e280f685fe part-13
+ee6fb9d1bb030467a05980bf4e84c5f3071ba480 part-14
+fcbef170b2c872ff8c04a502b8cd5106a7a963ab part-15
+333bb1527070253826cdcd6f98a87168ea9ff3a8 part-16
+f1cb1232bac84808e6aa23cb5840a4d7a8cac7ff part-17
+9cad7239bee5f42f7b8ec3049165ddd97e607f03 part-18
+3b95fa409a677fbedb062a628b1cb9cf857ab03c part-19
+4ba659173299b0d3692d118ccd17d0bf55b96737 part-20
+5572d1090f86f1ae6b7cbdeec227898c15428731 part-21
+7c469d8b873e1c47e0644606e63e55bf1c0ed8ac part-22
+c48641d2af488a2fa843aeaac8dc2c5bee00d33c part-23
+c46f216d1aa2c0acee30f8f7736e52c9946cdca9 part-24
+8d7ebf945c9c928b445d5d7f70133924b904bdfb part-25
+3bf5ff4c5e38cbe5f1f507d70f983df12845e0fb part-26
+990c372f683f1f6944a4f6aa3b6a91a81e21e7a5 part-27
+8ee09eaedf81ae45f81ddd4742227792299a0e64 part-28
+d4b780a473551a32f0314b1d8a733ab2172c4e84 part-29
+EOF
+          : > /tmp/source.tar.xz.b64
+          while read -r sha name; do
+            echo "Fetch $name $sha"
+            curl --fail-with-body -sS \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/$REPO/git/blobs/$sha" \
+              | jq -er '.content' | tr -d '\n' | base64 -d >> /tmp/source.tar.xz.b64
+          done < /tmp/chunks.tsv
+          base64 -d /tmp/source.tar.xz.b64 > /tmp/source.tar.xz
+          echo 'cb8240d7039ec858bb701b3cd14a19b1748e7241ae7e67ae939627a8adeb4822  /tmp/source.tar.xz' | sha256sum -c -
+          rm -rf /tmp/source
+          mkdir -p /tmp/source
+          tar -xJf /tmp/source.tar.xz -C /tmp/source
+
+      - name: Verify exact 52-file approved manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/manifest.tsv <<'EOF'
+7e9de08059f0c21d3b34d4054043cb9891ad6500	.env.example
+578110fe2af0f7448c9cccf2bb8ca557565537ce	.gitignore
+46c38a39ff57f11b338cbf022ffb099b314424ec	README.md
+8588ffc1290aefb448aea93e31e7bf24bcabbd11	RELEASE-NOTES-3.5.md
+e9d6b5c3870c13f55ef1fb431632457bf66ebea9	RELEASE-NOTES-3.6.md
+ce619c50216c194bb4c09f01f4d6197361d53b0a	api/_ai-access.js
+4b3aebece4ef8767d7a7d59bb87505341a7201a4	api/_google-storage.js
+24be114829c58d26ddf44f7f600c758f084d2fc6	api/_owner-auth.js
+4ca1558b0cfd5da8804f608e3a9bb7b849f4812a	api/_resource-factory.js
+fa0ead359f394e680f63b5cc1e9521a0ec8250c0	api/_runtime-credentials.js
+9462bccad26f7e127437e477031ae8fbbc58d153	api/ai/generate.js
+c5a203bc9b392eb06d8b5d33d32123c9545bed74	api/cron/innovation-scan.js
+3574e7cf5748a93a053a2af6ff234d0eff4d2afb	api/cron/resource-factory.js
+c6b3d4d1b3e0386765b199dc7daec667d20c0b16	api/health.js
+2b2d04b7814bfcb51155e36d8aadcbea10d2a7fd	api/owner/control.js
+8fe0a2628c93b2c0b855813f258f099a8c908c58	api/owner/factory.js
+27f3d3fb7f15134fb2dde2fd5bb79ae1b24c72af	api/resources.js
+fbd0a3ad4ab747c1c3b3382fbc5be19c7b59c5c9	api/storage/uploads.js
+905ec2934dad0e33c0d34910c44963209e9151d4	docs/benchmark-v3.4.md
+ea9d4399be8778c6f2a728ba1d34c0aef7a11f9c	docs/file-limit-benchmark-2026-08.md
+099f53eabdd355c1c1cfd64876a76059f36c9deb	docs/google-cloud-storage-setup.md
+79beb57b33d0e64471217a40754882d1a591845d	index.html
+d1852f315e34859d5653bced8e3012ce7ae14e38	package-lock.json
+58f0bedb8a112c529d0796daca34c3e0c94dfded	package.json
+6adf35b7c2520f417bf3928337907b8252cea335	public/assets/phonics-illustrations-v1.webp
+a68bafb042be9267a8a1cb362f42d8206c805731	public/assets/subject-covers-v1.webp
+3897d67f15e7d32d812c37f0e08eba5ed4824c4d	public/assets/yoyo-learning-hero-v2.webp
+24394b93f3ed9beef4fe16ab1913a08edb9e0536	shared/owner-ai-config.js
+58f77eb08653f8a4662237cdeb90d8a0b061a23b	shared/supabase-public-config.js
+ffb2fb7b2240dcd0a42dfe8a35dd90b7cc8b44af	shared/yoyo-ai-identity.js
+a80d7008333c8f3824a24eef1324e2bd9158ba9e	shared/yoyo-core.js
+3fb963dacce0b01874cab7ca5ee44d1e956ac545	src/App.jsx
+f30bfdad55cdbc0c96eb13dfe0f7522cf92dab43	src/data.js
+bb41dbf8c129873a247c90d488ce776d54632d7b	src/enhancements.css
+5bf6a8023f1ce20280f15bd8f053ec9d55701e03	src/features/ImmersiveGames.jsx
+5d81bd5bb4c69fb8bfeedeb9c575a97f19ae508e	src/features/OwnerAccessManager.jsx
+b3215517fd994131f70701b0f4be08ecb4786e42	src/features/OwnerFactoryManager.css
+34de801701cfe799000effed2ac0c5f6a5876a34	src/features/OwnerFactoryManager.jsx
+10dab0b64da3370526cbafa48412c555de3833a6	src/features/ReadingPlan.jsx
+445381957c80eee2d6927ac56d389e1abb2f080a	src/features/SourceLab.jsx
+92e35e779ece33c0923b4772832a6865eca84114	src/features/YoyoAIStudio.jsx
+ee5ee80079987aa8ed028b4cbd96857981423bf3	src/main.jsx
+0ae9c5906e11ad5c7115a96ceea0b152a76d2551	src/modules.jsx
+36734776b64f14fbdc9b7331c3377da76d45c0ba	src/styles.css
+7ad3581d11a77ea25c36189848b8f59a27cdb527	src/supabase.js
+6634d840abf4c6094bae1e471d1800af40249303	supabase/migrations/20260810193000_add_ai_plans_entitlements_and_usage.sql
+62e3906750c83c02dde79367ede2c420f01c7234	supabase/migrations/20260810194000_index_ai_entitlement_foreign_keys.sql
+e7369b175a80c7d025ee2f223080dc68756488b2	supabase/migrations/20260813143000_two_plans_token_quotas_owner_credentials.sql
+3e024e565aec982c2980cd77c6c1e3edda3287fc	supabase/migrations/20260813185000_yoyo_core_resource_factory.sql
+663b63d33d6899ecb0624ac41d231a839fd0d1a3	supabase/migrations/20260813190000_yoyo_core_google_storage_and_superior_file_limits.sql
+aeaa90043d3ab548cc031ff653570f175b5b1708	vercel.json
+1c05d8002a374c33e9a7f75d05979b8650613b36	vite.config.js
+EOF
+          test "$(wc -l < /tmp/manifest.tsv | tr -d ' ')" = '52'
+          test "$(find /tmp/source -type f | wc -l | tr -d ' ')" = '52'
+          while IFS=$'\t' read -r expected path; do
+            test -f "/tmp/source/$path" || { echo "MISSING $path"; exit 1; }
+            actual="$(git hash-object "/tmp/source/$path")"
+            test "$actual" = "$expected" || { echo "HASH_MISMATCH $path expected=$expected actual=$actual"; exit 1; }
+          done < /tmp/manifest.tsv
+
+      - name: Build exact approved source
+        working-directory: /tmp/source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build
+
+      - name: Commit exact source and move recovery refs only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/source/. .
+          while IFS=$'\t' read -r expected path; do
+            test "$(git hash-object "$path")" = "$expected"
+          done < /tmp/manifest.tsv
+          test "$(find . -path ./.git -prune -o -type f -print | wc -l | tr -d ' ')" = '52'
+          git add -A
+          git commit -m 'Restaurar fuente exacta aprobada YoYoLetrasAI 3.6.0'
+          EXACT="$(git rev-parse HEAD)"
+          git push origin "+$EXACT:refs/heads/recovery/approved-3.6-exact"
+          git push origin "+$EXACT:refs/heads/recovery/approved-3.6-verified"
