@@ -1,151 +1,38 @@
 import Link from 'next/link'
-import {
-  ArrowRight,
-  BarChart3,
-  BookOpen,
-  Bot,
-  CalendarDays,
-  CheckCircle2,
-  ClipboardCheck,
-  FileText,
-  Gamepad2,
-  GraduationCap,
-  Library,
-  Plus,
-  ShieldCheck,
-  Sparkles,
-  Target,
-  Users,
-} from 'lucide-react'
-import { AppShell } from '@/components/AppShell'
-import { ActivityArtwork } from '@/components/dashboard/DashboardIllustrations'
-import { premiumActivities } from '@/lib/premiumActivities'
-import { requireOrganizationContext } from '@/lib/auth/organization-context'
+import {ArrowRight,BookOpen,Bot,Check,ClipboardCheck,Clock3,Download,GraduationCap,Layers3,Palette,PenTool,Play,Plus,School,Sparkles,Star,Target,UsersRound,WandSparkles} from 'lucide-react'
+import {AppShell} from '@/components/AppShell'
+import {ActivityArtwork,ForestHeroArt} from '@/components/dashboard/DashboardIllustrations'
+import {resourceCatalog} from '@/lib/resourceCatalog'
+import {requireOrganizationContext} from '@/lib/auth/organization-context'
 
-export const dynamic = 'force-dynamic'
+export const dynamic='force-dynamic'
+const actions=[
+ ['Crear una guía premium','Currículum, DUA e imágenes listas para imprimir','/crear',WandSparkles,'purple'],
+ ['Adaptar para NEE','Ajusta lenguaje, apoyos y evaluación','/inclusion',UsersRound,'coral'],
+ ['Planificar una clase','Objetivo, secuencia y evidencias','/planificador',ClipboardCheck,'blue'],
+] as const
+const collections=[
+ ['Grafomotricidad','Progresión completa de trazos','/biblioteca',PenTool,'violet'],
+ ['Lectura y escritura','Fluidez, comprensión y producción','/plan-lector',BookOpen,'mint'],
+ ['Matemática manipulativa','Material concreto y simuladores','/simuladores',Layers3,'amber'],
+ ['PIE y DUA','Apoyos editables y multinivel','/inclusion',Target,'rose'],
+] as const
+const kinds=['forest','writing','math','science']
 
-const moduleGroups = [
-  { label: 'Biblioteca', href: '/biblioteca', icon: Library, tone: 'violet' },
-  { label: 'Crear con IA', href: '/crear', icon: Sparkles, tone: 'amber' },
-  { label: 'Profesor Virtual', href: '/profesor-virtual', icon: Bot, tone: 'blue' },
-  { label: 'Evaluaciones', href: '/evaluaciones', icon: ClipboardCheck, tone: 'mint' },
-  { label: 'Informes', href: '/informes', icon: FileText, tone: 'rose' },
-]
-
-const auditedModules = [
-  'Biblioteca', 'Crear con IA', 'Profesor Virtual', 'Cursos', 'Juegos',
-  'Caligrafía', 'Inclusión', 'Evaluaciones', 'Simuladores', 'Herramientas',
-  'Seguimiento', 'Familias', 'Informes', 'Integraciones', 'Multimedia',
-  'QA', 'Configuración',
-]
-
-export default async function Dashboard() {
-  const context = await requireOrganizationContext('/app')
-  const { data: courses, error } = await context.supabase
-    .from('courses')
-    .select('id, name, level, academic_year, is_active')
-    .eq('organization_id', context.organization.id)
-    .order('academic_year', { ascending: false })
-    .order('name')
-
-  const visibleCourses = courses ?? []
-  const activeCourses = visibleCourses.filter((course) => course.is_active)
-  const resources = premiumActivities.slice(0, 6)
-
-  return (
-    <AppShell active="Inicio">
-      <div className="approved-platform-dashboard">
-        <section className="approved-hero-row">
-          <div>
-            <span className="approved-kicker">{context.organization.name}</span>
-            <h1>¡Hola, {context.displayName}! <span aria-hidden="true">👋</span></h1>
-            <p>Explora, enseña y transforma el aprendizaje con una plataforma segura, inclusiva y conectada.</p>
-          </div>
-          <Link href="/crear" className="approved-primary-action"><Plus size={19}/> Crear recurso</Link>
-        </section>
-
-        <section className="approved-metric-grid" aria-label="Resumen institucional">
-          <Link href="/cursos" className="approved-metric metric-violet">
-            <span><GraduationCap/></span><div><strong>{activeCourses.length}</strong><small>Cursos activos</small></div><ArrowRight/>
-          </Link>
-          <Link href="/biblioteca" className="approved-metric metric-mint">
-            <span><BookOpen/></span><div><strong>{premiumActivities.length}</strong><small>Recursos disponibles</small></div><ArrowRight/>
-          </Link>
-          <Link href="/qa" className="approved-metric metric-amber">
-            <span><CheckCircle2/></span><div><strong>{auditedModules.length}</strong><small>Módulos auditados</small></div><ArrowRight/>
-          </Link>
-          <div className="approved-metric metric-rose">
-            <span><ShieldCheck/></span><div><strong>RLS</strong><small>Seguridad activa</small></div><CheckCircle2/>
-          </div>
-        </section>
-
-        <section className="approved-main-grid">
-          <article className="approved-panel approved-analytics-card">
-            <div className="approved-panel-heading">
-              <div><h2>Actividad institucional</h2><p>El gráfico se activará al registrar evidencias y progreso real.</p></div>
-              <span><BarChart3 size={16}/> Datos reales</span>
-            </div>
-            <div className="approved-empty-chart" role="img" aria-label="Gráfico sin datos todavía">
-              <svg viewBox="0 0 720 250" aria-hidden="true">
-                <defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop stopColor="#6f52ed" stopOpacity=".25"/><stop offset="1" stopColor="#6f52ed" stopOpacity="0"/></linearGradient></defs>
-                <g stroke="#e9e7f2" strokeWidth="1"><path d="M40 40H690"/><path d="M40 90H690"/><path d="M40 140H690"/><path d="M40 190H690"/><path d="M40 235H690"/></g>
-                <path d="M40 205 C150 205 185 185 260 185 S390 165 470 165 S600 145 690 145 L690 235 L40 235Z" fill="url(#chartFill)"/>
-                <path d="M40 205 C150 205 185 185 260 185 S390 165 470 165 S600 145 690 145" fill="none" stroke="#7657ef" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
-              <div><strong>Sin evidencias registradas todavía</strong><span>Los datos aparecerán automáticamente cuando los módulos de seguimiento estén conectados.</span></div>
-            </div>
-          </article>
-
-          <aside className="approved-panel approved-courses-card">
-            <div className="approved-panel-heading"><div><h2>Mis cursos activos</h2><p>{context.organization.name}</p></div><Link href="/cursos">Ver todos</Link></div>
-            {error ? <div className="approved-state error">No fue posible cargar los cursos.</div> : activeCourses.length ? (
-              <div className="approved-course-list">{activeCourses.slice(0, 5).map((course, index) => (
-                <Link href="/cursos" key={course.id}>
-                  <span className={`course-symbol course-${index % 4}`}><GraduationCap/></span>
-                  <div><strong>{course.name}</strong><small>{course.level} · {course.academic_year}</small></div>
-                  <ArrowRight/>
-                </Link>
-              ))}</div>
-            ) : <div className="approved-state"><GraduationCap/><strong>Aún no hay cursos activos</strong><span>Crea el primer curso desde el módulo institucional.</span><Link href="/cursos">Crear curso</Link></div>}
-          </aside>
-        </section>
-
-        <section className="approved-panel approved-ai-tools">
-          <div className="approved-panel-heading"><div><h2>Herramientas educativas</h2><p>Accesos directos a los módulos centrales de la plataforma.</p></div><Link href="/qa">Ver auditoría</Link></div>
-          <div className="approved-tools-row">{moduleGroups.map(({ label, href, icon: Icon, tone }) => (
-            <Link href={href} key={label} className={`tool-${tone}`}><span><Icon/></span><strong>{label}</strong><ArrowRight/></Link>
-          ))}</div>
-        </section>
-
-        <section className="approved-content-grid">
-          <article className="approved-panel">
-            <div className="approved-panel-heading"><div><h2>Recursos pedagógicos</h2><p>Materiales disponibles para abrir, adaptar y asignar.</p></div><Link href="/biblioteca">Ver biblioteca</Link></div>
-            <div className="approved-resource-list">{resources.map((resource, index) => (
-              <Link href={`/biblioteca/${resource.slug}`} key={resource.slug}>
-                <span className={`resource-thumb resource-${index}`}><ActivityArtwork kind={['reading','math','science','writing','forest','reading'][index]}/></span>
-                <div><strong>{resource.title}</strong><small>{resource.subject} · {resource.level}</small></div><ArrowRight/>
-              </Link>
-            ))}</div>
-          </article>
-
-          <aside className="approved-panel approved-readiness-card">
-            <div className="approved-panel-heading"><div><h2>Estado de preparación</h2><p>Transparencia antes de producción.</p></div></div>
-            <div className="approved-readiness">
-              <div><span><ShieldCheck/></span><div><strong>Seguridad multitenant</strong><small>RLS y contexto institucional activos</small></div><CheckCircle2/></div>
-              <div><span><Users/></span><div><strong>Identidad y roles</strong><small>Sesión, institución y permisos reales</small></div><CheckCircle2/></div>
-              <div><span><Target/></span><div><strong>Módulos pedagógicos</strong><small>Rutas verificadas; persistencia progresiva</small></div><CheckCircle2/></div>
-              <div><span><Gamepad2/></span><div><strong>Experiencia responsive</strong><small>Diseño adaptado para escritorio y móvil</small></div><CheckCircle2/></div>
-            </div>
-          </aside>
-        </section>
-
-        <footer className="approved-system-footer">
-          <span><ShieldCheck/> Seguridad RLS activa</span>
-          <span><GraduationCap/> Supabase conectado</span>
-          <span><CalendarDays/> Plataforma 2026</span>
-          <span><CheckCircle2/> Diseño aprobado</span>
-        </footer>
-      </div>
-    </AppShell>
-  )
+export default async function Dashboard(){
+ const context=await requireOrganizationContext('/app')
+ const {data:courses}=await context.supabase.from('courses').select('id,is_active').eq('organization_id',context.organization.id)
+ const active=(courses??[]).filter(course=>course.is_active).length
+ const featured=resourceCatalog.slice(0,4)
+ return <AppShell active="Inicio"><div className="yoyo-premium-home">
+  <section className="yoyo-welcome"><div><span className="yoyo-school"><School size={15}/>{context.organization.name}</span><h1>Hola, {context.displayName.split(' ')[0]} <span>✨</span></h1><p>¿Qué experiencia de aprendizaje quieres crear hoy?</p></div><div className="yoyo-welcome-actions"><Link href="/biblioteca" className="yoyo-secondary"><BookOpen size={17}/> Explorar biblioteca</Link><Link href="/crear" className="yoyo-primary"><Plus size={18}/> Crear con IA</Link></div></section>
+  <section className="yoyo-hero-card"><ForestHeroArt/><div className="yoyo-hero-shade"/><div className="yoyo-hero-copy"><span className="yoyo-premium-pill"><Star size={13} fill="currentColor"/> Experiencia destacada</span><h2>Detectives del bosque nativo</h2><p>Una aventura interactiva para inferir, explorar pistas y justificar respuestas con apoyos DUA.</p><div className="yoyo-hero-tags"><span>Lenguaje · 3.º básico</span><span>OA 4</span><span><Clock3 size={13}/>35 min</span></div><div className="yoyo-hero-actions"><Link href="/biblioteca/bosque-inferencias"><Play size={17} fill="currentColor"/> Iniciar experiencia</Link><Link href="/biblioteca/bosque-inferencias">Vista docente <ArrowRight size={16}/></Link></div></div><div className="yoyo-hero-score"><strong>4.9</strong><span><Star size={12} fill="currentColor"/>Calidad pedagógica</span></div></section>
+  <section><Heading eyebrow="ESTUDIO CREATIVO" title="De una idea a un recurso extraordinario" text="Diseña, adapta y evalúa con estándares pedagógicos reales." href="/crear"/><div className="yoyo-studio-grid">{actions.map(([title,detail,href,Icon,tone])=><Link href={href} className={`yoyo-studio-card ${tone}`} key={title}><span className="yoyo-studio-icon"><Icon/></span><div><strong>{title}</strong><p>{detail}</p></div><ArrowRight/></Link>)}</div></section>
+  <section><Heading eyebrow="COLECCIONES PEDAGÓGICAS" title="Todo lo que necesitas, organizado para enseñar" href="/biblioteca"/><div className="yoyo-collection-grid">{collections.map(([title,detail,href,Icon,tone])=><Link href={href} className={`yoyo-collection-card ${tone}`} key={title}><span><Icon/></span><div><strong>{title}</strong><small>{detail}</small></div><ArrowRight/></Link>)}</div></section>
+  <section><Heading eyebrow="SELECCIÓN PREMIUM" title="Recursos listos para transformar tu clase" text="Editables, imprimibles, interactivos y alineados al currículum chileno." href="/biblioteca"/><div className="yoyo-resource-grid">{featured.map((resource,index)=><article className="yoyo-resource-card" key={resource.slug}><Link href={`/biblioteca/${resource.slug}`} className="yoyo-resource-cover"><ActivityArtwork kind={kinds[index]}/><span className="yoyo-format">{resource.format}</span><span className="yoyo-favorite"><Star size={16}/></span></Link><div className="yoyo-resource-body"><div className="yoyo-resource-meta"><span>{resource.subject}</span><span>{resource.level}</span></div><h3><Link href={`/biblioteca/${resource.slug}`}>{resource.title}</Link></h3><p>{resource.summary}</p><div className="yoyo-supports">{resource.supports.slice(0,2).map(s=><span key={s}><Check size={11}/>{s}</span>)}</div><div className="yoyo-resource-foot"><span><Clock3 size={14}/>{resource.duration}</span><Link href={`/biblioteca/${resource.slug}`}>Abrir <ArrowRight size={14}/></Link></div></div></article>)}</div></section>
+  <section className="yoyo-teacher-strip"><div className="yoyo-bot-avatar"><Bot/></div><div><span>PROFESOR VIRTUAL YOYO</span><h2>Tu copiloto pedagógico conoce tu curso y te ayuda a decidir</h2><p>Pregunta, modela una actividad o solicita una adaptación sin partir desde cero.</p></div><Link href="/profesor-virtual"><Sparkles size={17}/> Conversar con YOYO</Link></section>
+  <section className="yoyo-progress-row"><Stat icon={GraduationCap} value={active||'Nuevo'} label={active?'cursos activos':'crea tu primer curso'} href="/cursos"/><Stat icon={Palette} value={resourceCatalog.length} label="recursos pedagógicos reales" href="/biblioteca"/><Stat icon={Download} value="4 formatos" label="interactivo, editable, PDF y aula" href="/crear"/></section>
+ </div></AppShell>
 }
+function Heading({eyebrow,title,text,href}:{eyebrow:string;title:string;text?:string;href:string}){return <div className="yoyo-section-heading"><div><span>{eyebrow}</span><h2>{title}</h2>{text?<p>{text}</p>:null}</div><Link href={href}>Ver todo <ArrowRight size={16}/></Link></div>}
+function Stat({icon:Icon,value,label,href}:{icon:typeof GraduationCap;value:string|number;label:string;href:string}){return <article><span><Icon/></span><div><strong>{value}</strong><small>{label}</small></div><Link href={href}>Abrir <ArrowRight size={14}/></Link></article>}
