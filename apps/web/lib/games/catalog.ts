@@ -31,9 +31,10 @@ export const gameExperiences: GameExperience[] = [
     subject: 'Matemática',
     levels: '3°–6° básico',
     skill: 'Resolver problemas con dinero y operaciones',
-    mission: 'Comprar, vender, calcular vuelto y optimizar un presupuesto para completar pedidos.',
-    accessibility: ['dinero visual','lectura en voz alta','apoyo paso a paso'],
-    status: 'development',
+    mission: 'Comprar, combinar precios, calcular vuelto y planificar un presupuesto para completar encargos.',
+    accessibility: ['dinero visual','teclado','alto contraste','movimiento reducido','apoyo paso a paso'],
+    status: 'playable',
+    route: '#feria-matematica',
   },
   {
     id: 'mision-agua',
