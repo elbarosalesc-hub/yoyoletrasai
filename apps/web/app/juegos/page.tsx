@@ -5,6 +5,7 @@ import {AppShell} from '@/components/AppShell'
 import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight} from 'lucide-react'
 import {gameExperiences} from '@/lib/games/catalog'
 const Bosque3D=dynamic(()=>import('@/components/games/Bosque3D'),{ssr:false})
+const FeriaMatematica3D=dynamic(()=>import('@/components/games/FeriaMatematica3D'),{ssr:false})
 
 const clues:Record<string,string>={mochila:'La mochila sigue cerrada. Sofía todavía no se ha preparado para entrar.',nota:'La nota dice: “Espera a la profesora antes de pasar”.',ave:'El ave permanece tranquila. No hay una amenaza visible en el entorno.',cabana:'La puerta está entreabierta y la cabaña se encuentra sin luz.'}
 const levels=[
@@ -28,17 +29,18 @@ export default function Juegos(){
  const choose=(i:number)=>{if(!unlocked)return;setAttempts(v=>v+1);setAnswer(i);const ok=i===current.correct;const msg=ok?'Respuesta correcta. Usaste evidencia pertinente.':'Aún no. Revisa las pistas más relacionadas con la pregunta.';setFeedback(msg);if(sound){tone(ok);speak(msg)}}
  const next=()=>{if(!correct)return;if(level<levels.length-1){setLevel(v=>v+1);setAnswer(null);setFound([]);setFeedback('Nuevo nivel desbloqueado. La complejidad aumentó.')}else setFeedback('Misión completa. Lograste explorar, relacionar, inferir, justificar y transferir.')}
  const reset=()=>{setFound([]);setAnswer(null);setLevel(0);setAttempts(0);setFeedback('Misión reiniciada.')}
+ const playableCount=gameExperiences.filter(game=>game.status==='playable').length
  return <AppShell active="Juegos inmersivos">
-  <section className="game-premium-head"><div><span className="eyebrow">Experiencias pedagógicas 3D · PIE + DUA</span><h1>Juegos que enseñan dentro de una misión</h1><p>No son cuestionarios con decoración: cada experiencia parte de un entorno, una meta, decisiones, feedback y progresión pedagógica.</p></div><div className="game-actions"><a className="btn btn-coral" href="#bosque-inferencias"><Play size={18}/> Jugar experiencia disponible</a></div></section>
+  <section className="game-premium-head"><div><span className="eyebrow">Experiencias pedagógicas 3D · PIE + DUA</span><h1>Juegos que enseñan dentro de una misión</h1><p>No son cuestionarios con decoración: cada experiencia parte de un entorno, una meta, decisiones, feedback y progresión pedagógica.</p></div><div className="game-actions"><a className="btn btn-coral" href="#bosque-inferencias"><Play size={18}/> Jugar Bosque</a><a className="btn btn-soft" href="#feria-matematica"><Calculator size={18}/> Jugar Feria</a></div></section>
 
   <section className="approved-panel" style={{marginBottom:24}}>
-   <div className="approved-panel-heading"><div><span className="eyebrow">Catálogo 3D</span><h2>12 mundos pedagógicos</h2><p>Una experiencia está disponible hoy; las demás quedan identificadas explícitamente como en desarrollo.</p></div><span className="control-chip"><Gamepad2 size={16}/> 1 jugable · 11 en desarrollo</span></div>
+   <div className="approved-panel-heading"><div><span className="eyebrow">Catálogo 3D</span><h2>12 mundos pedagógicos</h2><p>Las experiencias sólo se marcan disponibles cuando existe una escena interactiva real con alternativa accesible.</p></div><span className="control-chip"><Gamepad2 size={16}/> {playableCount} jugables · {gameExperiences.length-playableCount} en desarrollo</span></div>
    <div className="game-experience-catalog">{gameExperiences.map(game=>{const Icon=subjectIcon(game.subject);return <article key={game.id} className={'game-experience-card '+(game.status==='playable'?'is-playable':'is-development')}>
     <div className="game-experience-top"><span className="game-experience-icon"><Icon/></span><span className="game-status-badge">{game.status==='playable'?'Disponible ahora':'En desarrollo'}</span></div>
     <small>{game.world} · {game.subject}</small><h3>{game.title}</h3><p>{game.mission}</p>
     <div className="game-experience-meta"><span><b>Nivel</b>{game.levels}</span><span><b>Habilidad</b>{game.skill}</span></div>
     <div className="game-access-tags">{game.accessibility.map(item=><span key={item}>{item}</span>)}</div>
-    {game.status==='playable'?<a href="#bosque-inferencias" className="game-card-action">Entrar a la misión <ArrowRight size={16}/></a>:<span className="game-card-action muted"><Lock size={15}/> Escena pendiente de construcción</span>}
+    {game.status==='playable'&&game.route?<a href={game.route} className="game-card-action">Entrar a la misión <ArrowRight size={16}/></a>:<span className="game-card-action muted"><Lock size={15}/> Escena pendiente de construcción</span>}
    </article>})}</div>
   </section>
 
@@ -49,5 +51,6 @@ export default function Juegos(){
    <section className="immersive-stage premium-3d-card"><div className="game-hud"><span>Nivel {current.id}: {current.name}</span><div className="hud-progress"><i style={{width:progress+'%'}}/></div><b>{found.length}/{current.goal} pistas</b></div><Bosque3D onSelect={select} active={found} reducedMotion={reduced} highContrast={contrast}/><div className="mission"><b>Misión:</b> explora, escucha y responde usando evidencia.<div className="feedback-box" role="status" aria-live="polite">{feedback}</div></div></section>
    <aside className="panel challenge-panel"><span className="eyebrow">{current.skill}</span><h2>{current.question}</h2><div className="answer-stack">{current.answers.map((a,i)=><button key={a} disabled={!unlocked} onClick={()=>choose(i)} className={'answer-card '+(answer===i?(i===current.correct?'correct':'wrong'):'')}>{String.fromCharCode(65+i)}. {a}</button>)}</div>{!unlocked&&<div className="locked-note"><Lock size={16}/> Encuentra {current.goal-found.length} pista(s) más.</div>}<button className="btn btn-primary next-level" disabled={!correct} onClick={next}>{level===levels.length-1?'Finalizar misión':'Ir al siguiente nivel'}</button><div className="teacher-live"><h3>Analítica docente</h3><div className="metric-grid"><div><strong>{attempts}</strong><span>intentos</span></div><div><strong>{accuracy}%</strong><span>precisión</span></div><div><strong>{sound?'Sí':'No'}</strong><span>narración</span></div><div><strong>{current.id}/5</strong><span>complejidad</span></div></div><div className="accessibility-summary"><Accessibility size={18}/><span>Alternativa textual, lector de pantalla, reducción de movimiento y alto contraste disponibles.</span></div><div className="difficulty-note"><Brain size={18}/><span>La dificultad progresa desde localizar hasta transferir el aprendizaje.</span></div></div></aside>
   </div>
+  <FeriaMatematica3D reducedMotion={reduced} highContrast={contrast}/>
  </AppShell>
 }
