@@ -7,7 +7,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   Accessibility, BarChart3, Bell, BookOpen, BookOpenCheck, Bot, CalendarDays, Check,
   ChevronDown, ChevronRight, ClipboardList, Cloud, Command, FileText, FlaskConical,
-  Gamepad2, Home, Images, Mail, Menu, PenTool, Radar, Search, Settings, ShieldCheck,
+  Gamepad2, Home, Images, Library, Mail, Menu, PenTool, Radar, Search, Settings, ShieldCheck,
   Sparkles, Users, UsersRound, Wrench, X,
 } from 'lucide-react'
 import { SessionMenu } from '@/components/SessionMenu'
@@ -20,9 +20,9 @@ const groups: NavGroup[] = [
     ['Inicio', '/app', Home], ['Cursos', '/cursos', BookOpen], ['Estudiantes', '/seguimiento', Users], ['Evaluaciones', '/evaluaciones', ClipboardList],
   ]},
   { label: 'Enseñanza', items: [
-    ['Centros Premium', '/centros', Sparkles], ['Biblioteca', '/biblioteca', BookOpen], ['Plan Lector', '/plan-lector', BookOpenCheck],
+    ['Centros Premium', '/centros', Sparkles], ['Biblioteca Premium', '/biblioteca', Library], ['Plan Lector', '/plan-lector', BookOpenCheck],
     ['Crear con YOYO IA', '/crear', Sparkles], ['Profesor Virtual', '/profesor-virtual', Bot], ['Herramientas', '/herramientas', Wrench],
-    ['Caligrafía', '/caligrafia', PenTool], ['Apoyos PIE y DUA', '/inclusion', Accessibility], ['Simuladores', '/simuladores', FlaskConical], ['Juegos', '/juegos', Gamepad2],
+    ['Caligrafía', '/caligrafia', PenTool], ['Apoyos PIE y DUA', '/inclusion', Accessibility], ['Simuladores', '/simuladores', FlaskConical], ['Juegos 3D', '/juegos', Gamepad2],
   ]},
   { label: 'Gestión', items: [
     ['Progreso por OA', '/progreso', BarChart3], ['Evidencias', '/seguimiento/evidencias', ClipboardList], ['Familias', '/familias', UsersRound],
@@ -35,12 +35,12 @@ const groups: NavGroup[] = [
 
 const allItems: NavItem[] = groups.flatMap((group) => group.items)
 const mobile: NavItem[] = [
-  ['Inicio', '/app', Home], ['Cursos', '/cursos', BookOpen], ['Crear', '/crear', Sparkles], ['Centros', '/centros', Images], ['Perfil', '/configuracion', UsersRound],
+  ['Inicio', '/app', Home], ['Biblioteca', '/biblioteca', Library], ['Crear', '/crear', Sparkles], ['Juegos 3D', '/juegos', Gamepad2], ['Perfil', '/configuracion', UsersRound],
 ]
 const notifications = [
-  { title: 'Centros Premium activos', detail: 'Matemática, Ciencias, Caligrafía, Grafomotricidad, Pictogramas y Plan Lector están integrados.', time: 'Ahora' },
-  { title: 'Cursos conectados', detail: 'Los cursos se filtran por institución y rol mediante Supabase.', time: 'Hoy' },
-  { title: 'Recursos accesibles', detail: 'Los materiales incorporan apoyos PIE, DUA y opciones de adaptación.', time: 'Hoy' },
+  { title: '15 recursos premium publicados', detail: 'La biblioteca activa incorpora recursos de Lenguaje, Matemática, Ciencias, caligrafía, grafomotricidad, evaluación y PIE/DUA.', time: 'Ahora' },
+  { title: '2 experiencias 3D disponibles', detail: 'Bosque de las inferencias y Feria matemática están integrados como experiencias jugables.', time: 'Ahora' },
+  { title: 'Centro de Evolución YOYO activo', detail: 'Auditoría, benchmark, backlog de mejoras y evaluación reproducible de YOYO IA están disponibles para propietaria.', time: 'Ahora' },
 ]
 
 export function AppShell({ children, active }: { children: React.ReactNode; active: string }) {
@@ -89,7 +89,7 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
           <button aria-label="Mensajes" onClick={() => router.push('/familias')}><Mail size={18} /></button>
           <div className="top-action-wrap">
             <button aria-label="Notificaciones" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen((value) => !value); setSidebarProfileOpen(false); setTopProfileOpen(false) }}><Bell size={18} />{readCount < notifications.length && <i>{notifications.length - readCount}</i>}</button>
-            {notificationsOpen && <div className="top-popover notification-popover"><div className="popover-head"><div><strong>Notificaciones</strong><span>{notifications.length-readCount} pendientes</span></div><button onClick={() => setReadCount(notifications.length)}><Check size={15}/> Marcar leídas</button></div><div className="notification-list">{notifications.map((item,index)=><article className={index < readCount ? 'read' : ''} key={item.title}><span></span><div><b>{item.title}</b><p>{item.detail}</p><small>{item.time}</small></div></article>)}</div></div>}
+            {notificationsOpen && <div className="top-popover notification-popover"><div className="popover-head"><div><strong>Novedades YOYO</strong><span>{notifications.length-readCount} pendientes</span></div><button onClick={() => setReadCount(notifications.length)}><Check size={15}/> Marcar leídas</button></div><div className="notification-list">{notifications.map((item,index)=><article className={index < readCount ? 'read' : ''} key={item.title}><span></span><div><b>{item.title}</b><p>{item.detail}</p><small>{item.time}</small></div></article>)}</div></div>}
           </div>
           <SessionMenu open={topProfileOpen} onToggle={() => { setTopProfileOpen((value) => !value); setSidebarProfileOpen(false); setNotificationsOpen(false) }} onClose={() => setTopProfileOpen(false)} />
         </div>
@@ -97,6 +97,6 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
       <div className="approved-content">{children}</div>
     </main>
     <nav className="approved-mobile-nav" aria-label="Navegación móvil">{mobile.map(([label,href,Icon])=><Link key={label} href={href} className={label===active?'active':''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
-    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con centros, biblioteca, evaluación o informes.</span></div>}</div></section></div>}
+    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con biblioteca, YOYO IA, juegos, evolución o informes.</span></div>}</div></section></div>}
   </div>
 }
