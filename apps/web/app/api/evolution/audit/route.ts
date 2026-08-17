@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { gameCatalog } from '@/lib/games/catalog'
+import { gameExperiences } from '@/lib/games/catalog'
 
 type Row = Record<string, unknown>
 type QueryResult = Promise<{ data: Row[] | null; error: { message?: string } | null }>
@@ -73,38 +73,38 @@ export async function POST() {
     const measuredBenchmarks = benchmarks.filter(row => typeof row.yoyo_score === 'number')
     const benchmarkScore = benchmarks.length ? Math.round(measuredBenchmarks.length / benchmarks.length * 100) : null
 
-    const availableGames = gameCatalog.filter(game => game.status === 'available').length
-    const gameScore = Math.round(availableGames / gameCatalog.length * 100)
+    const playableGames = gameExperiences.filter(game => game.status === 'playable').length
+    const gameCoverageScore = Math.round(playableGames / gameExperiences.length * 100)
     const platformParts = [resourceScore, accessibilityScore, aiReliability].filter((value): value is number => value !== null)
     const platformScore = platformParts.length ? Math.round(platformParts.reduce((sum, value) => sum + value, 0) / platformParts.length) : null
-    const scoreParts = [platformScore, aiScore, resourceScore, gameScore, accessibilityScore, benchmarkScore].filter((value): value is number => value !== null)
+    const scoreParts = [platformScore, aiScore, resourceScore, gameCoverageScore, accessibilityScore, benchmarkScore].filter((value): value is number => value !== null)
     const overallScore = scoreParts.length ? Math.round(scoreParts.reduce((sum, value) => sum + value, 0) / scoreParts.length) : null
 
     const metrics = {
       resources: { published: resources.length, averageQuality: resourceScore, accessible: accessibleCount },
       ai: { generations30d: generations.length, completed: completedGenerations, failed: failedGenerations, reliability: aiReliability, evalRuns: evalScores.length, evalScore: aiEvalScore },
-      games: { available: availableGames, catalog: gameCatalog.length },
+      games: { playable: playableGames, catalog: gameExperiences.length, coverageScore: gameCoverageScore },
       benchmark: { capabilities: benchmarks.length, measured: measuredBenchmarks.length },
       innovation: { openFindings: (findingsResult.data || []).length },
     }
 
     await db.from('evolution_audit_runs').update({
-      status: 'completed', executive_summary: `Auditoría integral completada: ${resources.length} recursos publicados, ${availableGames}/${gameCatalog.length} juegos disponibles y ${measuredBenchmarks.length}/${benchmarks.length} capacidades benchmark medidas.`,
-      overall_score: overallScore, platform_score: platformScore, ai_score: aiScore, resource_score: resourceScore, games_score: gameScore,
+      status: 'completed', executive_summary: `Auditoría integral completada: ${resources.length} recursos publicados, ${playableGames}/${gameExperiences.length} juegos jugables y ${measuredBenchmarks.length}/${benchmarks.length} capacidades benchmark medidas.`,
+      overall_score: overallScore, platform_score: platformScore, ai_score: aiScore, resource_score: resourceScore, games_score: gameCoverageScore,
       accessibility_score: accessibilityScore, benchmark_score: benchmarkScore, metrics, completed_at: new Date().toISOString(),
     }).eq('id', auditId)
 
     const existingTitles = new Set((actionsResult.data || []).map(row => String(row.title)))
     const proposals: Row[] = []
     if (evalScores.length === 0) proposals.push({ area: 'ai', title: 'Ejecutar batería completa de evaluación YOYO IA', problem: 'No existen resultados comparables de la batería de evaluación.', recommendation: 'Ejecutar los casos activos contra las rutas de modelo y registrar score, latencia y tokens.', expected_impact: 'Permite comparar calidad entre versiones y modelos con evidencia reproducible.', priority: 100, impact_score: 100, effort_score: 45, risk_score: 15 })
-    if (availableGames < 3) proposals.push({ area: 'games', title: 'Construir las próximas escenas 3D prioritarias', problem: `Sólo ${availableGames} de ${gameCatalog.length} experiencias del catálogo están jugables.`, recommendation: 'Implementar primero Mercado Matemático, Laboratorio Ecosistema y Ruta de Trazos con interacción WebGL, accesibilidad y analítica.', expected_impact: 'Aumenta variedad pedagógica y diferenciación frente a generadores de actividades planas.', priority: 92, impact_score: 95, effort_score: 80, risk_score: 30 })
+    if (playableGames < 3) proposals.push({ area: 'games', title: 'Construir las próximas escenas 3D prioritarias', problem: `Sólo ${playableGames} de ${gameExperiences.length} experiencias del catálogo están jugables.`, recommendation: 'Implementar primero Feria matemática, Laboratorio de ecosistemas y Senderos de trazos con interacción WebGL, accesibilidad y analítica.', expected_impact: 'Aumenta variedad pedagógica y diferenciación frente a generadores de actividades planas.', priority: 92, impact_score: 95, effort_score: 80, risk_score: 30 })
     if (benchmarkScore !== 100) proposals.push({ area: 'benchmark', title: 'Completar medición reproducible contra benchmark', problem: `${measuredBenchmarks.length} de ${benchmarks.length} capacidades tienen score interno comparable.`, recommendation: 'Definir prueba verificable por capacidad y guardar yoyo_score únicamente después de ejecutarla.', expected_impact: 'Evita claims sin evidencia y orienta inversión hacia brechas reales.', priority: 96, impact_score: 100, effort_score: 55, risk_score: 10 })
     if (resourceScore !== null && resourceScore < 96) proposals.push({ area: 'resources', title: 'Elevar estándar medio de recursos premium a 96+', problem: `El promedio actual de calidad publicada es ${resourceScore}/100.`, recommendation: 'Reauditar recursos con foco en profundidad pedagógica, accesibilidad, valor visual, edición y reutilización antes de nuevas expansiones.', expected_impact: 'Mejora consistencia premium y reduce recursos apenas por encima del quality gate.', priority: 88, impact_score: 90, effort_score: 50, risk_score: 15 })
 
     const missing = proposals.filter(proposal => !existingTitles.has(String(proposal.title))).map(proposal => ({ ...proposal, organization_id: organizationId, audit_run_id: auditId, status: 'proposed' }))
     for (const proposal of missing) await db.from('evolution_actions').insert(proposal).select('id').single()
 
-    return NextResponse.json({ auditId, scores: { overallScore, platformScore, aiScore, resourceScore, gameScore, accessibilityScore, benchmarkScore }, metrics, proposed: missing.length })
+    return NextResponse.json({ auditId, scores: { overallScore, platformScore, aiScore, resourceScore, gameCoverageScore, accessibilityScore, benchmarkScore }, metrics, proposed: missing.length })
   } catch (error) {
     await db.from('evolution_audit_runs').update({ status: 'failed', error_message: error instanceof Error ? error.message.slice(0, 500) : 'AUDIT_FAILED', completed_at: new Date().toISOString() }).eq('id', auditId)
     return NextResponse.json({ error: 'La auditoría no pudo completarse.', auditId }, { status: 500 })
