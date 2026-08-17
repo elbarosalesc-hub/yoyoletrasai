@@ -1,8 +1,11 @@
 import { YOYO_SOURCE_BUCKET, sourceExtension } from '@/lib/ai/source-files'
+import { extractOfficeText, isExtractableOfficeFile } from '@/lib/ai/office-extract'
 
 const TEXT_EXTENSIONS = new Set(['txt','md','csv','tsv','html','htm','json','xml','sql','js','ts','py','yaml','yml'])
 const IMAGE_EXTENSIONS = new Set(['png','jpg','jpeg','webp','gif'])
+const LEGACY_OFFICE_EXTENSIONS = new Set(['doc','rtf','ppt','xls'])
 const MAX_TEXT_FILE_BYTES = 1024 * 1024
+const MAX_OFFICE_FILE_BYTES = 20 * 1024 * 1024
 const MAX_TOTAL_CONTEXT_CHARS = 1_500_000
 const MAX_DIRECT_BINARY_BYTES = 20 * 1024 * 1024
 const MAX_TOTAL_DIRECT_BINARY_BYTES = 24 * 1024 * 1024
@@ -42,7 +45,7 @@ export type GatewayAttachment = {
 export type PendingSource = {
   id: string
   fileName: string
-  reason: 'office-extraction-pending' | 'binary-context-limit' | 'unsupported-binary'
+  reason: 'legacy-office-pending' | 'office-extraction-failed' | 'binary-context-limit' | 'unsupported-binary'
 }
 
 export type LoadedSourceContext = {
@@ -57,6 +60,15 @@ async function downloadBlob(client: SourceClient, source: SourceRow) {
   const downloaded = await client.storage.from(YOYO_SOURCE_BUCKET).download(source.object_path)
   if (downloaded.error || !downloaded.data) throw new Error('SOURCE_DOWNLOAD_FAILED')
   return downloaded.data
+}
+
+function pushTextBlock(blocks: string[], sourceName: string, text: string, currentChars: number) {
+  const remaining = MAX_TOTAL_CONTEXT_CHARS - currentChars
+  if (remaining <= 0) return { added: 0, ok: false }
+  const excerpt = text.slice(0, remaining).trim()
+  if (!excerpt) return { added: 0, ok: false }
+  blocks.push(`FUENTE VERIFICADA: ${sourceName}\n${excerpt}`)
+  return { added: excerpt.length, ok: true }
 }
 
 export async function loadVerifiedSourceContext(client: unknown, userId: string, sourceIds: string[]): Promise<LoadedSourceContext> {
@@ -86,17 +98,34 @@ export async function loadVerifiedSourceContext(client: unknown, userId: string,
 
     if (TEXT_EXTENSIONS.has(extension) && bytes <= MAX_TEXT_FILE_BYTES) {
       const blob = await downloadBlob(supabase, source)
-      const text = (await blob.text()).trim()
-      if (!text) continue
-      const remaining = MAX_TOTAL_CONTEXT_CHARS - chars
-      if (remaining <= 0) {
+      const resultText = pushTextBlock(blocks, source.file_name, await blob.text(), chars)
+      if (resultText.ok) {
+        chars += resultText.added
+        analyzedSourceIds.push(source.id)
+      } else {
+        pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'binary-context-limit' })
+      }
+      continue
+    }
+
+    if (isExtractableOfficeFile(source.file_name)) {
+      if (bytes < 1 || bytes > MAX_OFFICE_FILE_BYTES) {
         pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'binary-context-limit' })
         continue
       }
-      const excerpt = text.slice(0, remaining)
-      blocks.push(`FUENTE VERIFICADA: ${source.file_name}\n${excerpt}`)
-      chars += excerpt.length
-      analyzedSourceIds.push(source.id)
+      try {
+        const blob = await downloadBlob(supabase, source)
+        const officeText = extractOfficeText(source.file_name, await blob.arrayBuffer())
+        const resultText = pushTextBlock(blocks, source.file_name, officeText, chars)
+        if (!resultText.ok) {
+          pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'binary-context-limit' })
+          continue
+        }
+        chars += resultText.added
+        analyzedSourceIds.push(source.id)
+      } catch {
+        pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'office-extraction-failed' })
+      }
       continue
     }
 
@@ -121,8 +150,8 @@ export async function loadVerifiedSourceContext(client: unknown, userId: string,
       continue
     }
 
-    if (['doc','docx','rtf','odt','ppt','pptx','odp','xls','xlsx','ods'].includes(extension)) {
-      pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'office-extraction-pending' })
+    if (LEGACY_OFFICE_EXTENSIONS.has(extension)) {
+      pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'legacy-office-pending' })
       continue
     }
 
