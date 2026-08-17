@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { resolveProductAccess } from '@/lib/product/access'
 import type { Database } from '@/lib/supabase/database.types'
 
 type AppRole = Database['public']['Enums']['app_role']
@@ -86,16 +87,28 @@ export async function GET() {
     const email = typeof claims?.email === 'string' ? claims.email : ''
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
     const displayName = profile?.display_name?.trim() || fullName || email.split('@')[0] || 'Usuario'
+    const access = resolveProductAccess(email, role)
 
     return NextResponse.json({
       displayName,
       initials: getInitials(displayName),
       role,
-      roleLabel: roleLabels[role],
+      roleLabel: access.isOwner ? 'Propietaria' : roleLabels[role],
       organizationId: organization.id,
       organizationName: organization.name,
       organizationSlug: organization.slug,
       avatarUrl: profile?.avatar_url ?? null,
+      plan: access.plan,
+      isOwner: access.isOwner,
+      aiUnlimited: access.aiUnlimited,
+      permissions: {
+        premiumResources: access.canUsePremiumResources,
+        managePlatform: access.canManagePlatform,
+        managePlans: access.canManagePlans,
+        manageModules: access.canManageModules,
+        manageThemes: access.canManageThemes,
+        managePayments: access.canManagePayments,
+      },
     }, {
       headers: {
         'Cache-Control': 'private, no-store',
