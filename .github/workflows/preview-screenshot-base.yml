@@ -1,0 +1,82 @@
+name: Preview screenshot base
+
+on:
+  push:
+    branches:
+      - fix/screenshot-base-2026-08-17
+    paths:
+      - .github/workflows/preview-screenshot-base.yml
+
+permissions:
+  contents: read
+
+env:
+  VERCEL_ORG_ID: team_Wq1pPeDlHDUfKwJNyH4ZSLFD
+  VERCEL_PROJECT_ID: prj_90GNn7Y95ZZIYAJEyOoJCyi6NO0p
+  VERCEL_SCOPE: elbarosalesc-pngs-projects
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    environment: VERCEL_TOKEN
+    timeout-minutes: 30
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - name: Checkout protected screenshot branch
+        uses: actions/checkout@v4
+
+      - name: Require Vercel credential
+        shell: bash
+        run: test -n "${VERCEL_TOKEN:-}" || { echo "::error::Falta VERCEL_TOKEN"; exit 2; }
+
+      - name: Install pinned Vercel CLI
+        run: npm install --global vercel@50.1.6
+
+      - name: Pull preview environment for Next app
+        run: vercel pull --yes --environment=preview --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+
+      - name: Build isolated Next preview
+        run: vercel build --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web
+
+      - name: Deploy isolated preview only
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="$(vercel deploy --prebuilt --scope="$VERCEL_SCOPE" --token="$VERCEL_TOKEN" --cwd apps/web)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview base visual: $url/referencia-base" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate reference route
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${{ steps.preview.outputs.url }}"
+          code="$(curl --retry 10 --retry-delay 2 --silent --location --output /tmp/reference.html --write-out '%{http_code}' "$base/referencia-base")"
+          test "$code" -ge 200 -a "$code" -lt 400
+          grep -qi 'Lo importante, antes que lo urgente' /tmp/reference.html
+          grep -qi 'Centro de control' /tmp/reference.html
+          grep -qi 'IA y herramientas' /tmp/reference.html
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Capture mobile reference evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yoyo-reference
+          base="${{ steps.preview.outputs.url }}"
+          npx playwright screenshot --device="Pixel 7" --full-page "$base/referencia-base" /tmp/yoyo-reference/reference-base-mobile.png
+          echo "Captura móvil generada desde preview real." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload mobile evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: referencia-base-movil
+          path: /tmp/yoyo-reference/reference-base-mobile.png
+          if-no-files-found: error
+          retention-days: 7
