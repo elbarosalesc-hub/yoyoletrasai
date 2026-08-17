@@ -6,6 +6,9 @@ on:
       - fix/screenshot-base-2026-08-17
     paths:
       - .github/workflows/preview-screenshot-base.yml
+      - apps/web/app/reference-base.css
+      - apps/web/app/referencia-base/**
+      - apps/web/public/yoyo-hero-preserved.webp
 
 permissions:
   contents: read
@@ -66,8 +69,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/yoyo-reference
-          npx playwright screenshot --device="Pixel 7" --full-page http://127.0.0.1:3000/referencia-base /tmp/yoyo-reference/reference-base-mobile.png
-          echo "Base visual compilada, servida y capturada en navegador real." >> "$GITHUB_STEP_SUMMARY"
+          npx playwright screenshot --device="Pixel 7" http://127.0.0.1:3000/referencia-base /tmp/yoyo-reference/reference-base-mobile.png
+          echo "Base visual compilada, servida y capturada en viewport móvil real." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload mobile evidence
         uses: actions/upload-artifact@v4
