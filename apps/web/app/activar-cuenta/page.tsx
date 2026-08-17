@@ -23,7 +23,7 @@ function ActivationContent() {
       const supabase = createClient()
       const { error } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
-        type: 'magiclink',
+        type: 'email',
       })
 
       if (cancelled) return
