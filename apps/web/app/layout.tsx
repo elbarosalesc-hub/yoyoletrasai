@@ -13,6 +13,7 @@ import './tools-functional.css'
 import './tools-command.css'
 import './classroom-suite.css'
 import './creator-functional.css'
+import './creator-premium-v2.css'
 import './course-functional.css'
 import './library-functional.css'
 import './library-interactive.css'
@@ -38,6 +39,10 @@ import './virtual-professor.css'
 import './virtual-teacher.css'
 import './planner-workspace.css'
 import './centres-premium.css'
+import './premium-home-2026.css'
+import './hero-restored.css'
+import './games-hub-2026.css'
+import './evolution-center.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',
