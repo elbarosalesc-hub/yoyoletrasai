@@ -40,7 +40,7 @@ const auditedModules = [
 const fallbackResources = [
   { resourceKey: 'premium-reading-3b-bosque-nativo', title: 'Comprensión lectora · El bosque nativo', subject: 'Lenguaje', level: '3° básico', score: 96, kind: 'reading' },
   { resourceKey: 'premium-math-4b-feria-escolar', title: 'Problemas matemáticos · La feria escolar', subject: 'Matemática', level: '4° básico', score: 94, kind: 'math' },
-  { resourceKey: 'premium-assessment-5b-ecosistemas', title: 'Evaluación adaptada · Ecosistemas', subject: 'Ciencias', level: '5° básico', score: 95, kind: 'science' },
+  { resourceKey: 'premium-assessment-5b-ecosistemas', title: 'Evaluación adaptada · Ecosistemas', subject: 'Ciencias', level: '5° básico', score: 95, kind: 'assessment' },
   { resourceKey: 'premium-graphomotor-kinder-trazos', title: 'Grafomotricidad · Ruta de trazos', subject: 'Lenguaje', level: 'Kínder', score: 97, kind: 'writing' },
   { resourceKey: 'premium-escape-6b-agua', title: 'Escape Room · Misión agua', subject: 'Ciencias', level: '6° básico', score: 96, kind: 'forest' },
 ]
@@ -51,8 +51,14 @@ type Payload = { subject?: unknown; level?: unknown; type?: unknown }
 function artworkKind(payload: Payload) {
   const type = String(payload.type || '').toLowerCase()
   const subject = String(payload.subject || '').toLowerCase()
+  if (type.includes('assessment')) return 'assessment'
+  if (type.includes('reading-plan')) return 'plan'
   if (type.includes('reading')) return 'reading'
+  if (type.includes('calligraphy')) return 'calligraphy'
   if (type.includes('graphomotor')) return 'writing'
+  if (type.includes('inclusive') || subject.includes('apoyo transversal')) return 'inclusion'
+  if (type.includes('history') || subject.includes('historia')) return 'history'
+  if (type.includes('writing')) return 'writing'
   if (type.includes('escape')) return 'forest'
   if (subject.includes('matem')) return 'math'
   if (subject.includes('ciencia')) return 'science'
@@ -69,7 +75,7 @@ export default async function Dashboard() {
   const context = await requireOrganizationContext('/app')
   const db = context.supabase as any
 
-  const [coursesResult, entitlementResult, resourcesResult] = await Promise.all([
+  const [coursesResult, entitlementResult, resourcesResult, resourceCountResult] = await Promise.all([
     context.supabase
       .from('courses')
       .select('id, name, level, academic_year, is_active')
@@ -90,6 +96,11 @@ export default async function Dashboard() {
       .eq('status', 'published')
       .order('quality_score', { ascending: false })
       .limit(12),
+    db
+      .from('resource_candidates')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', context.organization.id)
+      .eq('status', 'published'),
   ])
 
   const visibleCourses = coursesResult.data ?? []
@@ -107,6 +118,7 @@ export default async function Dashboard() {
   }
 
   const resourceRows = Array.isArray(resourcesResult.data) ? resourcesResult.data : []
+  const publishedResourceCount = typeof resourceCountResult.count === 'number' ? resourceCountResult.count : resourceRows.length
   const validatedResources: PremiumResource[] = resourceRows.length
     ? resourceRows.map((row: Record<string, unknown>) => {
         const payload = (row.payload && typeof row.payload === 'object' ? row.payload : {}) as Payload
@@ -146,7 +158,7 @@ export default async function Dashboard() {
               <Link href="/biblioteca" className="premium-secondary-action"><BookOpen size={18}/> Explorar recursos premium</Link>
             </div>
             <div className="premium-home-proof" aria-label="Estado premium">
-              <div><strong>{validatedResources.length}</strong><span>recursos premium publicados</span></div>
+              <div><strong>{publishedResourceCount}</strong><span>recursos premium publicados</span></div>
               <div><strong>≥92</strong><span>quality gate para publicar</span></div>
               <div><strong>PIE + DUA</strong><span>integrados al recurso</span></div>
             </div>
@@ -166,7 +178,7 @@ export default async function Dashboard() {
 
         <section className="approved-metric-grid" aria-label="Resumen institucional">
           <Link href="/cursos" className="approved-metric metric-violet"><span><GraduationCap/></span><div><strong>{activeCourses.length}</strong><small>Cursos activos</small></div><ArrowRight/></Link>
-          <Link href="/biblioteca" className="approved-metric metric-mint"><span><BookOpen/></span><div><strong>{validatedResources.length}</strong><small>Premium publicados</small></div><ArrowRight/></Link>
+          <Link href="/biblioteca" className="approved-metric metric-mint"><span><BookOpen/></span><div><strong>{publishedResourceCount}</strong><small>Premium publicados</small></div><ArrowRight/></Link>
           <Link href="/qa" className="approved-metric metric-amber"><span><CheckCircle2/></span><div><strong>{auditedModules.length}</strong><small>Módulos en control QA</small></div><ArrowRight/></Link>
           <Link href="/crear" className="approved-metric metric-rose"><span><Sparkles/></span><div><strong>{aiMetric}</strong><small>{aiMetricLabel}</small></div><ArrowRight/></Link>
         </section>
@@ -178,7 +190,7 @@ export default async function Dashboard() {
 
         <section className="approved-main-grid">
           <article className="approved-panel premium-resource-showcase">
-            <div className="approved-panel-heading"><div><span className="approved-kicker">Biblioteca viva</span><h2>Recursos premium validados</h2><p>{resourceRows.length ? 'Contenido publicado desde la biblioteca real de la institución.' : 'Contenido canónico de respaldo mientras se sincroniza la biblioteca.'}</p></div><Link href="/biblioteca">Abrir biblioteca</Link></div>
+            <div className="approved-panel-heading"><div><span className="approved-kicker">Biblioteca viva</span><h2>Recursos premium validados</h2><p>{resourceRows.length ? `${publishedResourceCount} recursos publicados; se muestran los destacados con mayor calidad.` : 'Contenido canónico de respaldo mientras se sincroniza la biblioteca.'}</p></div><Link href="/biblioteca">Abrir biblioteca</Link></div>
             <div className="approved-resource-list premium-validated-list">{validatedResources.slice(0, 5).map((resource, index) => (
               <Link href="/biblioteca" key={resource.resourceKey || resource.title}>
                 <span className={`resource-thumb resource-${index}`}><ActivityArtwork kind={resource.kind}/></span>
