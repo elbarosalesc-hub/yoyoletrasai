@@ -1,8 +1,11 @@
 import { YOYO_SOURCE_BUCKET, sourceExtension } from '@/lib/ai/source-files'
 
 const TEXT_EXTENSIONS = new Set(['txt','md','csv','tsv','html','htm','json','xml','sql','js','ts','py','yaml','yml'])
+const IMAGE_EXTENSIONS = new Set(['png','jpg','jpeg','webp','gif'])
 const MAX_TEXT_FILE_BYTES = 1024 * 1024
 const MAX_TOTAL_CONTEXT_CHARS = 1_500_000
+const MAX_DIRECT_BINARY_BYTES = 20 * 1024 * 1024
+const MAX_TOTAL_DIRECT_BINARY_BYTES = 24 * 1024 * 1024
 
 type SourceRow = {
   id: string
@@ -28,16 +31,37 @@ type SourceClient = {
   }
 }
 
+export type GatewayAttachment = {
+  id: string
+  fileName: string
+  mediaType: string
+  kind: 'pdf' | 'image'
+  base64: string
+}
+
+export type PendingSource = {
+  id: string
+  fileName: string
+  reason: 'office-extraction-pending' | 'binary-context-limit' | 'unsupported-binary'
+}
+
 export type LoadedSourceContext = {
   verified: SourceRow[]
   textContext: string
   analyzedSourceIds: string[]
-  pendingBinarySourceIds: string[]
+  gatewayAttachments: GatewayAttachment[]
+  pendingSources: PendingSource[]
+}
+
+async function downloadBlob(client: SourceClient, source: SourceRow) {
+  const downloaded = await client.storage.from(YOYO_SOURCE_BUCKET).download(source.object_path)
+  if (downloaded.error || !downloaded.data) throw new Error('SOURCE_DOWNLOAD_FAILED')
+  return downloaded.data
 }
 
 export async function loadVerifiedSourceContext(client: unknown, userId: string, sourceIds: string[]): Promise<LoadedSourceContext> {
   const uniqueIds = [...new Set(sourceIds.filter(Boolean))].slice(0, 200)
-  if (!uniqueIds.length) return { verified: [], textContext: '', analyzedSourceIds: [], pendingBinarySourceIds: [] }
+  if (!uniqueIds.length) return { verified: [], textContext: '', analyzedSourceIds: [], gatewayAttachments: [], pendingSources: [] }
 
   const supabase = client as SourceClient
   const result = await supabase.from('ai_source_files')
@@ -50,30 +74,60 @@ export async function loadVerifiedSourceContext(client: unknown, userId: string,
   if (verified.length !== uniqueIds.length) throw new Error('SOURCE_NOT_READY')
 
   let chars = 0
+  let binaryBytes = 0
   const blocks: string[] = []
   const analyzedSourceIds: string[] = []
-  const pendingBinarySourceIds: string[] = []
+  const gatewayAttachments: GatewayAttachment[] = []
+  const pendingSources: PendingSource[] = []
 
   for (const source of verified) {
     const extension = sourceExtension(source.file_name)
     const bytes = Number(source.actual_bytes || 0)
-    if (!TEXT_EXTENSIONS.has(extension) || bytes > MAX_TEXT_FILE_BYTES) {
-      pendingBinarySourceIds.push(source.id)
+
+    if (TEXT_EXTENSIONS.has(extension) && bytes <= MAX_TEXT_FILE_BYTES) {
+      const blob = await downloadBlob(supabase, source)
+      const text = (await blob.text()).trim()
+      if (!text) continue
+      const remaining = MAX_TOTAL_CONTEXT_CHARS - chars
+      if (remaining <= 0) {
+        pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'binary-context-limit' })
+        continue
+      }
+      const excerpt = text.slice(0, remaining)
+      blocks.push(`FUENTE VERIFICADA: ${source.file_name}\n${excerpt}`)
+      chars += excerpt.length
+      analyzedSourceIds.push(source.id)
       continue
     }
 
-    const downloaded = await supabase.storage.from(YOYO_SOURCE_BUCKET).download(source.object_path)
-    if (downloaded.error || !downloaded.data) throw new Error('SOURCE_DOWNLOAD_FAILED')
-    const text = (await downloaded.data.text()).trim()
-    if (!text) continue
+    const isPdf = extension === 'pdf'
+    const isImage = IMAGE_EXTENSIONS.has(extension)
+    if (isPdf || isImage) {
+      if (bytes < 1 || bytes > MAX_DIRECT_BINARY_BYTES || binaryBytes + bytes > MAX_TOTAL_DIRECT_BINARY_BYTES) {
+        pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'binary-context-limit' })
+        continue
+      }
+      const blob = await downloadBlob(supabase, source)
+      const base64 = Buffer.from(await blob.arrayBuffer()).toString('base64')
+      gatewayAttachments.push({
+        id: source.id,
+        fileName: source.file_name,
+        mediaType: source.media_type || (isPdf ? 'application/pdf' : `image/${extension === 'jpg' ? 'jpeg' : extension}`),
+        kind: isPdf ? 'pdf' : 'image',
+        base64,
+      })
+      binaryBytes += bytes
+      analyzedSourceIds.push(source.id)
+      continue
+    }
 
-    const remaining = MAX_TOTAL_CONTEXT_CHARS - chars
-    if (remaining <= 0) break
-    const excerpt = text.slice(0, remaining)
-    blocks.push(`FUENTE: ${source.file_name}\n${excerpt}`)
-    chars += excerpt.length
-    analyzedSourceIds.push(source.id)
+    if (['doc','docx','rtf','odt','ppt','pptx','odp','xls','xlsx','ods'].includes(extension)) {
+      pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'office-extraction-pending' })
+      continue
+    }
+
+    pendingSources.push({ id: source.id, fileName: source.file_name, reason: 'unsupported-binary' })
   }
 
-  return { verified, textContext: blocks.join('\n\n---\n\n'), analyzedSourceIds, pendingBinarySourceIds }
+  return { verified, textContext: blocks.join('\n\n---\n\n'), analyzedSourceIds, gatewayAttachments, pendingSources }
 }
