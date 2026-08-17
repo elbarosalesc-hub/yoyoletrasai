@@ -1,10 +1,12 @@
 import { ArrowUpRight, BrainCircuit, Sparkles } from 'lucide-react'
+import { AiEvalSuiteButton } from '@/components/evolution/AiEvalSuiteButton'
 
 type Row = Record<string, unknown>
 function score(value: unknown) { return typeof value === 'number' ? `${value}/100` : 'Pendiente' }
 
 export function EvolutionBenchmarkPanel({ benchmarks, evalCases, evalRuns }: { benchmarks: Row[]; evalCases: Row[]; evalRuns: Row[] }) {
   const measured = benchmarks.filter(item => typeof item.yoyo_score === 'number').length
+  const caseIds = evalCases.map(item => String(item.id))
   return <section className="evolution-grid-two">
     <article className="evolution-panel">
       <div className="evolution-heading"><div><span className="eyebrow">Benchmark competitivo</span><h2>Capacidades verificadas</h2></div><span className="evolution-count">{measured}/{benchmarks.length} medidas</span></div>
@@ -16,8 +18,9 @@ export function EvolutionBenchmarkPanel({ benchmarks, evalCases, evalRuns }: { b
     </article>
     <article className="evolution-panel">
       <div className="evolution-heading"><div><span className="eyebrow">YOYO IA</span><h2>Batería de evaluación</h2></div><span className="evolution-count">{evalCases.length} casos activos</span></div>
+      <AiEvalSuiteButton caseIds={caseIds}/>
       <div className="eval-list">{evalCases.map(item => { const latestRun = evalRuns.find(run => run.case_id === item.id); return <div key={String(item.id)}><span className="eval-icon"><BrainCircuit size={17}/></span><div><strong>{String(item.title)}</strong><small>{String(item.category)} · peso {String(item.weight)}</small></div><b>{latestRun ? score(latestRun.score) : 'Sin ejecutar'}</b></div> })}</div>
-      <div className="evolution-note"><Sparkles size={18}/><p>La batería cubre generación, adaptación, análisis cruzado, evaluación, informes, planificación, accesibilidad y seguridad.</p></div>
+      <div className="evolution-note"><Sparkles size={18}/><p>La batería cubre generación, adaptación, análisis cruzado, evaluación, informes, planificación, accesibilidad y seguridad. Cada resultado conserva modelo, versión, latencia y consumo.</p></div>
     </article>
   </section>
 }
