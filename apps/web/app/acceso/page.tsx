@@ -1,142 +1,36 @@
 'use client'
 
 import Link from 'next/link'
-import { FormEvent, Suspense, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, LockKeyhole, School, ShieldCheck, Sparkles } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { getSafeRedirectPath } from '@/lib/auth/redirect'
+import {FormEvent,Suspense,useMemo,useState} from 'react'
+import {useSearchParams} from 'next/navigation'
+import {ArrowLeft,ArrowRight,CheckCircle2,Eye,EyeOff,KeyRound,LockKeyhole,School,ShieldCheck,Sparkles} from 'lucide-react'
+import {createClient} from '@/lib/supabase/client'
+import {getSafeRedirectPath} from '@/lib/auth/redirect'
 
-type Mode = 'login' | 'register' | 'recovery'
+type Mode='login'|'setup'|'register'|'recovery'
 
-const messages: Record<string, string> = {
-  missing_code: 'El enlace de acceso no contiene un código válido.',
-  callback_failed: 'No fue posible completar el acceso. Solicita un nuevo enlace.',
-  signed_out: 'Tu sesión se cerró correctamente.',
-}
+const messages:Record<string,string>={missing_code:'El enlace de acceso no contiene un código válido.',callback_failed:'No fue posible completar el acceso. Solicita un nuevo enlace.',signed_out:'Tu sesión se cerró correctamente.'}
 
-function getFriendlyError(error: unknown) {
-  const message = error instanceof Error ? error.message.toLowerCase() : ''
-  if (message.includes('invalid login credentials')) return 'El correo o la contraseña no son correctos.'
-  if (message.includes('email not confirmed')) return 'Debes confirmar tu correo antes de ingresar.'
-  if (message.includes('user already registered')) return 'Ya existe una cuenta asociada a este correo.'
-  if (message.includes('password')) return 'La contraseña no cumple los requisitos de seguridad.'
-  return 'No fue posible completar la solicitud. Inténtalo nuevamente.'
-}
+function friendly(error:unknown){const message=error instanceof Error?error.message.toLowerCase():'';if(message.includes('invalid login credentials'))return 'El correo o la contraseña no son correctos. Si es tu primer ingreso, usa “Crear mi contraseña”.';if(message.includes('email not confirmed'))return 'Debes confirmar tu correo antes de ingresar.';if(message.includes('user already registered'))return 'Ya existe una cuenta asociada a este correo.';if(message.includes('password'))return 'La contraseña no cumple los requisitos de seguridad.';if(message.includes('rate'))return 'Espera un momento antes de solicitar otro enlace.';return 'No fue posible completar la solicitud. Inténtalo nuevamente.'}
 
-function AccessForm() {
-  const params = useSearchParams()
-  const [mode, setMode] = useState<Mode>('login')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [pending, setPending] = useState(false)
-  const [feedback, setFeedback] = useState('')
-  const next = useMemo(() => getSafeRedirectPath(params.get('next')), [params])
-  const initialMessage = messages[params.get('error') ?? params.get('message') ?? '']
+function AccessForm(){
+ const params=useSearchParams();const[mode,setMode]=useState<Mode>('login');const[email,setEmail]=useState('');const[password,setPassword]=useState('');const[displayName,setDisplayName]=useState('');const[showPassword,setShowPassword]=useState(false);const[pending,setPending]=useState(false);const[feedback,setFeedback]=useState('');const next=useMemo(()=>getSafeRedirectPath(params.get('next')),[params]);const initialMessage=messages[params.get('error')??params.get('message')??'']
+ async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setPending(true);setFeedback('');try{const supabase=createClient()
+  if(mode==='login'){const{error}=await supabase.auth.signInWithPassword({email,password});if(error)throw error;window.location.assign(next);return}
+  if(mode==='setup'){const callback=`${window.location.origin}/auth/callback?next=${encodeURIComponent('/restablecer-contrasena?first=1')}`;const{error}=await supabase.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:callback}});if(error)throw error;setFeedback('Te enviamos un enlace seguro. Ábrelo desde tu correo para crear y guardar tu contraseña.');return}
+  if(mode==='register'){const callback=`${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;const{data,error}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:callback,data:{display_name:displayName}}});if(error)throw error;setFeedback(data.session?'Cuenta creada. Ingresando…':'Revisa tu correo para confirmar la cuenta.');if(data.session)window.location.assign(next);return}
+  const callback=`${window.location.origin}/auth/callback?next=${encodeURIComponent('/restablecer-contrasena')}`;const{error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:callback});if(error)throw error;setFeedback('Enviamos un enlace para cambiar tu contraseña.')
+ }catch(error){setFeedback(friendly(error))}finally{setPending(false)}}
+ const heading=mode==='login'?'Bienvenida nuevamente':mode==='setup'?'Crea tu contraseña':mode==='register'?'Crea tu acceso':'Recupera tu cuenta'
+ const description=mode==='setup'?'Escribe el correo que ya está registrado en YOYOLETRASAI. Recibirás un enlace seguro y, al abrirlo, crearás tu contraseña.':mode==='recovery'?'Recibirás un enlace seguro para cambiar tu contraseña.':'Ingresa a tu espacio educativo protegido.'
+ return <section className="access-panel"><div className="access-card"><div className="access-heading"><span className="access-eyebrow"><ShieldCheck size={15}/> ACCESO INSTITUCIONAL</span><h2>{heading}</h2><p>{description}</p></div>
+ {(initialMessage||feedback)&&<div className="feedback" role="status"><CheckCircle2 size={17}/>{feedback||initialMessage}</div>}
+ <form onSubmit={submit}>{mode==='register'&&<label>Nombre visible<input value={displayName} onChange={e=>setDisplayName(e.target.value)} required autoComplete="name" placeholder="Tu nombre"/></label>}<label>Correo electrónico<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required autoComplete="email" placeholder="nombre@institucion.cl"/></label>
+ {(mode==='login'||mode==='register')&&<label>Contraseña<span className="password-field"><input type={showPassword?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)} required minLength={8} autoComplete={mode==='login'?'current-password':'new-password'} placeholder="Mínimo 8 caracteres"/><button type="button" aria-label={showPassword?'Ocultar contraseña':'Mostrar contraseña'} onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></span></label>}
+ <button className="submit-button" disabled={pending}>{pending?'Procesando…':mode==='login'?<>Ingresar <ArrowRight size={18}/></>:mode==='setup'?<>Enviar enlace para crear contraseña <KeyRound size={18}/></>:mode==='register'?<>Crear cuenta <ArrowRight size={18}/></>:<>Enviar enlace <ArrowRight size={18}/></>}</button></form>
+ <div className="access-divider"><span>Acceso protegido</span></div><div className="first-access-box"><KeyRound size={20}/><div><strong>¿Es tu primera vez?</strong><span>Si tu correo ya fue creado por administración, no necesitas registrarte de nuevo.</span></div><button type="button" onClick={()=>{setMode('setup');setPassword('');setFeedback('')}}>Crear mi contraseña</button></div>
+ <div className="mode-actions"><button type="button" onClick={()=>{setMode(mode==='login'?'register':'login');setFeedback('')}}>{mode==='login'?'Crear una cuenta institucional':'Volver al ingreso'}</button>{mode==='login'&&<button type="button" onClick={()=>{setMode('recovery');setFeedback('')}}>Olvidé mi contraseña</button>}</div><div className="access-security"><LockKeyhole size={16}/><span>Tu contraseña la creas tú. YOYOLETRASAI no la conoce ni la muestra.</span></div></div></section>}
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setPending(true)
-    setFeedback('')
-
-    try {
-      const supabase = createClient()
-
-      if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-        window.location.assign(next)
-        return
-      }
-
-      if (mode === 'register') {
-        const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: callback, data: { display_name: displayName } },
-        })
-        if (error) throw error
-        setFeedback(data.session ? 'Cuenta creada. Ingresando…' : 'Revisa tu correo para confirmar la cuenta.')
-        if (data.session) window.location.assign(next)
-        return
-      }
-
-      const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/restablecer-contrasena')}`
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callback })
-      if (error) throw error
-      setFeedback('Enviamos un enlace de recuperación a tu correo.')
-    } catch (error) {
-      setFeedback(getFriendlyError(error))
-    } finally {
-      setPending(false)
-    }
-  }
-
-  return (
-    <section className="access-panel">
-      <div className="access-card">
-        <div className="access-heading">
-          <span className="access-eyebrow"><ShieldCheck size={15}/> ACCESO INSTITUCIONAL</span>
-          <h2>{mode === 'login' ? 'Bienvenida nuevamente' : mode === 'register' ? 'Crea tu acceso' : 'Recupera tu cuenta'}</h2>
-          <p>{mode === 'recovery' ? 'Recibirás un enlace seguro en tu correo institucional.' : 'Ingresa a tu espacio educativo protegido.'}</p>
-        </div>
-
-        {(initialMessage || feedback) && <div className="feedback" role="status"><CheckCircle2 size={17}/>{feedback || initialMessage}</div>}
-
-        <form onSubmit={submit}>
-          {mode === 'register' && <label>Nombre visible<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required autoComplete="name" placeholder="Tu nombre" /></label>}
-          <label>Correo electrónico<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required autoComplete="email" placeholder="nombre@institucion.cl" /></label>
-          {mode !== 'recovery' && (
-            <label>Contraseña
-              <span className="password-field">
-                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Mínimo 8 caracteres" />
-                <button type="button" aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} onClick={() => setShowPassword((value) => !value)}>{showPassword ? <EyeOff size={18}/> : <Eye size={18}/>}</button>
-              </span>
-            </label>
-          )}
-          <button className="submit-button" disabled={pending}>{pending ? 'Procesando…' : mode === 'login' ? <>Ingresar <ArrowRight size={18}/></> : mode === 'register' ? <>Crear cuenta <ArrowRight size={18}/></> : <>Enviar enlace <ArrowRight size={18}/></>}</button>
-        </form>
-
-        <div className="access-divider"><span>Acceso protegido</span></div>
-        <div className="mode-actions">
-          <button type="button" onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>{mode === 'login' ? 'Crear una cuenta institucional' : 'Volver al ingreso'}</button>
-          {mode === 'login' && <button type="button" onClick={() => setMode('recovery')}>Olvidé mi contraseña</button>}
-        </div>
-        <div className="access-security"><LockKeyhole size={16}/><span>Sesión cifrada, contexto institucional y permisos por rol.</span></div>
-      </div>
-    </section>
-  )
-}
-
-export default function AccessPage() {
-  return (
-    <main className="access-shell">
-      <section className="access-hero">
-        <div className="access-orb access-orb-one" />
-        <div className="access-orb access-orb-two" />
-        <Link href="/" className="access-back"><ArrowLeft size={17}/> Volver a la presentación</Link>
-        <div className="access-brand"><span><School size={26}/></span><div><strong>YOYOLETRASAI</strong><small>Ecosistema educativo nacional</small></div></div>
-        <div className="access-copy">
-          <span className="access-kicker"><Sparkles size={16}/> Tecnología al servicio de cada trayectoria</span>
-          <h1>Aprendizaje, inclusión y gestión escolar en un solo lugar.</h1>
-          <p>Una experiencia segura para docentes, equipos PIE, UTP, dirección, estudiantes y familias.</p>
-          <div className="access-benefits">
-            <div><CheckCircle2/><span><strong>Seguimiento con evidencia</strong><small>Progreso real por objetivos de aprendizaje.</small></span></div>
-            <div><CheckCircle2/><span><strong>Inclusión integrada</strong><small>PIE, DUA y adecuaciones dentro del flujo pedagógico.</small></span></div>
-            <div><CheckCircle2/><span><strong>Datos protegidos</strong><small>Aislamiento institucional y acceso por responsabilidades.</small></span></div>
-          </div>
-        </div>
-        <div className="access-mini-card"><ShieldCheck/><div><strong>Entorno institucional seguro</strong><small>Supabase · RLS · sesiones protegidas</small></div></div>
-      </section>
-      <Suspense fallback={<section className="access-panel"><div className="access-card">Cargando acceso seguro…</div></section>}>
-        <AccessForm />
-      </Suspense>
-      <style jsx global>{`
-        *{box-sizing:border-box}.access-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(430px,.9fr);background:#f4f6fb;color:#172033;font-family:Arial,Helvetica,sans-serif}.access-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;padding:clamp(28px,5vw,72px);background:radial-gradient(circle at 18% 15%,#7658ef55,transparent 26%),radial-gradient(circle at 86% 75%,#22cfb944,transparent 28%),linear-gradient(145deg,#080d1d,#131c3c 60%,#0a1928);color:white}.access-hero:after{content:'';position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 90%)}.access-orb{position:absolute;border-radius:999px;filter:blur(70px);pointer-events:none}.access-orb-one{width:280px;height:280px;background:#7658ef55;left:-90px;top:10%}.access-orb-two{width:300px;height:300px;background:#1fc8ae44;right:-110px;bottom:4%}.access-back,.access-brand,.access-copy,.access-mini-card{position:relative;z-index:2}.access-back{display:inline-flex;align-items:center;gap:7px;width:max-content;color:#c9d2e4;text-decoration:none;font-size:.82rem;font-weight:800}.access-brand{display:flex;align-items:center;gap:12px;margin-top:38px}.access-brand>span{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:linear-gradient(145deg,#8463f5,#5578f5);box-shadow:0 16px 36px #4d44cb55}.access-brand div{display:grid;gap:2px}.access-brand strong{font-size:.98rem;letter-spacing:.06em}.access-brand small{font-size:.7rem;color:#9eabc0}.access-copy{max-width:760px;margin:auto 0}.access-kicker,.access-eyebrow{display:inline-flex;align-items:center;gap:7px;width:max-content;font-size:.74rem;font-weight:900;letter-spacing:.05em}.access-kicker{padding:8px 11px;border-radius:999px;background:#ffffff0e;border:1px solid #ffffff18;color:#dbe0ff}.access-copy h1{margin:22px 0 17px;font-size:clamp(3rem,5vw,6rem);line-height:.97;letter-spacing:-.06em}.access-copy>p{max-width:690px;margin:0;color:#aab6ca;font-size:1.08rem;line-height:1.7}.access-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px}.access-benefits>div{display:flex;gap:9px;padding:14px;border-radius:16px;background:#ffffff0b;border:1px solid #ffffff12}.access-benefits svg{flex:none;color:#61dfbd}.access-benefits span{display:grid;gap:3px}.access-benefits strong{font-size:.78rem}.access-benefits small{color:#9eabc0;font-size:.67rem;line-height:1.4}.access-mini-card{display:flex;align-items:center;gap:11px;width:max-content;padding:13px 15px;border-radius:16px;background:#ffffff10;border:1px solid #ffffff17}.access-mini-card svg{color:#61dfbd}.access-mini-card div{display:grid;gap:2px}.access-mini-card strong{font-size:.76rem}.access-mini-card small{color:#9eabc0;font-size:.65rem}.access-panel{display:grid;place-items:center;padding:clamp(24px,5vw,64px);background:radial-gradient(circle at 80% 10%,#7658ef10,transparent 25%),#f5f7fb}.access-card{width:min(500px,100%);padding:clamp(28px,4vw,44px);border-radius:30px;background:#fff;border:1px solid #e3e7ef;box-shadow:0 36px 90px #1a25421c}.access-heading{display:grid;gap:10px}.access-eyebrow{color:#6b58df}.access-heading h2{margin:0;font-size:2.15rem;letter-spacing:-.04em}.access-heading p{margin:0;color:#6b7485;line-height:1.6}.feedback{display:flex;align-items:flex-start;gap:8px;padding:13px 14px;border-radius:14px;background:#eef2ff;color:#3349a5;font-weight:750;margin-top:20px}.access-card form{display:grid;gap:18px;margin-top:26px}.access-card label{display:grid;gap:8px;font-weight:850;font-size:.82rem;color:#2b3448}.access-card input{width:100%;height:53px;border:1px solid #d9deea;border-radius:15px;padding:0 15px;background:#fbfcfe;color:#172033;font:inherit;outline:none;transition:.2s}.access-card input:focus{border-color:#6557df;box-shadow:0 0 0 4px #6557df18;background:#fff}.password-field{position:relative}.password-field input{padding-right:48px}.password-field button{position:absolute;top:50%;right:9px;transform:translateY(-50%);display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:#657085;cursor:pointer}.submit-button{height:55px;border:0;border-radius:16px;background:linear-gradient(135deg,#7658ef,#5578f5 65%,#25c8b2);color:white;font-weight:900;font-size:.96rem;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 16px 34px #5d55dd3a}.submit-button:disabled{opacity:.62;cursor:wait}.access-divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:#9aa3b2;font-size:.72rem;font-weight:800}.access-divider:before,.access-divider:after{content:'';height:1px;flex:1;background:#e6e9ef}.mode-actions{display:flex;justify-content:space-between;gap:14px}.mode-actions button{border:0;background:none;color:#5b50c8;font-weight:850;cursor:pointer;padding:4px 0;font-size:.8rem}.access-security{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:24px;padding-top:20px;border-top:1px solid #eceef3;color:#7b8494;font-size:.72rem}@media(max-width:1050px){.access-shell{grid-template-columns:1fr}.access-hero{min-height:660px}.access-copy{margin:70px 0}.access-panel{min-height:720px}}@media(max-width:720px){.access-hero{min-height:auto;padding:26px 20px 42px}.access-brand{margin-top:26px}.access-copy{margin:65px 0 38px}.access-copy h1{font-size:3rem}.access-benefits{grid-template-columns:1fr}.access-mini-card{width:100%}.access-panel{min-height:auto;padding:24px 16px 40px}.access-card{padding:28px 22px}.mode-actions{flex-direction:column;align-items:flex-start}}
-      `}</style>
-    </main>
-  )
-}
+export default function AccessPage(){return <main className="access-shell"><section className="access-hero"><div className="access-orb access-orb-one"/><div className="access-orb access-orb-two"/><Link href="/" className="access-back"><ArrowLeft size={17}/> Volver a la presentación</Link><div className="access-brand"><span><School size={26}/></span><div><strong>YOYOLETRASAI</strong><small>Ecosistema educativo nacional</small></div></div><div className="access-copy"><span className="access-kicker"><Sparkles size={16}/> Tecnología al servicio de cada trayectoria</span><h1>Aprendizaje, inclusión y gestión escolar en un solo lugar.</h1><p>Una experiencia segura para docentes, equipos PIE, UTP, dirección, estudiantes y familias.</p><div className="access-benefits"><div><CheckCircle2/><span><strong>Seguimiento con evidencia</strong><small>Progreso real por objetivos de aprendizaje.</small></span></div><div><CheckCircle2/><span><strong>Inclusión integrada</strong><small>PIE, DUA y adecuaciones dentro del flujo pedagógico.</small></span></div><div><CheckCircle2/><span><strong>Datos protegidos</strong><small>Aislamiento institucional y acceso por responsabilidades.</small></span></div></div></div><div className="access-mini-card"><ShieldCheck/><div><strong>Entorno institucional seguro</strong><small>Supabase · RLS · sesiones protegidas</small></div></div></section><Suspense fallback={<section className="access-panel"><div className="access-card">Cargando acceso seguro…</div></section>}><AccessForm/></Suspense><style jsx global>{`
+*{box-sizing:border-box}.access-shell{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(430px,.9fr);background:#f4f6fb;color:#172033;font-family:Arial,Helvetica,sans-serif}.access-hero{position:relative;overflow:hidden;display:flex;flex-direction:column;padding:clamp(28px,5vw,72px);background:radial-gradient(circle at 18% 15%,#7658ef55,transparent 26%),radial-gradient(circle at 86% 75%,#22cfb944,transparent 28%),linear-gradient(145deg,#080d1d,#131c3c 60%,#0a1928);color:white}.access-hero:after{content:'';position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 90%)}.access-orb{position:absolute;border-radius:999px;filter:blur(70px);pointer-events:none}.access-orb-one{width:280px;height:280px;background:#7658ef55;left:-90px;top:10%}.access-orb-two{width:300px;height:300px;background:#1fc8ae44;right:-110px;bottom:4%}.access-back,.access-brand,.access-copy,.access-mini-card{position:relative;z-index:2}.access-back{display:inline-flex;align-items:center;gap:7px;width:max-content;color:#c9d2e4;text-decoration:none;font-size:.82rem;font-weight:800}.access-brand{display:flex;align-items:center;gap:12px;margin-top:38px}.access-brand>span{display:grid;place-items:center;width:48px;height:48px;border-radius:16px;background:linear-gradient(145deg,#8463f5,#5578f5);box-shadow:0 16px 36px #4d44cb55}.access-brand div{display:grid;gap:2px}.access-brand strong{font-size:.98rem;letter-spacing:.06em}.access-brand small{font-size:.7rem;color:#9eabc0}.access-copy{max-width:760px;margin:auto 0}.access-kicker,.access-eyebrow{display:inline-flex;align-items:center;gap:7px;width:max-content;font-size:.74rem;font-weight:900;letter-spacing:.05em}.access-kicker{padding:8px 11px;border-radius:999px;background:#ffffff0e;border:1px solid #ffffff18;color:#dbe0ff}.access-copy h1{margin:22px 0 17px;font-size:clamp(3rem,5vw,6rem);line-height:.97;letter-spacing:-.06em}.access-copy>p{max-width:690px;margin:0;color:#aab6ca;font-size:1.08rem;line-height:1.7}.access-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:34px}.access-benefits>div{display:flex;gap:9px;padding:14px;border-radius:16px;background:#ffffff0b;border:1px solid #ffffff12}.access-benefits svg{flex:none;color:#61dfbd}.access-benefits span{display:grid;gap:3px}.access-benefits strong{font-size:.78rem}.access-benefits small{color:#9eabc0;font-size:.67rem;line-height:1.4}.access-mini-card{display:flex;align-items:center;gap:11px;width:max-content;padding:13px 15px;border-radius:16px;background:#ffffff10;border:1px solid #ffffff17}.access-mini-card svg{color:#61dfbd}.access-mini-card div{display:grid;gap:2px}.access-mini-card strong{font-size:.76rem}.access-mini-card small{color:#9eabc0;font-size:.65rem}.access-panel{display:grid;place-items:center;padding:clamp(24px,5vw,64px);background:radial-gradient(circle at 80% 10%,#7658ef10,transparent 25%),#f5f7fb}.access-card{width:min(500px,100%);padding:clamp(28px,4vw,44px);border-radius:30px;background:#fff;border:1px solid #e3e7ef;box-shadow:0 36px 90px #1a25421c}.access-heading{display:grid;gap:10px}.access-eyebrow{color:#6b58df}.access-heading h2{margin:0;font-size:2.15rem;letter-spacing:-.04em}.access-heading p{margin:0;color:#6b7485;line-height:1.6}.feedback{display:flex;align-items:flex-start;gap:8px;padding:13px 14px;border-radius:14px;background:#eef2ff;color:#3349a5;font-weight:750;margin-top:20px}.access-card form{display:grid;gap:18px;margin-top:26px}.access-card label{display:grid;gap:8px;font-weight:850;font-size:.82rem;color:#2b3448}.access-card input{width:100%;height:53px;border:1px solid #d9deea;border-radius:15px;padding:0 15px;background:#fbfcfe;color:#172033;font:inherit;outline:none;transition:.2s}.access-card input:focus{border-color:#6557df;box-shadow:0 0 0 4px #6557df18;background:#fff}.password-field{position:relative}.password-field input{padding-right:48px}.password-field button{position:absolute;top:50%;right:9px;transform:translateY(-50%);display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:#657085;cursor:pointer}.submit-button{height:55px;border:0;border-radius:16px;background:linear-gradient(135deg,#7658ef,#5578f5 65%,#25c8b2);color:white;font-weight:900;font-size:.96rem;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 16px 34px #5d55dd3a}.submit-button:disabled{opacity:.62;cursor:wait}.access-divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:#9aa3b2;font-size:.72rem;font-weight:800}.access-divider:before,.access-divider:after{content:'';height:1px;flex:1;background:#e6e9ef}.first-access-box{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:14px;border:1px solid #dfe4ff;background:#f7f8ff;border-radius:16px;color:#35315e}.first-access-box>svg{color:#6757df}.first-access-box div{display:grid;gap:3px}.first-access-box strong{font-size:.82rem}.first-access-box span{font-size:.72rem;color:#6d7484;line-height:1.45}.first-access-box button{grid-column:1/-1;height:42px;border:1px solid #6b58df;border-radius:12px;background:white;color:#5b50c8;font-weight:900;cursor:pointer}.mode-actions{display:flex;justify-content:space-between;gap:14px;margin-top:18px}.mode-actions button{border:0;background:none;color:#5b50c8;font-weight:850;cursor:pointer;padding:4px 0;font-size:.8rem}.access-security{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:24px;padding-top:20px;border-top:1px solid #eceef3;color:#7b8494;font-size:.72rem}@media(max-width:1050px){.access-shell{grid-template-columns:1fr}.access-hero{min-height:660px}.access-copy{margin:70px 0}.access-panel{min-height:720px}}@media(max-width:720px){.access-hero{min-height:auto;padding:26px 20px 42px}.access-brand{margin-top:26px}.access-copy{margin:65px 0 38px}.access-copy h1{font-size:3rem}.access-benefits{grid-template-columns:1fr}.access-mini-card{width:100%}.access-panel{min-height:auto;padding:24px 16px 40px}.access-card{padding:28px 22px}.mode-actions{flex-direction:column;align-items:flex-start}}
+`}</style></main>}
