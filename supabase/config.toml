@@ -14,10 +14,13 @@ major_version = 17
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
+site_url = "https://yoyoletrasai.vercel.app"
 additional_redirect_urls = [
-  "http://localhost:3000/auth/callback",
-  "http://127.0.0.1:3000/auth/callback"
+  "https://yoyoletrasai.vercel.app/**",
+  "https://yoyoletrasai-*-elbarosalesc-pngs-projects.vercel.app/**",
+  "https://yoyoletrasai-educa.espacio-de-t-1244.chatgpt.site/**",
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**"
 ]
 jwt_expiry = 3600
 enable_signup = true
