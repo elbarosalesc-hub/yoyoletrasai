@@ -4,13 +4,13 @@ import {useMemo,useState} from 'react'
 import ThreeFair from './ThreeFair'
 
 type Props={reducedMotion?:boolean;highContrast?:boolean}
-type Item={id:string;label:string;price:number;left:string;top:string;width:string;height:string}
+type Item={id:string;label:string;price:number}
 
 const items:Item[]=[
- {id:'jugo',label:'Jugo natural',price:800,left:'9%',top:'48%',width:'20%',height:'24%'},
- {id:'brocheta',label:'Brocheta de fruta',price:1200,left:'71%',top:'48%',width:'20%',height:'24%'},
- {id:'libro',label:'Libro usado',price:2500,left:'9%',top:'69%',width:'20%',height:'21%'},
- {id:'lapiz',label:'Set de lápices',price:500,left:'71%',top:'69%',width:'20%',height:'21%'}
+ {id:'jugo',label:'Jugo natural',price:800},
+ {id:'brocheta',label:'Brocheta de fruta',price:1200},
+ {id:'libro',label:'Libro usado',price:2500},
+ {id:'lapiz',label:'Set de lápices',price:500}
 ]
 
 const levels=[
@@ -33,10 +33,9 @@ export default function FeriaMatematica3D({reducedMotion=false,highContrast=fals
   <div className="game-premium-head"><div><span className="eyebrow">WebGL 3D · Matemática · 3°–6° básico</span><h2>Feria matemática</h2><p>Compra, combina precios, calcula vuelto y toma decisiones dentro de una feria escolar 3D.</p></div><div className="game-actions"><button className="btn btn-soft" onClick={reset}>Reiniciar</button></div></div>
   <div className="game-layout premium-game-grid">
    <section className="immersive-stage premium-3d-card"><div className="game-hud"><span>{current.name}</span><div className="hud-progress"><i style={{width:`${Math.min(100,Math.round(level/levels.length*100+33))}%`}}/></div><b>${total.toLocaleString('es-CL')}</b></div>
-    <div className="three-stage premium-webgl-scene" role="application" aria-label="Feria matemática tridimensional con alternativa accesible"><ThreeFair reducedMotion={reducedMotion} highContrast={highContrast} onReady={setReady}/><div className="scene-guide-label"><strong>Feria escolar</strong><span>{ready?'Escena 3D activa. Selecciona productos.':'Cargando escena accesible…'}</span></div><div className="hotspot-layer">{items.map(item=><button key={item.id} type="button" className={'svg-hotspot '+(cart.includes(item.id)?'found':'')} style={{left:item.left,top:item.top,width:item.width,height:item.height}} onClick={()=>toggle(item.id)} aria-pressed={cart.includes(item.id)} aria-label={`${item.label}, ${item.price} pesos`}><span>{cart.includes(item.id)?'✓ ':''}{item.label}<small>${item.price.toLocaleString('es-CL')}</small></span></button>)}</div></div>
-    <div className="accessible-object-list" aria-label="Productos disponibles">{items.map((item,index)=><button key={item.id} onClick={()=>toggle(item.id)} aria-pressed={cart.includes(item.id)}><span>{index+1}</span>{item.label} · ${item.price.toLocaleString('es-CL')}{cart.includes(item.id)?' seleccionado':''}</button>)}</div>
+    <div className="three-stage premium-webgl-scene" role="application" aria-label="Feria matemática tridimensional con alternativa accesible"><ThreeFair reducedMotion={reducedMotion} highContrast={highContrast} selected={cart} onReady={setReady} onSelect={toggle}/><div className="scene-guide-label"><strong>Feria escolar</strong><span>{ready?'Toca directamente un puesto para agregar o quitar su producto.':'Cargando experiencia accesible…'}</span></div><div className="scene-discovery" aria-hidden="true"><span>{cart.length} seleccionados</span>{items.map(item=><i key={item.id} className={cart.includes(item.id)?'found':''}/>)}</div><div className="accessible-object-list" aria-label="Productos disponibles">{items.map((item,index)=><button key={item.id} onClick={()=>toggle(item.id)} aria-pressed={cart.includes(item.id)}><span>{index+1}</span>{item.label} · ${item.price.toLocaleString('es-CL')}{cart.includes(item.id)?' seleccionado':''}</button>)}</div></div>
    </section>
-   <aside className="panel challenge-panel"><span className="eyebrow">Nivel {level+1} de {levels.length}</span><h2>{current.goal}</h2><div className="metric-grid"><div><strong>${current.budget.toLocaleString('es-CL')}</strong><span>presupuesto</span></div><div><strong>${total.toLocaleString('es-CL')}</strong><span>total</span></div><div><strong>${remaining.toLocaleString('es-CL')}</strong><span>saldo</span></div><div><strong>{attempts}</strong><span>intentos</span></div></div><button className="btn btn-primary next-level" onClick={check}>Comprobar compra</button><button className="btn btn-coral next-level" disabled={!solved} onClick={next}>{level===levels.length-1?'Finalizar misión':'Siguiente desafío'}</button><div className="feedback-box" role="status" aria-live="polite">{message}</div><div className="accessibility-summary"><span>DUA:</span><span>escena + lista textual, teclado, alto contraste, movimiento reducido y cálculo visible.</span></div></aside>
+   <aside className="panel challenge-panel"><span className="eyebrow">Nivel {level+1} de {levels.length}</span><h2>{current.goal}</h2><div className="metric-grid"><div><strong>${current.budget.toLocaleString('es-CL')}</strong><span>presupuesto</span></div><div><strong>${total.toLocaleString('es-CL')}</strong><span>total</span></div><div><strong>${remaining.toLocaleString('es-CL')}</strong><span>saldo</span></div><div><strong>{attempts}</strong><span>intentos</span></div></div><button className="btn btn-primary next-level" onClick={check}>Comprobar compra</button><button className="btn btn-coral next-level" disabled={!solved} onClick={next}>{level===levels.length-1?'Finalizar misión':'Siguiente desafío'}</button><div className="feedback-box" role="status" aria-live="polite">{message}</div><div className="accessibility-summary"><span>DUA:</span><span>interacción 3D real + lista textual, teclado, alto contraste, movimiento reducido y cálculo visible.</span></div></aside>
   </div>
  </section>
 }
