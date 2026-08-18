@@ -1,0 +1,85 @@
+name: Preview screenshot base
+
+on:
+  push:
+    branches:
+      - fix/screenshot-base-2026-08-17
+    paths:
+      - .github/workflows/preview-screenshot-base.yml
+      - apps/web/app/reference-base.css
+      - apps/web/app/referencia-base/**
+      - apps/web/public/yoyo-hero-preserved.webp
+
+permissions:
+  contents: read
+
+jobs:
+  validate-reference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout protected screenshot branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Typecheck
+        run: npm run typecheck -- --pretty false
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Start application
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run start > /tmp/yoyo-reference-server.log 2>&1 &
+          echo $! > /tmp/yoyo-reference-server.pid
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:3000/referencia-base > /tmp/reference.html; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/yoyo-reference-server.log
+          exit 1
+
+      - name: Validate protected reference content
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -qi 'Lo importante, antes que lo urgente' /tmp/reference.html
+          grep -qi 'Centro de control' /tmp/reference.html
+          grep -qi 'IA y herramientas' /tmp/reference.html
+          grep -qi 'Propietaria' /tmp/reference.html
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund @playwright/test@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Capture mobile reference evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yoyo-reference
+          npx playwright screenshot --device="Pixel 7" http://127.0.0.1:3000/referencia-base /tmp/yoyo-reference/reference-base-mobile.png
+          echo "Base visual compilada, servida y capturada en viewport móvil real." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload mobile evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: referencia-base-movil
+          path: /tmp/yoyo-reference/reference-base-mobile.png
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Show server logs on failure
+        if: failure()
+        run: cat /tmp/yoyo-reference-server.log || true
