@@ -1,0 +1,48 @@
+name: Cloudflare readiness audit
+
+on:
+  push:
+    branches:
+      - migration/cloudflare-readiness
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install current dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Typecheck current application
+        run: npm run typecheck -- --pretty false
+
+      - name: Build current Next.js application
+        run: npm run build
+
+      - name: Check Next.js 16 compatibility with vinext
+        working-directory: apps/web
+        run: |
+          set -o pipefail
+          npx --yes vinext@latest check . 2>&1 | tee ../../vinext-check.txt
+
+      - name: Upload compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-vinext-readiness
+          path: vinext-check.txt
+          if-no-files-found: warn
+          retention-days: 7
