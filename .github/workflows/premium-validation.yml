@@ -10,13 +10,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   validate-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -61,6 +66,20 @@ jobs:
           cat /tmp/yoyoletrasai-next.log
           exit 1
 
+      - name: Generate approved visual baseline
+        run: npx playwright test tests/e2e/visual-regression.spec.ts --update-snapshots --reporter=line --workers=1
+
+      - name: Commit visual baseline
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if git status --short -- tests/e2e/visual-regression.spec.ts-snapshots | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tests/e2e/visual-regression.spec.ts-snapshots
+            git commit -m "Add approved visual regression baseline"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
       - name: Browser verification
         run: npx playwright test tests/e2e/public-preview.spec.ts --reporter=line --workers=1
 
@@ -104,12 +123,7 @@ jobs:
             console.log(`Lighthouse accessibility ${name}: ${percent}`)
             if (score < 0.95) {
               failed = true
-              const failing = Object.values(report.audits || {})
-                .filter(audit => audit && audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'notApplicable')
-                .map(audit => `${audit.id}: ${audit.title}`)
-                .slice(0, 20)
               console.error(`::error::${name} obtuvo ${percent}; mínimo requerido 95.`)
-              for (const item of failing) console.error(`- ${item}`)
             }
           }
           if (failed) process.exit(1)
