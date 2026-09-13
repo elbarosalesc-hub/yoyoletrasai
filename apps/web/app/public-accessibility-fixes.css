@@ -18,14 +18,8 @@ main[class*="presentacion-module"][class*="__page"] [class*="__footer"] > p {
   color: #566176;
 }
 
-.access-divider {
-  color: #687385;
-}
-
-.first-access-box span {
-  color: #566176;
-}
-
-.access-security {
-  color: #596477;
+.access-shell .access-divider,
+.access-shell .first-access-box span,
+.access-shell .access-security {
+  color: #4f5a6f !important;
 }
