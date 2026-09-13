@@ -1,0 +1,38 @@
+name: Evolución YOYO programada
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yoyo-evolution-schedule
+  cancel-in-progress: false
+
+jobs:
+  trigger-evolution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validar configuración
+        env:
+          YOYO_PRODUCTION_URL: ${{ secrets.YOYO_PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          test -n "$YOYO_PRODUCTION_URL"
+          test -n "$CRON_SECRET"
+
+      - name: Ejecutar auditoría gobernada
+        env:
+          YOYO_PRODUCTION_URL: ${{ secrets.YOYO_PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          BASE_URL="${YOYO_PRODUCTION_URL%/}"
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --retry-delay 5 \
+            --max-time 300 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE_URL/api/cron/evolution"
