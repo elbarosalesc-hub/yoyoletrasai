@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
 
+      - name: Cloudflare vinext compatibility check
+        working-directory: apps/web
+        env:
+          CI: '1'
+        run: npx --yes vinext@latest check
+
       - name: Typecheck
         run: npm run typecheck -- --pretty false
 
