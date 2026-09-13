@@ -1,0 +1,25 @@
+/* Public surfaces: targeted WCAG AA contrast corrections found by automated Axe QA. */
+main[class*="presentacion-module"][class*="__page"] [class*="__headerTools"] > span {
+  background: #5742c7;
+}
+
+main[class*="presentacion-module"][class*="__page"] [class*="__signalStrip"] span,
+main[class*="presentacion-module"][class*="__page"] [class*="__sectionIntro"] > p,
+main[class*="presentacion-module"][class*="__page"] [class*="__experienceList"] small {
+  color: #566176;
+}
+
+main[class*="presentacion-module"][class*="__page"] [class*="__studentAvatar"] {
+  background: #16786d;
+}
+
+main[class*="presentacion-module"][class*="__page"] [class*="__footer"] [class*="__brand"] small,
+main[class*="presentacion-module"][class*="__page"] [class*="__footer"] > p {
+  color: #566176;
+}
+
+.access-shell .access-divider,
+.access-shell .first-access-box span,
+.access-shell .access-security {
+  color: #4f5a6f !important;
+}

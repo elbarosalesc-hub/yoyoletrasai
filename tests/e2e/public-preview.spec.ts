@@ -1,4 +1,5 @@
 import { mkdir } from 'node:fs/promises'
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 const baseUrl = 'http://127.0.0.1:3000'
@@ -65,6 +66,23 @@ async function expectStructuralAccessibility(page: Page) {
   expect(audit.landmarkCount).toBeGreaterThanOrEqual(1)
 }
 
+async function expectNoSeriousAxeViolations(page: Page) {
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+
+  const blocking = results.violations
+    .filter((violation) => violation.impact === 'critical' || violation.impact === 'serious')
+    .map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      help: violation.help,
+      nodes: violation.nodes.map((node) => node.target),
+    }))
+
+  expect(blocking).toEqual([])
+}
+
 async function expectKeyboardEntry(page: Page) {
   await page.keyboard.press('Tab')
   const active = await page.evaluate(() => {
@@ -84,6 +102,7 @@ async function runPublicQualityGate(page: Page) {
   await expectNoHorizontalOverflow(page)
   await expectBasicAccessibility(page)
   await expectStructuralAccessibility(page)
+  await expectNoSeriousAxeViolations(page)
   await expectKeyboardEntry(page)
 }
 
