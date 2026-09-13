@@ -7,6 +7,11 @@ on:
         description: "Escribe DEPLOY para confirmar publicación en producción"
         required: true
         type: string
+  workflow_run:
+    workflows:
+      - Production preflight
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -17,7 +22,11 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ inputs.confirm_production == 'DEPLOY' }}
+    if: >-
+      ${{
+        (github.event_name == 'workflow_dispatch' && inputs.confirm_production == 'DEPLOY') ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -182,6 +191,6 @@ jobs:
           echo "- Commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "- Next.js build: validado" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cloudflare Worker build: validado" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Publicación: completada por workflow manual protegido" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Publicación: completada tras preflight protegido o confirmación manual" >> "$GITHUB_STEP_SUMMARY"
           echo "- Health check: aprobado" >> "$GITHUB_STEP_SUMMARY"
           echo "- URL pública: ${YOYO_DEPLOYED_URL}" >> "$GITHUB_STEP_SUMMARY"
