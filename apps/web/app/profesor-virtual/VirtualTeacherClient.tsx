@@ -4,13 +4,17 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight, BarChart3, BookOpen, Bot, BrainCircuit, CheckCircle2, ClipboardCheck, Copy,
-  FileText, HeartHandshake, History, MessageSquareText, Save, Send, Sparkles, WandSparkles,
+  FileText, GraduationCap, HeartHandshake, History, MessageSquareText, Save, Send, Sparkles, UserRound, WandSparkles,
 } from 'lucide-react'
 
 type TeacherMode='planificar'|'adaptar'|'evaluar'|'analizar'|'comunicar'
 type VirtualTeacherResult={title:string;summary:string;sections:Array<{title:string;items:string[]}>;pedagogicalChecks?:string[];nextSteps?:string[]}
 type HistoryItem=VirtualTeacherResult&{id:string;mode:TeacherMode;generatedAt:string;prompt:string;level:string;subject:string}
 type Preferences={defaultLevel?:string;defaultSubject?:string;defaultSupportProfile?:string;preferredDuration?:string;virtualTeacherTone?:string;virtualTeacherDepth?:string}
+type Course={id:string;name:string;level:string;academicYear:number}
+type Student={id:string;displayName:string}
+type Objective={id:string;subject:string;code:string;title:string;description:string}
+type ContextResponse={courses?:Course[];selectedCourse?:Course;students?:Student[];objectives?:Objective[];metrics?:{studentCount:number;evidenceCount:number;achievement:{achieved:number;developing:number;initial:number;not_observed:number}};studentContext?:{studentId:string;support?:Record<string,string>|null;recentEvidence?:Array<Record<string,string>>};error?:string}
 
 const modes:Array<{id:TeacherMode;label:string;description:string;icon:typeof Bot}>=[
  {id:'planificar',label:'Planificar',description:'Clases y secuencias',icon:BookOpen},
@@ -22,7 +26,7 @@ const modes:Array<{id:TeacherMode;label:string;description:string;icon:typeof Bo
 
 const suggestions:Record<TeacherMode,string[]>={
  planificar:['Planifica una clase con inicio, modelado, práctica guiada, aplicación y cierre.','Crea una secuencia de tres clases con progresión cognitiva y evidencia por sesión.'],
- adaptar:['Adapta esta actividad manteniendo el objetivo y aplicando DUA, apoyos PIE y retiro progresivo de ayudas.','Propón apoyos diferenciados para TDAH, TEA, DIL y DEA sin bajar la exigencia central.'],
+ adaptar:['Adapta esta actividad manteniendo el objetivo y aplicando DUA, apoyos PIE y retiro progresivo de ayudas.','Propón apoyos diferenciados sin bajar la exigencia central.'],
  evaluar:['Diseña una evaluación diversificada con puntajes, criterios, pauta y versión con apoyos.','Crea evaluación formativa breve con retroalimentación inmediata y criterio de siguiente paso.'],
  analizar:['Analiza resultados por nivel de logro, tipo de error y apoyo requerido; propone decisiones.','Diseña un plan de refuerzo con agrupamientos flexibles y nueva evidencia de seguimiento.'],
  comunicar:['Redacta una comunicación positiva, concreta y profesional para la familia.','Organiza antecedentes, acuerdos, responsables y seguimiento de una entrevista.'],
@@ -45,6 +49,14 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
  const[history,setHistory]=useState<HistoryItem[]>([])
  const[status,setStatus]=useState('Listo para trabajar contigo')
  const[loading,setLoading]=useState(false)
+ const[courses,setCourses]=useState<Course[]>([])
+ const[students,setStudents]=useState<Student[]>([])
+ const[objectives,setObjectives]=useState<Objective[]>([])
+ const[courseId,setCourseId]=useState('')
+ const[studentId,setStudentId]=useState('')
+ const[objectiveId,setObjectiveId]=useState('')
+ const[contextMetrics,setContextMetrics]=useState<ContextResponse['metrics']|null>(null)
+ const[contextLoading,setContextLoading]=useState(false)
  const selectedMode=useMemo(()=>modes.find(item=>item.id===mode)??modes[0],[mode])
 
  useEffect(()=>{
@@ -57,20 +69,52 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
    if(prefs.virtualTeacherTone)setTone(prefs.virtualTeacherTone)
    if(prefs.virtualTeacherDepth)setDepth(prefs.virtualTeacherDepth)
   }).catch(()=>null)
+  fetch('/api/profesor-virtual/context',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then((data:ContextResponse|null)=>{if(data?.courses)setCourses(data.courses)}).catch(()=>null)
   try{const stored=localStorage.getItem('yoyo-virtual-teacher-history');if(stored)setHistory(JSON.parse(stored) as HistoryItem[])}catch{}
  },[])
 
+ useEffect(()=>{
+  if(!courseId){setStudents([]);setObjectives([]);setStudentId('');setObjectiveId('');setContextMetrics(null);return}
+  setContextLoading(true)
+  fetch(`/api/profesor-virtual/context?courseId=${encodeURIComponent(courseId)}`,{cache:'no-store'}).then(async response=>response.json()).then((data:ContextResponse)=>{
+   if(data.error)throw new Error(data.error)
+   setStudents(data.students||[]);setObjectives(data.objectives||[]);setContextMetrics(data.metrics||null);setStudentId('');setObjectiveId('')
+   if(data.selectedCourse?.level)setLevel(data.selectedCourse.level)
+   setStatus('Contexto del curso cargado')
+  }).catch(()=>setStatus('No fue posible cargar el contexto del curso.')).finally(()=>setContextLoading(false))
+ },[courseId])
+
+ useEffect(()=>{
+  if(!courseId||!studentId)return
+  setContextLoading(true)
+  fetch(`/api/profesor-virtual/context?courseId=${encodeURIComponent(courseId)}&studentId=${encodeURIComponent(studentId)}`,{cache:'no-store'}).then(async response=>response.json()).then((data:ContextResponse)=>{
+   if(data.error)throw new Error(data.error)
+   const support=data.studentContext?.support
+   if(support){
+    const pieces=[support.strengths&&`Fortalezas: ${support.strengths}`,support.barriers&&`Barreras: ${support.barriers}`,support.accessAccommodations&&`Apoyos de acceso: ${support.accessAccommodations}`,support.objectiveAccommodations&&`Ajustes de objetivo: ${support.objectiveAccommodations}`].filter(Boolean)
+    if(pieces.length)setSupportProfile(pieces.join(' · '))
+   }
+   setStatus('Contexto individual cargado de forma protegida')
+  }).catch(()=>setStatus('No fue posible cargar el contexto individual.')).finally(()=>setContextLoading(false))
+ },[courseId,studentId])
+
+ function selectObjective(id:string){
+  setObjectiveId(id)
+  const selected=objectives.find(item=>item.id===id)
+  if(selected){setSubject(selected.subject);setObjective(`${selected.code} · ${selected.title}${selected.description?` — ${selected.description}`:''}`)}
+ }
+
  async function generate(){
   if(!prompt.trim()||loading)return
-  setLoading(true);setStatus('Profesor Virtual YOYO está razonando con tu contexto pedagógico...')
+  setLoading(true);setStatus(courseId?'Profesor Virtual YOYO está razonando con contexto institucional protegido...':'Profesor Virtual YOYO está razonando con tu contexto pedagógico...')
   try{
-   const response=await fetch('/api/profesor-virtual/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,level,subject,objective,supportProfile,duration,tone,depth})})
-   const data=await response.json() as {result?:VirtualTeacherResult;error?:string;fallback?:boolean;model?:string}
+   const response=await fetch('/api/profesor-virtual/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,level,subject,objective,supportProfile,duration,tone,depth,courseId,studentId,objectiveId})})
+   const data=await response.json() as {result?:VirtualTeacherResult;error?:string;fallback?:boolean;model?:string;contextUsed?:boolean}
    if(!response.ok||!data.result)throw new Error(data.error||'No fue posible generar la propuesta.')
    setResult(data.result)
    const item:HistoryItem={...data.result,id:crypto.randomUUID(),mode,generatedAt:new Date().toISOString(),prompt,level,subject}
    setHistory(current=>{const next=[item,...current].slice(0,12);localStorage.setItem('yoyo-virtual-teacher-history',JSON.stringify(next));return next})
-   setStatus(data.fallback?'Propuesta lista · modo de respaldo seguro activo':'Propuesta lista · YOYO IA activa')
+   setStatus(data.fallback?'Propuesta lista · modo de respaldo seguro activo':data.contextUsed?'Propuesta lista · YOYO IA + contexto institucional':'Propuesta lista · YOYO IA activa')
   }catch(error){setStatus(error instanceof Error?error.message:'No fue posible generar la propuesta.')}
   finally{setLoading(false)}
  }
@@ -91,17 +135,21 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
  }
 
  function saveBrief(){
-  localStorage.setItem('yoyo-virtual-teacher-brief',JSON.stringify({mode,prompt,level,subject,objective,supportProfile,duration,tone,depth,updatedAt:new Date().toISOString()}))
+  localStorage.setItem('yoyo-virtual-teacher-brief',JSON.stringify({mode,prompt,level,subject,objective,supportProfile,duration,tone,depth,courseId,studentId,objectiveId,updatedAt:new Date().toISOString()}))
   setStatus('Contexto pedagógico guardado en este dispositivo')
  }
 
  return <div className="virtual-teacher-workspace">
-  <section className="virtual-command-center"><div><span className="virtual-kicker"><Sparkles size={15}/> Profesor Virtual YOYO</span><h1>Copiloto pedagógico con IA real, contexto docente y control profesional.</h1><p>Planifica, adapta, evalúa, analiza y comunica con currículum chileno, DUA, PIE y decisiones pedagógicas accionables.</p></div><div className="virtual-context-card"><span><BrainCircuit size={20}/> Contexto activo</span><strong>{organization}</strong><small>{displayName} · Sesión institucional protegida</small></div></section>
+  <section className="virtual-command-center"><div><span className="virtual-kicker"><Sparkles size={15}/> Profesor Virtual YOYO</span><h1>Copiloto pedagógico con IA real y contexto institucional protegido.</h1><p>Planifica, adapta, evalúa, analiza y comunica usando cursos, OA, evidencias y apoyos registrados, sin exponer notas sensibles.</p></div><div className="virtual-context-card"><span><BrainCircuit size={20}/> Contexto activo</span><strong>{organization}</strong><small>{displayName} · Sesión institucional protegida</small></div></section>
 
   <section className="virtual-mode-grid" aria-label="Modos del profesor virtual">{modes.map(({id,label,description,icon:Icon})=><button key={id} className={mode===id?'active':''} onClick={()=>setMode(id)}><span><Icon size={19}/></span><div><strong>{label}</strong><small>{description}</small></div></button>)}</section>
 
   <div className="virtual-main-grid">
-   <aside className="virtual-brief-panel premium-card"><div className="virtual-panel-heading"><WandSparkles/><div><h2>Contexto pedagógico</h2><p>Se reutilizan tus preferencias del perfil.</p></div></div>
+   <aside className="virtual-brief-panel premium-card"><div className="virtual-panel-heading"><WandSparkles/><div><h2>Contexto pedagógico</h2><p>Combina tus preferencias con datos institucionales autorizados.</p></div></div>
+    <label><GraduationCap size={15}/> Curso<select value={courseId} onChange={e=>setCourseId(e.target.value)} disabled={contextLoading}><option value="">Sin curso específico</option>{courses.map(course=><option key={course.id} value={course.id}>{course.name} · {course.level} · {course.academicYear}</option>)}</select></label>
+    {courseId&&<label><UserRound size={15}/> Estudiante opcional<select value={studentId} onChange={e=>setStudentId(e.target.value)} disabled={contextLoading}><option value="">Trabajar con el curso completo</option>{students.map(student=><option key={student.id} value={student.id}>{student.displayName}</option>)}</select></label>}
+    {courseId&&objectives.length>0&&<label>OA / habilidad registrada<select value={objectiveId} onChange={e=>selectObjective(e.target.value)}><option value="">Elegir manualmente</option>{objectives.map(item=><option key={item.id} value={item.id}>{item.code} · {item.subject} · {item.title}</option>)}</select></label>}
+    {contextMetrics&&<div className="insight"><b>Contexto del curso</b><p>{contextMetrics.studentCount} estudiante(s) · {contextMetrics.evidenceCount} evidencias recientes</p><p>Logrado {contextMetrics.achievement.achieved} · En desarrollo {contextMetrics.achievement.developing} · Inicial {contextMetrics.achievement.initial}</p></div>}
     <label>Nivel<select value={level} onChange={e=>setLevel(e.target.value)}>{levels.map(item=><option key={item}>{item}</option>)}</select></label>
     <label>Asignatura<select value={subject} onChange={e=>setSubject(e.target.value)}>{subjects.map(item=><option key={item}>{item}</option>)}</select></label>
     <label>Objetivo / OA / habilidad<textarea rows={3} value={objective} onChange={e=>setObjective(e.target.value)} placeholder="Escribe el objetivo. Si no conoces el código OA, deja sólo la habilidad."/></label>
@@ -114,11 +162,11 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
    </aside>
 
    <main className="virtual-conversation-panel premium-card"><div className="virtual-panel-heading"><Bot/><div><h2>{selectedMode.label} con YOYO</h2><p>{selectedMode.description}</p></div></div>
-    <div className="virtual-prompt-box"><textarea rows={6} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Describe el objetivo, dificultad, estudiante, curso o recurso que necesitas..."/><div><small>{status}</small><button className="btn btn-primary" onClick={generate} disabled={loading||!prompt.trim()}>{loading?<Sparkles size={17}/>:<Send size={17}/>} {loading?'Generando...':'Generar con YOYO IA'}</button></div></div>
-    {!result?<div className="virtual-empty-state"><Bot size={40}/><h3>Describe tu necesidad pedagógica</h3><p>Profesor Virtual usará IA real cuando el gateway esté disponible y un modo de respaldo seguro si el proveedor falla.</p></div>:<article className="virtual-result-card"><header><div><span>{subject} · {level}</span><h2>{result.title}</h2><p>{result.summary}</p></div><button onClick={copyResult} aria-label="Copiar propuesta"><Copy size={18}/></button></header><div className="virtual-result-sections">{result.sections.map(section=><section key={section.title}><h3>{section.title}</h3>{section.items.map(item=><div key={item}><CheckCircle2 size={16}/><span>{item}</span></div>)}</section>)}</div>{result.pedagogicalChecks?.length?<section className="insight"><b>Control pedagógico</b>{result.pedagogicalChecks.map(item=><p key={item}>✓ {item}</p>)}</section>:null}<div className="virtual-result-actions"><button onClick={sendToCreator}>Convertir en recurso editable <ArrowRight size={16}/></button><Link href={`/evaluaciones?tema=${encodeURIComponent(prompt)}`}>Crear evaluación <ArrowRight size={16}/></Link><Link href={`/biblioteca?q=${encodeURIComponent(prompt)}`}>Buscar recursos <ArrowRight size={16}/></Link><Link href="/seguimiento/evidencias">Registrar evidencia <ArrowRight size={16}/></Link></div></article>}
+    <div className="virtual-prompt-box"><textarea rows={6} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Describe el objetivo, dificultad, curso o recurso que necesitas..."/><div><small>{status}</small><button className="btn btn-primary" onClick={generate} disabled={loading||!prompt.trim()}>{loading?<Sparkles size={17}/>:<Send size={17}/>} {loading?'Generando...':'Generar con YOYO IA'}</button></div></div>
+    {!result?<div className="virtual-empty-state"><Bot size={40}/><h3>Describe tu necesidad pedagógica</h3><p>Selecciona un curso para que YOYO incorpore contexto académico real. Puedes trabajar con el curso completo o, cuando tengas permisos PIE, con un estudiante seleccionado.</p></div>:<article className="virtual-result-card"><header><div><span>{subject} · {level}</span><h2>{result.title}</h2><p>{result.summary}</p></div><button onClick={copyResult} aria-label="Copiar propuesta"><Copy size={18}/></button></header><div className="virtual-result-sections">{result.sections.map(section=><section key={section.title}><h3>{section.title}</h3>{section.items.map(item=><div key={item}><CheckCircle2 size={16}/><span>{item}</span></div>)}</section>)}</div>{result.pedagogicalChecks?.length?<section className="insight"><b>Control pedagógico</b>{result.pedagogicalChecks.map(item=><p key={item}>✓ {item}</p>)}</section>:null}<div className="virtual-result-actions"><button onClick={sendToCreator}>Convertir en recurso editable <ArrowRight size={16}/></button><Link href={`/evaluaciones?tema=${encodeURIComponent(prompt)}`}>Crear evaluación <ArrowRight size={16}/></Link><Link href={`/biblioteca?q=${encodeURIComponent(prompt)}`}>Buscar recursos <ArrowRight size={16}/></Link><Link href="/seguimiento/evidencias">Registrar evidencia <ArrowRight size={16}/></Link></div></article>}
    </main>
 
-   <aside className="virtual-history-panel premium-card"><div className="virtual-panel-heading"><History/><div><h2>Historial</h2><p>Hasta 12 propuestas recientes en este dispositivo.</p></div></div>{history.length?<div className="virtual-history-list">{history.map(item=><button key={item.id} onClick={()=>{setResult(item);setMode(item.mode);setPrompt(item.prompt);setLevel(item.level);setSubject(item.subject)}}><span><FileText size={17}/></span><div><strong>{item.title}</strong><small>{new Date(item.generatedAt).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></div></button>)}</div>:<div className="virtual-history-empty">Tus propuestas recientes aparecerán aquí.</div>}<div className="virtual-control-note"><CheckCircle2/><div><strong>Control docente permanente</strong><p>Ninguna propuesta modifica estudiantes, evidencias ni publicaciones automáticamente.</p></div></div></aside>
+   <aside className="virtual-history-panel premium-card"><div className="virtual-panel-heading"><History/><div><h2>Historial</h2><p>Hasta 12 propuestas recientes en este dispositivo.</p></div></div>{history.length?<div className="virtual-history-list">{history.map(item=><button key={item.id} onClick={()=>{setResult(item);setMode(item.mode);setPrompt(item.prompt);setLevel(item.level);setSubject(item.subject)}}><span><FileText size={17}/></span><div><strong>{item.title}</strong><small>{new Date(item.generatedAt).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></div></button>)}</div>:<div className="virtual-history-empty">Tus propuestas recientes aparecerán aquí.</div>}<div className="virtual-control-note"><CheckCircle2/><div><strong>Privacidad y control docente</strong><p>El modelo recibe contexto pedagógico anonimizado. No se envían nombres ni notas sensibles y ninguna propuesta modifica registros automáticamente.</p></div></div></aside>
   </div>
  </div>
 }
