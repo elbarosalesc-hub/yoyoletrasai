@@ -39,13 +39,13 @@ export default function ThreeStoryMuseum({activeRoom,collected,reducedMotion=fal
   ;(Object.entries(roomPositions) as Array<[RoomId,[number,number,number]]>).forEach(([id,pos])=>{
    const group=new THREE.Group();group.position.set(...pos);scene.add(group);roomGroups.set(id,group)
    const active=id===activeRoom,done=collected.includes(id),accent=roomColors[id]
-   const wall=new THREE.Mesh(new THREE.BoxGeometry(5.5,2.7,.25),new THREE.MeshStandardMaterial({color:highContrast?0x1b2940:0xf7f1e8,roughness:.92,emissive:active?accent:0x000000,emissiveIntensity:active?.08:0}));wall.position.z=pos[2]<0?.5:-.5;wall.castShadow=true;group.add(wall)
+   const wall=new THREE.Mesh(new THREE.BoxGeometry(5.5,2.7,.25),new THREE.MeshStandardMaterial({color:highContrast?0x1b2940:0xf7f1e8,roughness:.92,emissive:active?accent:0x000000,emissiveIntensity:active ? .08 : 0}));wall.position.z=pos[2]<0 ? .5 : -.5;wall.castShadow=true;group.add(wall)
    for(let frameIndex=0;frameIndex<3;frameIndex++){
-    const frame=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.15,.16),new THREE.MeshStandardMaterial({color:done?0xffffff:accent,roughness:.5,metalness:.08,emissive:active?accent:0x000000,emissiveIntensity:active?.2:0}));frame.position.set(-1.45+frameIndex*1.45,.35,pos[2]<0?.32:-.32);group.add(frame)
-    const art=new THREE.Mesh(new THREE.PlaneGeometry(.72,.78),new THREE.MeshStandardMaterial({color:done?0x9eeacb:0xf7dfaa,roughness:.75}));art.position.set(frame.position.x,.35,pos[2]<0?.42:-.42);art.rotation.y=pos[2]<0?0:Math.PI;group.add(art)
+    const frame=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.15,.16),new THREE.MeshStandardMaterial({color:done?0xffffff:accent,roughness:.5,metalness:.08,emissive:active?accent:0x000000,emissiveIntensity:active ? .2 : 0}));frame.position.set(-1.45+frameIndex*1.45,.35,pos[2]<0 ? .32 : -.32);group.add(frame)
+    const art=new THREE.Mesh(new THREE.PlaneGeometry(.72,.78),new THREE.MeshStandardMaterial({color:done?0x9eeacb:0xf7dfaa,roughness:.75}));art.position.set(frame.position.x,.35,pos[2]<0 ? .42 : -.42);art.rotation.y=pos[2]<0 ? 0 : Math.PI;group.add(art)
    }
    const pedestal=new THREE.Mesh(new THREE.CylinderGeometry(.46,.58,1,12),new THREE.MeshStandardMaterial({color:active?accent:highContrast?0x3b4a62:0xbba98f,roughness:.66}));pedestal.position.set(0,-.7,0);group.add(pedestal)
-   const evidence=new THREE.Mesh(new THREE.OctahedronGeometry(.32),new THREE.MeshStandardMaterial({color:done?0x59d8a9:0xffffff,emissive:done?0x2a9d8f:active?accent:0x000000,emissiveIntensity:done||active?.8:0,roughness:.35}));evidence.position.set(0,.05,0);group.add(evidence)
+   const evidence=new THREE.Mesh(new THREE.OctahedronGeometry(.32),new THREE.MeshStandardMaterial({color:done?0x59d8a9:0xffffff,emissive:done?0x2a9d8f:active?accent:0x000000,emissiveIntensity:done||active ? .8 : 0,roughness:.35}));evidence.position.set(0,.05,0);group.add(evidence)
   })
 
   const ribbonMaterial=new THREE.MeshStandardMaterial({color:highContrast?0xf8f2ff:0x734b32,roughness:.75})
