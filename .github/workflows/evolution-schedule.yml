@@ -2,6 +2,7 @@ name: Evolución YOYO programada
 
 on:
   schedule:
+    # Heartbeat diario; la API aplica internamente la cadencia real de 72 horas.
     - cron: '0 5 * * *'
   workflow_dispatch:
 
@@ -19,20 +20,60 @@ jobs:
     steps:
       - name: Validar configuración
         env:
-          YOYO_PRODUCTION_URL: ${{ secrets.YOYO_PRODUCTION_URL }}
+          YOYO_PRODUCTION_URL_VAR: ${{ vars.YOYO_PRODUCTION_URL }}
+          YOYO_PRODUCTION_URL_SECRET: ${{ secrets.YOYO_PRODUCTION_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
         run: |
+          set -euo pipefail
+          YOYO_PRODUCTION_URL="${YOYO_PRODUCTION_URL_VAR:-${YOYO_PRODUCTION_URL_SECRET:-}}"
           test -n "$YOYO_PRODUCTION_URL"
           test -n "$CRON_SECRET"
+          case "$YOYO_PRODUCTION_URL" in
+            https://*) ;;
+            *) echo "::error::YOYO_PRODUCTION_URL debe usar https://"; exit 1 ;;
+          esac
 
       - name: Ejecutar auditoría gobernada
         env:
-          YOYO_PRODUCTION_URL: ${{ secrets.YOYO_PRODUCTION_URL }}
+          YOYO_PRODUCTION_URL_VAR: ${{ vars.YOYO_PRODUCTION_URL }}
+          YOYO_PRODUCTION_URL_SECRET: ${{ secrets.YOYO_PRODUCTION_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        shell: bash
         run: |
+          set -euo pipefail
+          YOYO_PRODUCTION_URL="${YOYO_PRODUCTION_URL_VAR:-${YOYO_PRODUCTION_URL_SECRET:-}}"
           BASE_URL="${YOYO_PRODUCTION_URL%/}"
           curl --fail-with-body --silent --show-error \
             --retry 2 --retry-delay 5 \
             --max-time 300 \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$BASE_URL/api/cron/evolution"
+            "$BASE_URL/api/cron/evolution" > /tmp/yoyo-evolution.json
+
+          node <<'NODE'
+          const fs = require('node:fs')
+          const body = JSON.parse(fs.readFileSync('/tmp/yoyo-evolution.json','utf8'))
+          const failures = []
+          if (body.cadenceHours !== 72) failures.push(`cadenceHours esperado 72, recibido ${body.cadenceHours}`)
+          if (body.automaticPublishing !== false) failures.push('automaticPublishing debe permanecer en false')
+          if (body.humanReviewRequired !== true) failures.push('humanReviewRequired debe permanecer en true')
+          if (body.productionChangesApplied !== false) failures.push('productionChangesApplied debe permanecer en false')
+          if (body.governance !== 'audit-propose-and-draft-only') failures.push(`governance inesperado: ${body.governance}`)
+          if (!Array.isArray(body.results)) failures.push('results debe ser un arreglo auditable')
+          if (failures.length) {
+            for (const failure of failures) console.error(`::error::${failure}`)
+            process.exit(1)
+          }
+          console.log(`Gobernanza verificada: ${body.audited ?? 0} auditadas, ${body.skipped ?? 0} omitidas, ${body.failed ?? 0} fallidas, ${body.draftsGenerated ?? 0} borradores.`)
+          NODE
+
+      - name: Resumen de gobernanza
+        if: always()
+        shell: bash
+        run: |
+          echo "## YOYO · Evolución gobernada" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Heartbeat: diario" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cadencia real: 72 horas, aplicada por la API" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Publicación automática: bloqueada" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cambios directos en producción: bloqueados" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Revisión humana: obligatoria" >> "$GITHUB_STEP_SUMMARY"
