@@ -2,8 +2,8 @@
 import dynamic from 'next/dynamic'
 import {useEffect,useMemo,useState} from 'react'
 import {AppShell} from '@/components/AppShell'
-import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight,Droplets} from 'lucide-react'
-import {gameExperiences} from '@/lib/games/catalog'
+import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight,Droplets,ClipboardList} from 'lucide-react'
+import {gameExperiences,type GameExperience} from '@/lib/games/catalog'
 const Bosque3D=dynamic(()=>import('@/components/games/Bosque3D'),{ssr:false})
 const FeriaMatematica3D=dynamic(()=>import('@/components/games/FeriaMatematica3D'),{ssr:false})
 const MisionAgua3D=dynamic(()=>import('@/components/games/MisionAgua3D'),{ssr:false})
@@ -19,6 +19,7 @@ const levels=[
 function tone(ok=true){const Ctx=window.AudioContext||(window as typeof window&{webkitAudioContext?:typeof AudioContext}).webkitAudioContext;if(!Ctx)return;const ctx=new Ctx();const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type=ok?'sine':'triangle';osc.frequency.value=ok?660:220;gain.gain.value=.08;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.18)}
 function speak(text:string){if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(text))}}
 function subjectIcon(subject:string){if(subject==='Matemática')return Calculator;if(subject==='Ciencias')return FlaskConical;if(subject.includes('Historia'))return Map;if(subject==='Lenguaje')return BookOpen;return Gamepad2}
+function missionHref(game:GameExperience){if(!game.route)return'/juegos';return game.route.startsWith('#')?`/juegos${game.route}`:game.route}
 
 export default function Juegos(){
  const[running,setRunning]=useState(false),[sound,setSound]=useState(true),[reduced,setReduced]=useState(false),[contrast,setContrast]=useState(false)
@@ -39,6 +40,7 @@ export default function Juegos(){
  const next=()=>{if(!correct)return;if(level<levels.length-1){setLevel(v=>v+1);setAnswer(null);setFound([]);setFeedback('Nuevo nivel desbloqueado. La complejidad aumentó.')}else setFeedback('Misión completa. Lograste explorar, relacionar, inferir, justificar y transferir.')}
  const reset=()=>{setFound([]);setAnswer(null);setLevel(0);setAttempts(0);setFeedback('Misión reiniciada.')}
  const playableCount=gameExperiences.filter(game=>game.status==='playable').length
+ const prepareMission=(game:GameExperience)=>{if(game.status!=='playable')return;const draft={title:game.title,description:`${game.mission}\n\nHabilidad: ${game.skill}\nAsignatura: ${game.subject}\nNivel sugerido: ${game.levels}`,experienceType:'game',sourceHref:missionHref(game),supportProfile:`Accesibilidad disponible: ${game.accessibility.join(', ')}. Revisar y ajustar apoyos DUA/PIE antes de asignar.`,courseId:'',objectiveId:'',dueAt:'',updatedAt:new Date().toISOString(),source:'juegos-3d'};localStorage.setItem('yoyo-mission-draft',JSON.stringify(draft));window.location.href='/misiones?from=juegos-3d'}
  return <AppShell active="Juegos 3D">
   <section className="game-premium-head"><div><span className="eyebrow">Experiencias pedagógicas 3D · PIE + DUA</span><h1>Juegos que enseñan dentro de una misión</h1><p>Cada experiencia tiene una mecánica distinta, una meta pedagógica, decisiones, feedback, accesibilidad y progresión. No repetimos el mismo cuestionario cambiando el escenario.</p></div><div className="game-actions"><a className="btn btn-coral" href="#bosque-inferencias"><Play size={18}/> Bosque</a><a className="btn btn-soft" href="#feria-matematica"><Calculator size={18}/> Feria</a><a className="btn btn-soft" href="#mision-agua"><Droplets size={18}/> Misión Agua</a></div></section>
 
@@ -49,7 +51,7 @@ export default function Juegos(){
     <small>{game.world} · {game.subject}</small><h3>{game.title}</h3><p>{game.mission}</p>
     <div className="game-experience-meta"><span><b>Nivel</b>{game.levels}</span><span><b>Habilidad</b>{game.skill}</span></div>
     <div className="game-access-tags">{game.accessibility.map(item=><span key={item}>{item}</span>)}</div>
-    {game.status==='playable'&&game.route?<a href={game.route} className="game-card-action">Entrar a la misión <ArrowRight size={16}/></a>:<span className="game-card-action muted"><Lock size={15}/> Escena pendiente de construcción</span>}
+    {game.status==='playable'&&game.route?<div className="tool-row"><a href={game.route} className="game-card-action">Entrar a la misión <ArrowRight size={16}/></a><button className="game-card-action" onClick={()=>prepareMission(game)}><ClipboardList size={15}/> Asignar como Misión YOYO</button></div>:<span className="game-card-action muted"><Lock size={15}/> Escena pendiente de construcción</span>}
    </article>})}</div>
   </section>
 
