@@ -2,10 +2,11 @@
 import dynamic from 'next/dynamic'
 import {useMemo,useState} from 'react'
 import {AppShell} from '@/components/AppShell'
-import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight} from 'lucide-react'
+import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight,Droplets} from 'lucide-react'
 import {gameExperiences} from '@/lib/games/catalog'
 const Bosque3D=dynamic(()=>import('@/components/games/Bosque3D'),{ssr:false})
 const FeriaMatematica3D=dynamic(()=>import('@/components/games/FeriaMatematica3D'),{ssr:false})
+const MisionAgua3D=dynamic(()=>import('@/components/games/MisionAgua3D'),{ssr:false})
 
 const clues:Record<string,string>={mochila:'La mochila sigue cerrada. Sofía todavía no se ha preparado para entrar.',nota:'La nota dice: “Espera a la profesora antes de pasar”.',ave:'El ave permanece tranquila. No hay una amenaza visible en el entorno.',cabana:'La puerta está entreabierta y la cabaña se encuentra sin luz.'}
 const levels=[
@@ -30,8 +31,8 @@ export default function Juegos(){
  const next=()=>{if(!correct)return;if(level<levels.length-1){setLevel(v=>v+1);setAnswer(null);setFound([]);setFeedback('Nuevo nivel desbloqueado. La complejidad aumentó.')}else setFeedback('Misión completa. Lograste explorar, relacionar, inferir, justificar y transferir.')}
  const reset=()=>{setFound([]);setAnswer(null);setLevel(0);setAttempts(0);setFeedback('Misión reiniciada.')}
  const playableCount=gameExperiences.filter(game=>game.status==='playable').length
- return <AppShell active="Juegos inmersivos">
-  <section className="game-premium-head"><div><span className="eyebrow">Experiencias pedagógicas 3D · PIE + DUA</span><h1>Juegos que enseñan dentro de una misión</h1><p>No son cuestionarios con decoración: cada experiencia parte de un entorno, una meta, decisiones, feedback y progresión pedagógica.</p></div><div className="game-actions"><a className="btn btn-coral" href="#bosque-inferencias"><Play size={18}/> Jugar Bosque</a><a className="btn btn-soft" href="#feria-matematica"><Calculator size={18}/> Jugar Feria</a></div></section>
+ return <AppShell active="Juegos 3D">
+  <section className="game-premium-head"><div><span className="eyebrow">Experiencias pedagógicas 3D · PIE + DUA</span><h1>Juegos que enseñan dentro de una misión</h1><p>Cada experiencia tiene una mecánica distinta, una meta pedagógica, decisiones, feedback, accesibilidad y progresión. No repetimos el mismo cuestionario cambiando el escenario.</p></div><div className="game-actions"><a className="btn btn-coral" href="#bosque-inferencias"><Play size={18}/> Bosque</a><a className="btn btn-soft" href="#feria-matematica"><Calculator size={18}/> Feria</a><a className="btn btn-soft" href="#mision-agua"><Droplets size={18}/> Misión Agua</a></div></section>
 
   <section className="approved-panel" style={{marginBottom:24}}>
    <div className="approved-panel-heading"><div><span className="eyebrow">Catálogo 3D</span><h2>12 mundos pedagógicos</h2><p>Las experiencias sólo se marcan disponibles cuando existe una escena interactiva real con alternativa accesible.</p></div><span className="control-chip"><Gamepad2 size={16}/> {playableCount} jugables · {gameExperiences.length-playableCount} en desarrollo</span></div>
@@ -52,5 +53,6 @@ export default function Juegos(){
    <aside className="panel challenge-panel"><span className="eyebrow">{current.skill}</span><h2>{current.question}</h2><div className="answer-stack">{current.answers.map((a,i)=><button key={a} disabled={!unlocked} onClick={()=>choose(i)} className={'answer-card '+(answer===i?(i===current.correct?'correct':'wrong'):'')}>{String.fromCharCode(65+i)}. {a}</button>)}</div>{!unlocked&&<div className="locked-note"><Lock size={16}/> Encuentra {current.goal-found.length} pista(s) más.</div>}<button className="btn btn-primary next-level" disabled={!correct} onClick={next}>{level===levels.length-1?'Finalizar misión':'Ir al siguiente nivel'}</button><div className="teacher-live"><h3>Analítica docente</h3><div className="metric-grid"><div><strong>{attempts}</strong><span>intentos</span></div><div><strong>{accuracy}%</strong><span>precisión</span></div><div><strong>{sound?'Sí':'No'}</strong><span>narración</span></div><div><strong>{current.id}/5</strong><span>complejidad</span></div></div><div className="accessibility-summary"><Accessibility size={18}/><span>Alternativa textual, lector de pantalla, reducción de movimiento y alto contraste disponibles.</span></div><div className="difficulty-note"><Brain size={18}/><span>La dificultad progresa desde localizar hasta transferir el aprendizaje.</span></div></div></aside>
   </div>
   <FeriaMatematica3D reducedMotion={reduced} highContrast={contrast}/>
+  <MisionAgua3D reducedMotion={reduced} highContrast={contrast}/>
  </AppShell>
 }
