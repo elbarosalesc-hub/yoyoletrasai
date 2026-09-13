@@ -8,7 +8,7 @@ type Props={activeSector:Sector;completed:Sector[];reducedMotion?:boolean;highCo
 
 const colors:Record<Sector,number>={oxigeno:0x63c7ff,energia:0xffc857,suministros:0x62d394,equilibrio:0xb28dff}
 
-export default function ThreeSpaceBase({activeSector,completed,reducedMotion=false,highContrast=false,onReady}:Props){
+export function ThreeSpaceBase({activeSector,completed,reducedMotion=false,highContrast=false,onReady}:Props){
  const mountRef=useRef<HTMLDivElement>(null)
  const[fallback,setFallback]=useState(false)
  useEffect(()=>{
@@ -21,10 +21,10 @@ export default function ThreeSpaceBase({activeSector,completed,reducedMotion=fal
   renderer.domElement.setAttribute('aria-hidden','true');mount.appendChild(renderer.domElement)
   const background=highContrast?0x02050b:0x071426
   const scene=new THREE.Scene();scene.background=new THREE.Color(background)
-  const camera=new THREE.PerspectiveCamera(45,width/height,.1,100);camera.position.set(0,7.2,14.5);camera.lookAt(0,1,0)
+  const camera=new THREE.PerspectiveCamera(45,width/height,.1,100);camera.position.set(0,7.2,14.5);camera.lookAt(0,1.3,0)
   scene.add(new THREE.AmbientLight(0xffffff,.8));const key=new THREE.DirectionalLight(0xffffff,2);key.position.set(8,12,6);scene.add(key)
 
-  const stars=new THREE.BufferGeometry();const points=[] as number[]
+  const stars=new THREE.BufferGeometry();const points:number[]=[]
   for(let i=0;i<220;i++){points.push((Math.random()-.5)*50,(Math.random()-.5)*30,(Math.random()-.5)*40)}
   stars.setAttribute('position',new THREE.Float32BufferAttribute(points,3));scene.add(new THREE.Points(stars,new THREE.PointsMaterial({color:0xffffff,size:.05})))
 
@@ -35,7 +35,7 @@ export default function ThreeSpaceBase({activeSector,completed,reducedMotion=fal
   const sectors:Record<Sector,[number,number,number]>={oxigeno:[-4.4,.7,0],energia:[4.4,.7,0],suministros:[0,.7,4.2],equilibrio:[0,.7,-4.2]}
   ;(Object.entries(sectors) as Array<[Sector,[number,number,number]]>).forEach(([id,pos])=>{
    const active=id===activeSector,done=completed.includes(id)
-   const module=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.35,2.5),new THREE.MeshStandardMaterial({color:active?colors[id]:done?0x4fd19a:highContrast?0x24334a:0x8899aa,emissive:active?colors[id]:done?0x2a7d5d:0x000000,emissiveIntensity:active||done?.35:0,metalness:.45,roughness:.4}));module.position.set(...pos);module.castShadow=true;base.add(module)
+   const sectorModule=new THREE.Mesh(new THREE.BoxGeometry(2.5,1.35,2.5),new THREE.MeshStandardMaterial({color:active?colors[id]:done?0x4fd19a:highContrast?0x24334a:0x8899aa,emissive:active?colors[id]:done?0x2a7d5d:0x000000,emissiveIntensity:active||done?.35:0,metalness:.45,roughness:.4}));sectorModule.position.set(...pos);sectorModule.castShadow=true;base.add(sectorModule)
    const connector=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(pos[0])>.1?2.2:.75,.35,Math.abs(pos[2])>.1?2.2:.75),new THREE.MeshStandardMaterial({color:0x65798a,metalness:.55,roughness:.4}));connector.position.set(pos[0]*.55,.45,pos[2]*.55);base.add(connector)
    const beacon=new THREE.Mesh(new THREE.SphereGeometry(.18,12,12),new THREE.MeshBasicMaterial({color:active?0xffffff:done?0x9effc8:colors[id]}));beacon.position.set(pos[0],1.65,pos[2]);base.add(beacon)
   })
