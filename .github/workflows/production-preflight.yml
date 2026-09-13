@@ -26,6 +26,11 @@ jobs:
       YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID }}
       YOYO_RUNTIME_CLOUDFLARE_API_TOKEN: ${{ secrets.YOYO_RUNTIME_CLOUDFLARE_API_TOKEN }}
       YOYO_PRODUCTION_URL: ${{ vars.YOYO_PRODUCTION_URL }}
+      YOYO_BILLING_PROVIDER: ${{ vars.YOYO_BILLING_PROVIDER }}
+      MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+      MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+      MERCADOPAGO_PREMIUM_PLAN_ID: ${{ secrets.MERCADOPAGO_PREMIUM_PLAN_ID }}
+      MERCADOPAGO_INSTITUTION_PLAN_ID: ${{ secrets.MERCADOPAGO_INSTITUTION_PLAN_ID }}
     steps:
       - name: Validate required production configuration
         shell: bash
@@ -38,6 +43,18 @@ jobs:
               missing=1
             fi
           done
+          if [ "${YOYO_BILLING_PROVIDER:-}" = "mercadopago" ]; then
+            for key in MERCADOPAGO_ACCESS_TOKEN MERCADOPAGO_WEBHOOK_SECRET YOYO_PRODUCTION_URL; do
+              if [ -z "${!key:-}" ]; then
+                echo "::error::Mercado Pago está habilitado pero falta $key."
+                missing=1
+              fi
+            done
+            if [ -z "${MERCADOPAGO_PREMIUM_PLAN_ID:-}" ] && [ -z "${MERCADOPAGO_INSTITUTION_PLAN_ID:-}" ]; then
+              echo "::error::Mercado Pago requiere al menos un ID de plan real."
+              missing=1
+            fi
+          fi
           if [ "$missing" -ne 0 ]; then
             exit 1
           fi
@@ -98,6 +115,7 @@ jobs:
           echo "- Cuenta Cloudflare: validada si este job quedó verde" >> "$GITHUB_STEP_SUMMARY"
           echo "- Worker esperado: yoyoletrasai" >> "$GITHUB_STEP_SUMMARY"
           echo "- Worker existente: ${YOYO_WORKER_EXISTS:-no comprobado}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Facturación: ${YOYO_BILLING_PROVIDER:-no configurada}" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "${YOYO_PRODUCTION_URL:-}" ]; then
             echo "- URL de producción: configurada" >> "$GITHUB_STEP_SUMMARY"
           else
