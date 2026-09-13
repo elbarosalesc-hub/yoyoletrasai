@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { runEvolutionAudit, type EvolutionDb } from '@/lib/evolution/run-audit'
+import { generateResourceDraftBatch, type ResourceFactoryDb } from '@/lib/evolution/resource-factory'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,15 @@ function authorized(request: NextRequest) {
   return request.headers.get('authorization') === `Bearer ${secret}`
 }
 
+type CycleResult = {
+  organizationId: string
+  status: 'audited' | 'skipped' | 'failed'
+  auditId?: string
+  proposed?: number
+  draftsGenerated?: number
+  draftFactory?: 'generated' | 'skipped' | 'failed'
+}
+
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: 'No autorizado.' }, { status: 401 })
 
@@ -22,10 +32,11 @@ export async function GET(request: NextRequest) {
 
   const supabase = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
   const db = supabase as unknown as EvolutionDb
+  const resourceDb = supabase as unknown as ResourceFactoryDb
   const organizations = await supabase.from('organizations').select('id').limit(100)
   if (organizations.error) return NextResponse.json({ error: 'No fue posible cargar instituciones.' }, { status: 503 })
 
-  const results: Array<{ organizationId: string; status: 'audited' | 'skipped' | 'failed'; auditId?: string; proposed?: number }> = []
+  const results: CycleResult[] = []
 
   for (const organization of organizations.data || []) {
     const organizationId = String(organization.id)
@@ -44,8 +55,17 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const result = await runEvolutionAudit(db, organizationId, 'system')
-      results.push({ organizationId, status: 'audited', auditId: result.auditId, proposed: result.proposed })
+      const audit = await runEvolutionAudit(db, organizationId, 'system')
+      const cycle: CycleResult = { organizationId, status: 'audited', auditId: audit.auditId, proposed: audit.proposed }
+      try {
+        const factory = await generateResourceDraftBatch(resourceDb, organizationId)
+        cycle.draftFactory = factory.status
+        cycle.draftsGenerated = factory.status === 'generated' ? factory.generated : 0
+      } catch {
+        cycle.draftFactory = 'failed'
+        cycle.draftsGenerated = 0
+      }
+      results.push(cycle)
     } catch {
       results.push({ organizationId, status: 'failed' })
     }
@@ -54,11 +74,14 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     cadenceHours: 72,
     scheduler: 'provider-neutral',
-    governance: 'audit-and-propose-only',
+    governance: 'audit-propose-and-draft-only',
+    automaticPublishing: false,
+    humanReviewRequired: true,
     productionChangesApplied: false,
     audited: results.filter(item => item.status === 'audited').length,
     skipped: results.filter(item => item.status === 'skipped').length,
     failed: results.filter(item => item.status === 'failed').length,
+    draftsGenerated: results.reduce((sum, item) => sum + (item.draftsGenerated || 0), 0),
     results,
   })
 }
