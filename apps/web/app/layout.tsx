@@ -1,5 +1,6 @@
 import type {Metadata,Viewport} from 'next'
 import type {ReactNode} from 'react'
+import {PlatformPreferencesBridge} from '@/components/PlatformPreferencesBridge'
 import './globals.css'
 import './premium.css'
 import './game3d.css'
@@ -55,5 +56,5 @@ export const metadata:Metadata={
 export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#0d1530'}
 
 export default function RootLayout({children}:{children:ReactNode}){
- return <html lang="es"><body>{children}</body></html>
+ return <html lang="es" suppressHydrationWarning><body><PlatformPreferencesBridge/>{children}</body></html>
 }
