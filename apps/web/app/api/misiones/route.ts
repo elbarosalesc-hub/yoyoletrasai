@@ -11,7 +11,7 @@ function clean(value: unknown, max = 1000) {
   return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : ''
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const claims = (await supabase.auth.getClaims()).data?.claims
   const userId = typeof claims?.sub === 'string' ? claims.sub : null
@@ -19,6 +19,44 @@ export async function GET() {
 
   const organizationId = (await cookies()).get('yoyo-organization-id')?.value
   if (!organizationId) return NextResponse.json({ error: 'No hay institución activa.' }, { status: 409 })
+
+  const missionId = clean(request.nextUrl.searchParams.get('missionId'), 80)
+  if (missionId) {
+    const missionResult = await (supabase as any)
+      .from('learning_missions')
+      .select('id,course_id,title,status')
+      .eq('id', missionId)
+      .eq('organization_id', organizationId)
+      .maybeSingle()
+
+    if (missionResult.error) return NextResponse.json({ error: 'No fue posible cargar la misión.' }, { status: 503 })
+    if (!missionResult.data) return NextResponse.json({ error: 'Misión no encontrada.' }, { status: 404 })
+
+    const progressResult = await (supabase as any)
+      .from('learning_mission_progress')
+      .select('student_id,status,progress,support_used,evidence_note,last_activity_at,students(first_name,last_name,preferred_name)')
+      .eq('organization_id', organizationId)
+      .eq('mission_id', missionId)
+      .order('last_activity_at', { ascending: false, nullsFirst: false })
+
+    if (progressResult.error) return NextResponse.json({ error: 'No fue posible cargar el seguimiento de estudiantes.' }, { status: 503 })
+
+    const students = (progressResult.data || []).map((row: any) => ({
+      studentId: row.student_id,
+      status: row.status,
+      progress: Number(row.progress || 0),
+      supportUsed: row.support_used || '',
+      evidenceNote: row.evidence_note || '',
+      lastActivityAt: row.last_activity_at,
+      student: row.students ? {
+        firstName: row.students.first_name,
+        lastName: row.students.last_name,
+        preferredName: row.students.preferred_name,
+      } : null,
+    }))
+
+    return NextResponse.json({ mission: missionResult.data, students }, { headers: { 'Cache-Control': 'private, no-store' } })
+  }
 
   const [missionsResult, coursesResult] = await Promise.all([
     (supabase as any).from('learning_missions').select('id,course_id,objective_id,title,description,experience_type,source_href,support_profile,differentiation,due_at,status,created_at').eq('organization_id', organizationId).order('created_at', { ascending: false }).limit(60),
@@ -113,6 +151,12 @@ export async function PATCH(request: NextRequest) {
   const evidenceNote = clean(body.evidenceNote, 1200) || null
   const supportUsed = clean(body.supportUsed, 800) || null
   if (!missionId || !studentId) return NextResponse.json({ error: 'Faltan identificadores de seguimiento.' }, { status: 400 })
+
+  const missionResult = await (supabase as any).from('learning_missions').select('id').eq('id', missionId).eq('organization_id', organizationId).maybeSingle()
+  if (missionResult.error || !missionResult.data) return NextResponse.json({ error: 'Misión no autorizada.' }, { status: 403 })
+
+  const studentResult = await (supabase as any).from('students').select('id').eq('id', studentId).eq('organization_id', organizationId).maybeSingle()
+  if (studentResult.error || !studentResult.data) return NextResponse.json({ error: 'Estudiante no autorizado.' }, { status: 403 })
 
   const updateResult = await (supabase as any).from('learning_mission_progress').update({ status, progress, evidence_note: evidenceNote, support_used: supportUsed, last_activity_at: new Date().toISOString(), updated_by: userId }).eq('organization_id', organizationId).eq('mission_id', missionId).eq('student_id', studentId)
   if (updateResult.error) return NextResponse.json({ error: 'No fue posible actualizar el progreso.' }, { status: 500 })

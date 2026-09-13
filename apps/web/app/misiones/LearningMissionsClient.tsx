@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, BookOpenCheck, CalendarDays, CheckCircle2, ClipboardList, Gamepad2, Gauge, Plus, RefreshCw, Sparkles, Target, UsersRound } from 'lucide-react'
+import { ArrowRight, BookOpenCheck, CalendarDays, CheckCircle2, ClipboardList, Gamepad2, Gauge, PencilLine, Plus, RefreshCw, Save, Sparkles, Target, UsersRound, X } from 'lucide-react'
 
 type Course={id:string;name:string;level:string;academic_year:number}
 type Mission={
  id:string;course_id:string;objective_id:string|null;title:string;description:string|null;experience_type:string;source_href:string|null;support_profile:string|null;due_at:string|null;status:string;created_at:string;
  progressSummary:{assigned:number;completed:number;needsSupport:number;averageProgress:number}
 }
-
+type StudentProgress={studentId:string;status:string;progress:number;supportUsed:string;evidenceNote:string;lastActivityAt:string|null;student:{firstName:string;lastName:string;preferredName:string|null}|null}
 type Draft={title?:string;description?:string;experienceType?:string;sourceHref?:string;supportProfile?:string;courseId?:string;objectiveId?:string;dueAt?:string}
 
 const experienceOptions=[
@@ -17,6 +17,7 @@ const experienceOptions=[
 ]
 
 function statusLabel(value:string){return value==='assigned'?'Asignada':value==='draft'?'Borrador':value==='closed'?'Cerrada':'Archivada'}
+function studentStatusLabel(value:string){return value==='completed'?'Completada':value==='needs_support'?'Requiere apoyo':value==='in_progress'?'En progreso':'Asignada'}
 
 export function LearningMissionsClient({organizationName}:{organizationName:string}){
  const[courses,setCourses]=useState<Course[]>([])
@@ -32,6 +33,10 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
  const[supportProfile,setSupportProfile]=useState('Acceso universal DUA; instrucciones claras; opciones de respuesta y apoyos graduados.')
  const[dueAt,setDueAt]=useState('')
  const[assignNow,setAssignNow]=useState(true)
+ const[selectedMission,setSelectedMission]=useState<Mission|null>(null)
+ const[studentProgress,setStudentProgress]=useState<StudentProgress[]>([])
+ const[detailLoading,setDetailLoading]=useState(false)
+ const[updatingStudent,setUpdatingStudent]=useState('')
 
  async function load(){
   setLoading(true)
@@ -43,6 +48,17 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
    if(!courseId&&data.courses?.length)setCourseId(data.courses[0].id)
   }catch(error){setMessage(error instanceof Error?error.message:'No fue posible cargar las misiones.')}
   finally{setLoading(false)}
+ }
+
+ async function openMissionDetail(mission:Mission){
+  setSelectedMission(mission);setDetailLoading(true);setStudentProgress([])
+  try{
+   const response=await fetch(`/api/misiones?missionId=${encodeURIComponent(mission.id)}`,{cache:'no-store'})
+   const data=await response.json()
+   if(!response.ok)throw new Error(data.error||'No fue posible cargar el seguimiento.')
+   setStudentProgress(data.students||[])
+  }catch(error){setMessage(error instanceof Error?error.message:'No fue posible cargar el seguimiento.')}
+  finally{setDetailLoading(false)}
  }
 
  useEffect(()=>{
@@ -86,6 +102,23 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
   finally{setSaving(false)}
  }
 
+ function patchStudent(studentId:string,patch:Partial<StudentProgress>){
+  setStudentProgress(current=>current.map(item=>item.studentId===studentId?{...item,...patch}:item))
+ }
+
+ async function saveStudentProgress(item:StudentProgress){
+  if(!selectedMission||updatingStudent)return
+  setUpdatingStudent(item.studentId)
+  try{
+   const response=await fetch('/api/misiones',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({missionId:selectedMission.id,studentId:item.studentId,status:item.status,progress:item.progress,supportUsed:item.supportUsed,evidenceNote:item.evidenceNote})})
+   const data=await response.json()
+   if(!response.ok)throw new Error(data.error||'No fue posible actualizar el seguimiento.')
+   setMessage('Seguimiento del estudiante actualizado.')
+   await Promise.all([openMissionDetail(selectedMission),load()])
+  }catch(error){setMessage(error instanceof Error?error.message:'No fue posible actualizar el seguimiento.')}
+  finally{setUpdatingStudent('')}
+ }
+
  return <div className="learning-missions-workspace">
   <section className="premium-hero">
    <span className="eyebrow"><Sparkles size={15}/> Orquestador pedagógico YOYO</span>
@@ -112,7 +145,7 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
     <label>Fecha límite<input type="date" value={dueAt} onChange={e=>setDueAt(e.target.value)}/></label>
     <button className={`setting-toggle ${assignNow?'on':''}`} onClick={()=>setAssignNow(value=>!value)}><span>{assignNow?'Asignar ahora al curso':'Guardar como borrador'}</span><i/></button>
     <button className="btn btn-primary" onClick={createMission} disabled={saving||!courseId||!title.trim()}>{saving?<RefreshCw size={16}/>:<Plus size={16}/>} {saving?'Creando...':'Crear misión'}</button>
-    {message&&<p className="setting-note">{message}</p>}
+    {message&&<p className="setting-note" role="status">{message}</p>}
    </aside>
 
    <main className="premium-card virtual-conversation-panel">
@@ -124,7 +157,7 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
        <h3>{mission.title}</h3>
        <p>{mission.description||'Sin descripción adicional.'}</p>
        <div className="insight"><p><UsersRound size={14}/> {course?.name||'Curso'} · {mission.progressSummary.assigned} estudiantes</p><p><Gauge size={14}/> Progreso promedio {mission.progressSummary.averageProgress}%</p><p><CheckCircle2 size={14}/> {mission.progressSummary.completed} completadas · {mission.progressSummary.needsSupport} requieren apoyo</p>{mission.due_at?<p><CalendarDays size={14}/> {new Date(mission.due_at).toLocaleDateString('es-CL')}</p>:null}</div>
-       <div className="tool-row">{mission.source_href?<Link className="btn btn-soft" href={mission.source_href}>Abrir experiencia <ArrowRight size={15}/></Link>:null}<Link className="btn btn-soft" href="/seguimiento/evidencias"><ClipboardList size={15}/> Evidencias</Link></div>
+       <div className="tool-row">{mission.source_href?<Link className="btn btn-soft" href={mission.source_href}>Abrir experiencia <ArrowRight size={15}/></Link>:null}<button className="btn btn-primary" onClick={()=>openMissionDetail(mission)}><PencilLine size={15}/> Gestionar seguimiento</button><Link className="btn btn-soft" href="/seguimiento/evidencias"><ClipboardList size={15}/> Evidencias</Link></div>
       </article>
      })}</div>}
    </main>
@@ -138,5 +171,18 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
     <Link href="/profesor-virtual" className="btn btn-primary"><Gamepad2 size={16}/> Diseñar con Profesor Virtual</Link>
    </aside>
   </div>
+
+  {selectedMission?<section className="premium-card" style={{marginTop:20}}>
+   <div className="virtual-panel-heading" style={{justifyContent:'space-between'}}><div style={{display:'flex',gap:12,alignItems:'center'}}><UsersRound/><div><h2>Seguimiento individual · {selectedMission.title}</h2><p>Actualiza avance, necesidad de apoyo y evidencia breve por estudiante.</p></div></div><button className="icon-button" onClick={()=>{setSelectedMission(null);setStudentProgress([])}} aria-label="Cerrar seguimiento"><X/></button></div>
+   {detailLoading?<div className="virtual-empty-state"><RefreshCw size={30}/><h3>Cargando matrícula...</h3></div>:studentProgress.length===0?<div className="virtual-empty-state"><UsersRound size={34}/><h3>Sin estudiantes asignados</h3><p>Asigna la misión a un curso con matrícula activa para habilitar seguimiento individual.</p></div>:<div style={{display:'grid',gap:12}}>{studentProgress.map(item=>{
+    const name=item.student?.preferredName||[item.student?.firstName,item.student?.lastName].filter(Boolean).join(' ')||'Estudiante'
+    return <article key={item.studentId} className="insight" style={{display:'grid',gap:10}}>
+     <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center',flexWrap:'wrap'}}><div><b>{name}</b><p style={{margin:'4px 0 0'}}>{studentStatusLabel(item.status)} · {item.progress}%</p></div><button className="btn btn-primary" disabled={updatingStudent===item.studentId} onClick={()=>saveStudentProgress(item)}><Save size={15}/>{updatingStudent===item.studentId?'Guardando...':'Guardar'}</button></div>
+     <div className="form-two"><label>Estado<select value={item.status} onChange={event=>patchStudent(item.studentId,{status:event.target.value})}><option value="assigned">Asignada</option><option value="in_progress">En progreso</option><option value="completed">Completada</option><option value="needs_support">Requiere apoyo</option></select></label><label>Progreso<input type="number" min="0" max="100" value={item.progress} onChange={event=>patchStudent(item.studentId,{progress:Math.max(0,Math.min(100,Number(event.target.value)||0))})}/></label></div>
+     <label>Apoyo utilizado<input value={item.supportUsed} onChange={event=>patchStudent(item.studentId,{supportUsed:event.target.value})} maxLength={800} placeholder="Ej.: lectura mediada, apoyo visual, material concreto"/></label>
+     <label>Evidencia breve<textarea rows={3} value={item.evidenceNote} onChange={event=>patchStudent(item.studentId,{evidenceNote:event.target.value})} maxLength={1200} placeholder="Describe un desempeño observable o próximo paso."/></label>
+    </article>
+   })}</div>}
+  </section>:null}
  </div>
 }
