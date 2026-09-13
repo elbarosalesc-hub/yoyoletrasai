@@ -2,16 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrganizationContext } from '@/lib/auth/organization-context'
-
-export type SupportActionState = {
-  status: 'idle' | 'success' | 'error'
-  message: string
-}
-
-export const initialSupportActionState: SupportActionState = {
-  status: 'idle',
-  message: '',
-}
+import type { SupportActionState } from './support-action-state'
 
 const supportRoles = new Set(['pie', 'utp', 'principal', 'institution_admin', 'platform_admin'])
 const supportStatuses = new Set(['monitoring', 'active', 'closed'])
