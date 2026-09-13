@@ -13,7 +13,7 @@ on:
 jobs:
   validate-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,6 +61,9 @@ jobs:
           cat /tmp/yoyoletrasai-next.log
           exit 1
 
+      - name: Visual regression gate
+        run: npx playwright test tests/e2e/visual-regression.spec.ts --reporter=line --workers=1
+
       - name: Browser verification
         run: npx playwright test tests/e2e/public-preview.spec.ts --reporter=line --workers=1
 
@@ -104,16 +107,20 @@ jobs:
             console.log(`Lighthouse accessibility ${name}: ${percent}`)
             if (score < 0.95) {
               failed = true
-              const failing = Object.values(report.audits || {})
-                .filter(audit => audit && audit.score !== null && audit.score < 1 && audit.scoreDisplayMode !== 'notApplicable')
-                .map(audit => `${audit.id}: ${audit.title}`)
-                .slice(0, 20)
               console.error(`::error::${name} obtuvo ${percent}; mínimo requerido 95.`)
-              for (const item of failing) console.error(`- ${item}`)
             }
           }
           if (failed) process.exit(1)
           NODE
+
+      - name: Upload visual regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-evidence
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload Lighthouse evidence
         if: always()
