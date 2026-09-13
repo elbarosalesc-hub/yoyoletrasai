@@ -3,6 +3,11 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+type DatabaseState = 'reachable' | 'unreachable' | 'not_configured'
+type AiState = 'configured' | 'not_configured'
+type ConfigurationState = 'valid' | 'missing'
+type HealthStatus = 'ok' | 'degraded' | 'error'
+
 function json(body: Record<string, unknown>, status: number) {
   return NextResponse.json(body, {
     status,
@@ -13,15 +18,20 @@ function json(body: Record<string, unknown>, status: number) {
   })
 }
 
-function payload(status: 'ok'|'degraded'|'misconfigured', checkedAt: string, databaseGateway: string, aiGateway: string) {
+function payload(status: HealthStatus, checkedAt: string, configuration: ConfigurationState, database: DatabaseState, aiGateway: AiState) {
   return {
     status,
     checkedAt,
     timestamp: checkedAt,
     runtime: 'cloudflare-workers',
+    application: 'operational',
+    configuration,
+    database,
+    aiGateway,
     services: {
       application: 'operational',
-      databaseGateway,
+      configuration,
+      databaseGateway: database,
       aiGateway,
       runtime: 'cloudflare-workers',
     },
@@ -36,10 +46,10 @@ export async function GET() {
     process.env.YOYO_AI_GATEWAY_URL ||
     (process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN)
   )
-  const aiGateway = aiConfigured ? 'configured' : 'not_configured'
+  const aiGateway: AiState = aiConfigured ? 'configured' : 'not_configured'
 
   if (!supabaseUrl || !publishableKey) {
-    return json(payload('misconfigured', checkedAt, 'not_configured', aiGateway), 503)
+    return json(payload('error', checkedAt, 'missing', 'not_configured', aiGateway), 503)
   }
 
   const controller = new AbortController()
@@ -59,15 +69,15 @@ export async function GET() {
     })
 
     if (response.status >= 500) {
-      return json(payload('degraded', checkedAt, 'unreachable', aiGateway), 503)
+      return json(payload('degraded', checkedAt, 'valid', 'unreachable', aiGateway), 503)
     }
 
-    return json(payload(aiConfigured ? 'ok' : 'degraded', checkedAt, 'reachable', aiGateway), 200)
+    return json(payload(aiConfigured ? 'ok' : 'degraded', checkedAt, 'valid', 'reachable', aiGateway), 200)
   } catch (error) {
     console.error('[health-check] Supabase connectivity failed', {
       error: error instanceof Error ? error.message : String(error),
     })
-    return json(payload('degraded', checkedAt, 'unreachable', aiGateway), 503)
+    return json(payload('degraded', checkedAt, 'valid', 'unreachable', aiGateway), 503)
   } finally {
     clearTimeout(timeout)
   }
