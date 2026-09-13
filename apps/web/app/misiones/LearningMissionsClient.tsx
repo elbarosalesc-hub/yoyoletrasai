@@ -3,14 +3,18 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, BookOpenCheck, CalendarDays, CheckCircle2, ClipboardList, Gamepad2, Gauge, PencilLine, Plus, RefreshCw, Save, Sparkles, Target, UsersRound, X } from 'lucide-react'
+import { MissionEvidenceControls } from '@/components/missions/MissionEvidenceControls'
 
 type Course={id:string;name:string;level:string;academic_year:number}
+type Objective={id:string;subject:string;code:string;title:string;description?:string}
 type Mission={
  id:string;course_id:string;objective_id:string|null;title:string;description:string|null;experience_type:string;source_href:string|null;support_profile:string|null;due_at:string|null;status:string;created_at:string;
  progressSummary:{assigned:number;completed:number;needsSupport:number;averageProgress:number}
 }
 type StudentProgress={studentId:string;status:string;progress:number;supportUsed:string;evidenceNote:string;lastActivityAt:string|null;student:{firstName:string;lastName:string;preferredName:string|null}|null}
 type Draft={title?:string;description?:string;experienceType?:string;sourceHref?:string;supportProfile?:string;courseId?:string;objectiveId?:string;dueAt?:string}
+
+type ContextResponse={objectives?:Objective[];error?:string}
 
 const experienceOptions=[
  ['lesson','Clase / secuencia'],['resource','Recurso'],['assessment','Evaluación'],['game','Juego'],['practice','Práctica'],['project','Proyecto'],
@@ -21,6 +25,7 @@ function studentStatusLabel(value:string){return value==='completed'?'Completada
 
 export function LearningMissionsClient({organizationName}:{organizationName:string}){
  const[courses,setCourses]=useState<Course[]>([])
+ const[objectives,setObjectives]=useState<Objective[]>([])
  const[missions,setMissions]=useState<Mission[]>([])
  const[loading,setLoading]=useState(true)
  const[saving,setSaving]=useState(false)
@@ -28,6 +33,7 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
  const[title,setTitle]=useState('')
  const[description,setDescription]=useState('')
  const[courseId,setCourseId]=useState('')
+ const[objectiveId,setObjectiveId]=useState('')
  const[experienceType,setExperienceType]=useState('lesson')
  const[sourceHref,setSourceHref]=useState('')
  const[supportProfile,setSupportProfile]=useState('Acceso universal DUA; instrucciones claras; opciones de respuesta y apoyos graduados.')
@@ -72,12 +78,26 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
     if(draft.sourceHref)setSourceHref(draft.sourceHref)
     if(draft.supportProfile)setSupportProfile(draft.supportProfile)
     if(draft.courseId)setCourseId(draft.courseId)
+    if(draft.objectiveId)setObjectiveId(draft.objectiveId)
     if(draft.dueAt)setDueAt(draft.dueAt)
    }
   }catch{}
   load()
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[])
+
+ useEffect(()=>{
+  if(!courseId){setObjectives([]);setObjectiveId('');return}
+  fetch(`/api/profesor-virtual/context?courseId=${encodeURIComponent(courseId)}`,{cache:'no-store'})
+   .then(async response=>response.json())
+   .then((data:ContextResponse)=>{
+    if(data.error)throw new Error(data.error)
+    const next=data.objectives||[]
+    setObjectives(next)
+    setObjectiveId(current=>current&&next.some(item=>item.id===current)?current:'')
+   })
+   .catch(()=>{setObjectives([]);setObjectiveId('')})
+ },[courseId])
 
  const stats=useMemo(()=>{
   const active=missions.filter(item=>item.status==='assigned')
@@ -91,11 +111,11 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
   if(!courseId||!title.trim()||saving)return
   setSaving(true);setMessage('Creando misión y preparando seguimiento...')
   try{
-   const response=await fetch('/api/misiones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId,title,description,experienceType,sourceHref,supportProfile,dueAt:dueAt?new Date(`${dueAt}T23:59:00`).toISOString():null,status:assignNow?'assigned':'draft',differentiation:{dua:true,pie:true,allowMultipleResponseModes:true,teacherReview:true}})})
+   const response=await fetch('/api/misiones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId,objectiveId:objectiveId||null,title,description,experienceType,sourceHref,supportProfile,dueAt:dueAt?new Date(`${dueAt}T23:59:00`).toISOString():null,status:assignNow?'assigned':'draft',differentiation:{dua:true,pie:true,allowMultipleResponseModes:true,teacherReview:true}})})
    const data=await response.json()
    if(!response.ok)throw new Error(data.error||'No fue posible crear la misión.')
    localStorage.removeItem('yoyo-mission-draft')
-   setTitle('');setDescription('');setSourceHref('');setDueAt('')
+   setTitle('');setDescription('');setSourceHref('');setDueAt('');setObjectiveId('')
    setMessage(assignNow?'Misión asignada al curso y seguimiento creado.':'Misión guardada como borrador.')
    await load()
   }catch(error){setMessage(error instanceof Error?error.message:'No fue posible crear la misión.')}
@@ -137,6 +157,8 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
    <aside className="premium-card virtual-brief-panel">
     <div className="virtual-panel-heading"><Plus/><div><h2>Nueva misión</h2><p>{organizationName}</p></div></div>
     <label>Curso<select value={courseId} onChange={e=>setCourseId(e.target.value)}><option value="">Selecciona un curso</option>{courses.map(course=><option value={course.id} key={course.id}>{course.name} · {course.level}</option>)}</select></label>
+    <label>OA / habilidad registrada<select value={objectiveId} onChange={e=>setObjectiveId(e.target.value)}><option value="">Sin OA vinculado por ahora</option>{objectives.map(objective=><option value={objective.id} key={objective.id}>{objective.code} · {objective.subject} · {objective.title}</option>)}</select></label>
+    <small>Vincular un OA permite convertir después el desempeño de la misión en evidencia curricular con decisión docente.</small>
     <label>Título<input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Ej.: Misión inferencias: pistas del texto"/></label>
     <label>Tipo de experiencia<select value={experienceType} onChange={e=>setExperienceType(e.target.value)}>{experienceOptions.map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label>
     <label>Descripción / propósito<textarea rows={4} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Qué deben aprender, hacer o demostrar..."/></label>
@@ -149,11 +171,11 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
    </aside>
 
    <main className="premium-card virtual-conversation-panel">
-    <div className="virtual-panel-heading"><BookOpenCheck/><div><h2>Panel de misiones</h2><p>Asignación, progreso y apoyos en un mismo flujo.</p></div></div>
+    <div className="virtual-panel-heading"><BookOpenCheck/><div><h2>Panel de misiones</h2><p>Asignación, progreso, apoyos y evidencia en un mismo flujo.</p></div></div>
     {loading?<div className="virtual-empty-state"><RefreshCw size={34}/><h3>Cargando misiones...</h3></div>:missions.length===0?<div className="virtual-empty-state"><Target size={40}/><h3>Aún no hay misiones</h3><p>Crea una desde este panel o envía una propuesta desde Profesor Virtual.</p></div>:<div className="game-experience-catalog">{missions.map(mission=>{
       const course=courses.find(item=>item.id===mission.course_id)
       return <article className="game-experience-card" key={mission.id}>
-       <small>{statusLabel(mission.status)} · {mission.experience_type}</small>
+       <small>{statusLabel(mission.status)} · {mission.experience_type}{mission.objective_id?' · OA vinculado':' · sin OA'}</small>
        <h3>{mission.title}</h3>
        <p>{mission.description||'Sin descripción adicional.'}</p>
        <div className="insight"><p><UsersRound size={14}/> {course?.name||'Curso'} · {mission.progressSummary.assigned} estudiantes</p><p><Gauge size={14}/> Progreso promedio {mission.progressSummary.averageProgress}%</p><p><CheckCircle2 size={14}/> {mission.progressSummary.completed} completadas · {mission.progressSummary.needsSupport} requieren apoyo</p>{mission.due_at?<p><CalendarDays size={14}/> {new Date(mission.due_at).toLocaleDateString('es-CL')}</p>:null}</div>
@@ -165,9 +187,9 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
    <aside className="premium-card virtual-history-panel">
     <div className="virtual-panel-heading"><Target/><div><h2>Ciclo YOYO</h2><p>De la planificación a la evidencia.</p></div></div>
     <div className="insight"><b>1. Diseña</b><p>Profesor Virtual, YOYO IA, biblioteca, evaluación o juego.</p></div>
-    <div className="insight"><b>2. Asigna</b><p>Curso, propósito, fecha y apoyos DUA/PIE.</p></div>
+    <div className="insight"><b>2. Asigna</b><p>Curso, OA, propósito, fecha y apoyos DUA/PIE.</p></div>
     <div className="insight"><b>3. Observa</b><p>Progreso, autonomía y necesidad de apoyo.</p></div>
-    <div className="insight"><b>4. Evidencia</b><p>Registra el aprendizaje y toma decisiones por OA.</p></div>
+    <div className="insight"><b>4. Evidencia</b><p>El docente decide nivel de logro y registra el desempeño por OA.</p></div>
     <Link href="/profesor-virtual" className="btn btn-primary"><Gamepad2 size={16}/> Diseñar con Profesor Virtual</Link>
    </aside>
   </div>
@@ -181,6 +203,7 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
      <div className="form-two"><label>Estado<select value={item.status} onChange={event=>patchStudent(item.studentId,{status:event.target.value})}><option value="assigned">Asignada</option><option value="in_progress">En progreso</option><option value="completed">Completada</option><option value="needs_support">Requiere apoyo</option></select></label><label>Progreso<input type="number" min="0" max="100" value={item.progress} onChange={event=>patchStudent(item.studentId,{progress:Math.max(0,Math.min(100,Number(event.target.value)||0))})}/></label></div>
      <label>Apoyo utilizado<input value={item.supportUsed} onChange={event=>patchStudent(item.studentId,{supportUsed:event.target.value})} maxLength={800} placeholder="Ej.: lectura mediada, apoyo visual, material concreto"/></label>
      <label>Evidencia breve<textarea rows={3} value={item.evidenceNote} onChange={event=>patchStudent(item.studentId,{evidenceNote:event.target.value})} maxLength={1200} placeholder="Describe un desempeño observable o próximo paso."/></label>
+     <MissionEvidenceControls missionId={selectedMission.id} objectiveId={selectedMission.objective_id} studentId={item.studentId} status={item.status} evidenceNote={item.evidenceNote} onMessage={setMessage}/>
     </article>
    })}</div>}
   </section>:null}
