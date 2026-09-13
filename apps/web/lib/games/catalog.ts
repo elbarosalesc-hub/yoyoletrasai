@@ -115,9 +115,10 @@ export const gameExperiences: GameExperience[] = [
     subject: 'Matemática',
     levels: '6° básico–1° medio',
     skill: 'Razón, proporción y resolución de problemas',
-    mission: 'Administrar oxígeno, energía y suministros usando proporciones para mantener operativa la base.',
-    accessibility: ['tablas visuales','calculadora opcional','pistas graduadas'],
-    status: 'development',
+    mission: 'Administrar oxígeno, energía y suministros usando razones y proporcionalidad para mantener operativa la base.',
+    accessibility: ['tablas visuales','audio opcional','alternativa textual','alto contraste','movimiento reducido','sin límite de tiempo','estrategia por unidad'],
+    status: 'playable',
+    route: '/juegos/base-espacial',
   },
   {
     id: 'granja-palabras',
