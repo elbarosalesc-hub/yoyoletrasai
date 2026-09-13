@@ -6,6 +6,7 @@ on:
       - main
       - agent/full-premium-rebuild-v2
       - agent/corregir-mejorar-plataforma
+      - audit/protect-approved-surfaces-20260913
   pull_request:
     branches:
       - main
@@ -17,6 +18,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Protect approved surfaces
+        run: npm run verify:approved-surfaces
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
