@@ -1,0 +1,140 @@
+name: Temporary online preview
+
+on:
+  push:
+    branches:
+      - deploy/temporary-online-preview
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yoyo-temporary-online-preview
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://xpcywpvrveweynqvudcr.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_9FJ4V6Z58NAOaFQw6cJLKg_JnDjj9_9
+    steps:
+      - name: Checkout production source
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund --loglevel=error
+
+      - name: Typecheck
+        run: npm run typecheck -- --pretty false
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Cloudflare Worker with vinext
+        run: npm run build:vinext --workspace=web
+
+      - name: Deploy unauthenticated temporary Worker
+        id: deploy
+        working-directory: apps/web
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$HOME/.wrangler" "$HOME/.config/.wrangler" || true
+          set +e
+          npx --yes wrangler@latest deploy --temporary --config dist/server/wrangler.json > /tmp/wrangler-preview.log 2>&1
+          status=$?
+          set -e
+          sanitized_log="$(sed -E 's#(Claim URL:)[[:space:]]+https://[^[:space:]]+#\1 [REDACTED]#g' /tmp/wrangler-preview.log)"
+          if [ "$status" -ne 0 ]; then
+            printf '%s\n' "$sanitized_log"
+            exit "$status"
+          fi
+          preview_url="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' /tmp/wrangler-preview.log | tail -n 1 || true)"
+          if [ -z "$preview_url" ]; then
+            printf '%s\n' "$sanitized_log"
+            echo '::error::Cloudflare deployed but no workers.dev URL was detected.'
+            exit 1
+          fi
+          claim_url="$(grep -Eo 'https://dash\.cloudflare\.com/claim-preview\?claimToken=[^[:space:]]+' /tmp/wrangler-preview.log | tail -n 1 || true)"
+          if [ -n "$claim_url" ]; then
+            echo "::add-mask::$claim_url"
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Temporary Worker: $preview_url"
+
+      - name: Verify public deployment
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          for path in /presentacion /acceso /api/health; do
+            code="$(curl -sS -L --retry 6 --retry-delay 2 --max-time 30 -o "/tmp/yoyo$(echo "$path" | tr '/' '_').out" -w '%{http_code}' "$PREVIEW_URL$path")"
+            echo "$path -> HTTP $code"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+              echo "::error::$path returned HTTP $code"
+              exit 1
+            fi
+          done
+
+      - name: Install Chromium for live visual check
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture live preview evidence
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/yoyo-live-preview
+          PREVIEW_URL="$PREVIEW_URL" node <<'NODE'
+          const { chromium } = require('@playwright/test')
+          ;(async () => {
+            const browser = await chromium.launch({ headless: true })
+            const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
+            const errors = []
+            page.on('pageerror', error => errors.push(`pageerror: ${error.message}`))
+            page.on('console', message => {
+              if (message.type() === 'error') errors.push(`console: ${message.text()}`)
+            })
+            for (const [path, file] of [['/presentacion','presentacion.png'], ['/acceso','acceso.png']]) {
+              const response = await page.goto(`${process.env.PREVIEW_URL}${path}`, { waitUntil: 'networkidle', timeout: 45000 })
+              if (!response || response.status() >= 400) throw new Error(`${path} HTTP ${response?.status()}`)
+              await page.screenshot({ path: `/tmp/yoyo-live-preview/${file}`, fullPage: true })
+            }
+            require('node:fs').writeFileSync('/tmp/yoyo-live-preview/browser-errors.txt', errors.join('\n'))
+            await browser.close()
+            if (errors.length) {
+              console.log(`Browser reported ${errors.length} console/page errors; see artifact for review.`)
+            }
+          })().catch(error => { console.error(error); process.exit(1) })
+          NODE
+
+      - name: Upload live preview evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: yoyo-live-online-preview
+          path: /tmp/yoyo-live-preview
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Preview summary
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+        run: |
+          echo '## YOYO IA · vista previa online temporal' >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL pública: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo '- Fuente: rama main, sin cambios de código de producto.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Supabase público: proyecto real configurado con publishable key.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- Cloudflare: cuenta temporal; la URL expira si no se reclama.' >> "$GITHUB_STEP_SUMMARY"
+          echo '- El claim URL se suprime deliberadamente de logs públicos.' >> "$GITHUB_STEP_SUMMARY"
