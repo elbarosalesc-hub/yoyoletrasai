@@ -1,0 +1,95 @@
+:root{
+  --yoyo-accent:#6f5bd3;
+  --yoyo-accent-strong:#5140ad;
+  --yoyo-accent-soft:#f0edff;
+  --yoyo-focus:#6f5bd3;
+}
+
+html[data-yoyo-theme="teal"]{
+  --yoyo-accent:#147f7a;
+  --yoyo-accent-strong:#0d625e;
+  --yoyo-accent-soft:#e5f7f4;
+  --yoyo-focus:#147f7a;
+}
+
+html[data-yoyo-theme="coral"]{
+  --yoyo-accent:#d96658;
+  --yoyo-accent-strong:#ad4338;
+  --yoyo-accent-soft:#fff0ed;
+  --yoyo-focus:#d96658;
+}
+
+html[data-yoyo-theme="gold"]{
+  --yoyo-accent:#a86f09;
+  --yoyo-accent-strong:#7f5200;
+  --yoyo-accent-soft:#fff6df;
+  --yoyo-focus:#a86f09;
+}
+
+html[data-yoyo-theme] .btn-primary{
+  background:var(--yoyo-accent-strong);
+}
+
+html[data-yoyo-theme] .control-chip,
+html[data-yoyo-theme] .tag,
+html[data-yoyo-theme] .eyebrow{
+  color:var(--yoyo-accent-strong);
+}
+
+html[data-yoyo-theme] :is(button,a,input,select,textarea):focus-visible{
+  outline:3px solid var(--yoyo-focus);
+  outline-offset:3px;
+}
+
+html[data-yoyo-contrast="high"]{
+  color-scheme:light;
+}
+
+html[data-yoyo-contrast="high"] body{
+  background:#fff!important;
+  color:#111!important;
+}
+
+html[data-yoyo-contrast="high"] :is(.panel,.premium-card,.settings-card,.premium-resource-card,.chat-panel,.worksheet,.assignment-modal){
+  background:#fff!important;
+  color:#111!important;
+  border-color:#111!important;
+  box-shadow:none!important;
+}
+
+html[data-yoyo-contrast="high"] :is(p,small,.setting-note,.premium-card-meta,.meta){
+  color:#202020!important;
+}
+
+html[data-yoyo-contrast="high"] :is(input,select,textarea){
+  border:2px solid #111!important;
+  color:#111!important;
+  background:#fff!important;
+}
+
+html[data-yoyo-contrast="high"] .btn-soft{
+  background:#fff!important;
+  color:#111!important;
+  border:2px solid #111!important;
+}
+
+html[data-yoyo-contrast="high"] .sidebar{
+  background:#000!important;
+}
+
+html[data-yoyo-reduced-motion="on"] *,
+html[data-yoyo-animations="off"] *{
+  scroll-behavior:auto!important;
+  transition-duration:.001ms!important;
+  animation-duration:.001ms!important;
+  animation-iteration-count:1!important;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    transition-duration:.001ms!important;
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+  }
+}

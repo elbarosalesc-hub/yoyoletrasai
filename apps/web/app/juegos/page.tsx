@@ -1,6 +1,6 @@
 'use client'
 import dynamic from 'next/dynamic'
-import {useMemo,useState} from 'react'
+import {useEffect,useMemo,useState} from 'react'
 import {AppShell} from '@/components/AppShell'
 import {Volume2,VolumeX,Sparkles,Accessibility,Play,Pause,CheckCircle2,Star,Lock,RotateCcw,Eye,Brain,Keyboard,Gamepad2,Map,FlaskConical,Calculator,BookOpen,ArrowRight,Droplets} from 'lucide-react'
 import {gameExperiences} from '@/lib/games/catalog'
@@ -24,6 +24,14 @@ export default function Juegos(){
  const[running,setRunning]=useState(false),[sound,setSound]=useState(true),[reduced,setReduced]=useState(false),[contrast,setContrast]=useState(false)
  const[level,setLevel]=useState(0),[found,setFound]=useState<string[]>([]),[answer,setAnswer]=useState<number|null>(null),[attempts,setAttempts]=useState(0)
  const[feedback,setFeedback]=useState('Inicia la misión y explora los objetos del bosque.')
+ useEffect(()=>{
+  fetch('/api/profile/preferences',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then((prefs:{audio?:boolean;animations?:boolean;reduced?:boolean;contrast?:boolean}|null)=>{
+   if(!prefs)return
+   setSound(prefs.audio!==false)
+   setReduced(prefs.reduced===true||prefs.animations===false)
+   setContrast(prefs.contrast===true)
+  }).catch(()=>null)
+ },[])
  const current=levels[level];const unlocked=found.length>=current.goal;const progress=Math.min(100,Math.round(found.length/current.goal*100));const correct=answer===current.correct
  const stars=useMemo(()=>level+(correct?1:0),[level,correct]);const accuracy=attempts===0?100:Math.round(((level+(correct?1:0))/attempts)*100)
  const select=(id:string)=>{if(!running){setFeedback('Primero inicia la misión.');return}if(!found.includes(id))setFound(v=>[...v,id]);setFeedback(clues[id]);if(sound){tone(true);speak(clues[id])}}
