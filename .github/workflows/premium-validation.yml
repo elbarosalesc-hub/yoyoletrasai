@@ -6,7 +6,6 @@ on:
       - main
       - agent/full-premium-rebuild-v2
       - agent/corregir-mejorar-plataforma
-      - audit/protect-approved-surfaces-20260913
   pull_request:
     branches:
       - main
