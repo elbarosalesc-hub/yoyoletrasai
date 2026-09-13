@@ -63,6 +63,11 @@ grant select, insert, update on public.resource_factory_runs to authenticated;
 grant select, insert, update on public.resource_candidates to authenticated;
 grant all on public.platform_resources, public.resource_factory_runs, public.resource_candidates to service_role;
 
+-- The trigger function was introduced by an older migration. It remains in
+-- public for compatibility, but it is not a callable Data API surface.
+revoke all on function public.enforce_premium_resource_quality_gate() from public, anon, authenticated;
+grant execute on function public.enforce_premium_resource_quality_gate() to service_role;
+
 drop policy if exists "members can read platform resources" on public.platform_resources;
 create policy "members can read platform resources"
 on public.platform_resources for select to authenticated
