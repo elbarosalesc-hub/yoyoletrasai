@@ -2,7 +2,8 @@
 
 import { useActionState } from 'react'
 import { Save, ShieldCheck } from 'lucide-react'
-import { initialSupportActionState, saveSupportProfile } from './actions'
+import { saveSupportProfile } from './actions'
+import { initialSupportActionState } from './support-action-state'
 
 type Profile = {
   support_status: string
