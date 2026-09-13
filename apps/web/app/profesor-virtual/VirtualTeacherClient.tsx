@@ -16,6 +16,10 @@ type Course={id:string;name:string;level:string;academicYear:number}
 type Student={id:string;displayName:string}
 type Objective={id:string;subject:string;code:string;title:string;description:string}
 type ContextResponse={courses?:Course[];selectedCourse?:Course;students?:Student[];objectives?:Objective[];metrics?:{studentCount:number;evidenceCount:number;achievement:{achieved:number;developing:number;initial:number;not_observed:number}};studentContext?:{studentId:string;support?:Record<string,string>|null;recentEvidence?:Array<Record<string,string>>};error?:string}
+type InclusionTransfer={source?:string;mode?:TeacherMode;prompt?:string;supportProfile?:string;updatedAt?:string}
+
+const INCLUSION_TRANSFER_KEY='yoyo-profesor-virtual-transfer'
+const SAVED_BRIEF_KEY='yoyo-virtual-teacher-brief'
 
 const modes:Array<{id:TeacherMode;label:string;description:string;icon:typeof Bot}>=[
  {id:'planificar',label:'Planificar',description:'Clases y secuencias',icon:BookOpen},
@@ -77,6 +81,34 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
    if(prefs.virtualTeacherDepth)setDepth(prefs.virtualTeacherDepth)
   }).catch(()=>null)
   fetch('/api/profesor-virtual/context',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then((data:ContextResponse|null)=>{if(data?.courses)setCourses(data.courses)}).catch(()=>null)
+
+  try{
+   const savedBriefRaw=localStorage.getItem(SAVED_BRIEF_KEY)
+   if(savedBriefRaw){
+    const saved=JSON.parse(savedBriefRaw) as Partial<{mode:TeacherMode;prompt:string;level:string;subject:string;objective:string;supportProfile:string;duration:string;tone:string;depth:string}>
+    if(saved.mode&&modes.some(item=>item.id===saved.mode))setMode(saved.mode)
+    if(typeof saved.prompt==='string'&&saved.prompt.trim())setPrompt(saved.prompt)
+    if(typeof saved.level==='string'&&saved.level.trim())setLevel(saved.level)
+    if(typeof saved.subject==='string'&&saved.subject.trim())setSubject(saved.subject)
+    if(typeof saved.objective==='string')setObjective(saved.objective)
+    if(typeof saved.supportProfile==='string'&&saved.supportProfile.trim())setSupportProfile(saved.supportProfile)
+    if(typeof saved.duration==='string'&&saved.duration.trim())setDuration(saved.duration)
+    if(typeof saved.tone==='string'&&saved.tone.trim())setTone(saved.tone)
+    if(typeof saved.depth==='string'&&saved.depth.trim())setDepth(saved.depth)
+   }
+   const transferRaw=localStorage.getItem(INCLUSION_TRANSFER_KEY)
+   if(transferRaw){
+    const transfer=JSON.parse(transferRaw) as InclusionTransfer
+    if(transfer.source==='inclusion'){
+     if(transfer.mode&&modes.some(item=>item.id===transfer.mode))setMode(transfer.mode)
+     else setMode('adaptar')
+     if(typeof transfer.prompt==='string'&&transfer.prompt.trim())setPrompt(transfer.prompt)
+     if(typeof transfer.supportProfile==='string'&&transfer.supportProfile.trim())setSupportProfile(transfer.supportProfile)
+     setStatus('Contexto PIE recibido desde Inclusión')
+     localStorage.removeItem(INCLUSION_TRANSFER_KEY)
+    }
+   }
+  }catch{}
 
   const local=readLocalHistory();if(local.length)setHistory(local)
   fetch('/api/profesor-virtual/history',{cache:'no-store'}).then(async response=>{
@@ -171,7 +203,7 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
  }
 
  function saveBrief(){
-  localStorage.setItem('yoyo-virtual-teacher-brief',JSON.stringify({mode,prompt,level,subject,objective,supportProfile,duration,tone,depth,courseId,studentId,objectiveId,updatedAt:new Date().toISOString()}))
+  localStorage.setItem(SAVED_BRIEF_KEY,JSON.stringify({mode,prompt,level,subject,objective,supportProfile,duration,tone,depth,courseId,studentId,objectiveId,updatedAt:new Date().toISOString()}))
   setStatus('Contexto pedagógico guardado en este dispositivo')
  }
 
