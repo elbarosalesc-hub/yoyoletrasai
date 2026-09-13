@@ -13,7 +13,7 @@ on:
 jobs:
   validate-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,6 +31,14 @@ jobs:
 
       - name: Build Next.js
         run: npm run build
+
+      - name: Build Cloudflare Worker with vinext
+        run: npm run build:vinext --workspace=web
+
+      - name: Verify Cloudflare build output
+        run: |
+          test -d apps/web/dist/client
+          find apps/web/dist -maxdepth 3 -type f -name wrangler.json -print
 
       - name: Install Playwright
         run: |
