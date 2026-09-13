@@ -1,7 +1,7 @@
 'use client'
 
 import {useMemo,useState} from 'react'
-import {ArrowRight,CheckCircle2,City,Gamepad2,RotateCcw,Speaker,Target} from 'lucide-react'
+import {ArrowRight,Building2,CheckCircle2,Gamepad2,RotateCcw,Speaker,Target} from 'lucide-react'
 import ThreeFractionCity from './ThreeFractionCity'
 
 type Props={reducedMotion?:boolean;highContrast?:boolean;audioEnabled?:boolean}
@@ -35,7 +35,7 @@ export default function CiudadFracciones3D({reducedMotion=false,highContrast=fal
  const[ready,setReady]=useState(false)
  const level=levels[levelIndex]
 
- const displayFraction=useMemo(()=>level.kind==='build'?{n:buildNumerator,d:level.build?.denominator||1}:selected.n?selected:{n:0,d:level.kind==='compare'?4:4},[level,selected,buildNumerator])
+ const displayFraction=useMemo(()=>level.kind==='build'?{n:buildNumerator,d:level.build?.denominator||1}:selected.n?selected:{n:0,d:4},[level,selected,buildNumerator])
  const solved=completed[levelIndex]
 
  function speak(text:string){
@@ -78,7 +78,7 @@ export default function CiudadFracciones3D({reducedMotion=false,highContrast=fal
     <div className="game-hud"><span>{level.title}</span><div className="hud-progress"><i style={{width:`${Math.round(((levelIndex+(solved?1:0))/levels.length)*100)}%`}}/></div><b>Meta {fractionLabel(target)}</b></div>
     <div className="three-stage premium-webgl-scene" role="application" aria-label="Ciudad tridimensional para representar fracciones"><ThreeFractionCity numerator={displayFraction.n} denominator={displayFraction.d} targetNumerator={target.n} targetDenominator={target.d} reducedMotion={reducedMotion} highContrast={highContrast} onReady={setReady}/><div className="scene-guide-label"><strong>Modelo fraccionario</strong><span>{ready?`${displayFraction.n}/${displayFraction.d} representado en edificios · objetivo ${target.n}/${target.d}`:'Cargando ciudad 3D…'}</span></div></div>
     <div className="feedback-box" role="status" aria-live="polite">{message}</div>
-    <div className="accessibility-summary"><City size={18}/><span>{level.concept}</span></div>
+    <div className="accessibility-summary"><Building2 size={18}/><span>{level.concept}</span></div>
    </section>
 
    <aside className="panel challenge-panel"><span className="eyebrow"><Target size={14}/> Desafío matemático</span><h2>{level.brief}</h2>
