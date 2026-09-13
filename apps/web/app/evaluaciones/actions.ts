@@ -22,10 +22,14 @@ export type AssessmentDraftInput = {
   id?: string
   title: string
   level: string
+  subject: string
+  objective: string
   variant: string
   status: 'draft' | 'published'
   questions: AssessmentQuestion[]
   rubric: AssessmentRubric[]
+  supports?: string[]
+  equivalenceChecks?: string[]
 }
 
 type SaveAssessmentResult =
@@ -35,17 +39,25 @@ type SaveAssessmentResult =
 export async function saveAssessment(input: AssessmentDraftInput): Promise<SaveAssessmentResult> {
   const context = await requireOrganizationContext('/evaluaciones')
   const title = input.title.trim()
+  const subject = input.subject.trim()
+  const objective = input.objective.trim()
 
   if (!title) return { ok: false, error: 'Debes escribir un título.' }
+  if (!subject) return { ok: false, error: 'Debes seleccionar una asignatura.' }
+  if (!objective) return { ok: false, error: 'Debes escribir el objetivo o habilidad evaluada.' }
   if (!input.questions.length) return { ok: false, error: 'La evaluación debe incluir al menos una pregunta.' }
 
   const totalPoints = input.questions.reduce((sum, question) => sum + Math.max(0, question.points), 0)
   const description = JSON.stringify({
-    schemaVersion: 1,
+    schemaVersion: 2,
     level: input.level,
+    subject,
+    objective,
     variant: input.variant,
     questions: input.questions,
     rubric: input.rubric,
+    supports: input.supports ?? [],
+    equivalenceChecks: input.equivalenceChecks ?? [],
   })
 
   const payload = {
