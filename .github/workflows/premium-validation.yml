@@ -13,7 +13,7 @@ on:
 jobs:
   validate-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,6 +25,22 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Cloudflare vinext compatibility check
+        working-directory: apps/web
+        env:
+          CI: '1'
+        run: npx --yes vinext@latest check
+
+      - name: Generate Cloudflare vinext configuration in runner
+        working-directory: apps/web
+        env:
+          CI: '1'
+        run: npx --yes vinext@latest init --skip-check --platform=cloudflare
+
+      - name: Build with vinext for Cloudflare Workers
+        working-directory: apps/web
+        run: npm run build:vinext
 
       - name: Typecheck
         run: npm run typecheck -- --pretty false
