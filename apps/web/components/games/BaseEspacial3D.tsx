@@ -2,7 +2,7 @@
 
 import {useState} from 'react'
 import {ArrowRight,Calculator,CheckCircle2,Gamepad2,Gauge,Lightbulb,RotateCcw,Rocket,Speaker} from 'lucide-react'
-import ThreeSpaceBase from './ThreeSpaceBase'
+import {ThreeSpaceBase} from './ThreeSpaceBase'
 
 type Sector='oxigeno'|'energia'|'suministros'|'equilibrio'
 type Props={reducedMotion?:boolean;highContrast?:boolean;audioEnabled?:boolean}
