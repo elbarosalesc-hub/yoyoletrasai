@@ -10,9 +10,6 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   validate-web:
     runs-on: ubuntu-latest
@@ -20,8 +17,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,17 +25,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund --loglevel=error
-
-      - name: Commit synchronized package lock
-        if: github.event_name == 'pull_request' && github.head_ref == 'chore/sync-package-lock'
-        run: |
-          if git status --short package-lock.json | grep -q .; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "Sync package lock"
-            git push origin HEAD:chore/sync-package-lock
-          fi
 
       - name: Typecheck
         run: npm run typecheck -- --pretty false
