@@ -2,7 +2,8 @@
 
 import { useActionState, useMemo, useState } from 'react'
 import { BarChart3, BookOpenCheck, ClipboardPlus, Search, Target } from 'lucide-react'
-import { createEvidence, createObjective, initialEvidenceActionState } from './actions'
+import { createEvidence, createObjective } from './actions'
+import { initialEvidenceActionState } from './action-state'
 
 type Course = { id: string; name: string; level: string; academic_year: number }
 type Student = { id: string; first_name: string; last_name: string; preferred_name: string | null }
