@@ -49,7 +49,19 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start application
+        env:
+          CI_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        shell: bash
         run: |
+          set -euo pipefail
+          if [ -n "${CI_SUPABASE_URL:-}" ] && [ -n "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            export NEXT_PUBLIC_SUPABASE_URL="$CI_SUPABASE_URL"
+            export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$CI_SUPABASE_PUBLISHABLE_KEY"
+            echo "Supabase público disponible para pruebas autenticadas."
+          else
+            echo "::notice::Supabase público no está configurado en CI; se conserva el fallback de preview pública."
+          fi
           npm run start > /tmp/yoyoletrasai-next.log 2>&1 &
           echo $! > /tmp/yoyoletrasai-next.pid
           for attempt in {1..30}; do
@@ -66,6 +78,21 @@ jobs:
 
       - name: Browser and keyboard verification
         run: npx playwright test tests/e2e/public-preview.spec.ts tests/e2e/keyboard-navigation.spec.ts --reporter=line --workers=1
+
+      - name: Authenticated regression gate
+        env:
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+          CI_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${E2E_TEST_EMAIL:-}" ] && [ -n "${E2E_TEST_PASSWORD:-}" ] && [ -n "${CI_SUPABASE_URL:-}" ] && [ -n "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            npx playwright test tests/e2e/authenticated-regression.spec.ts --reporter=line --workers=1
+          else
+            echo "::notice::Gate autenticado preparado pero omitido: requiere E2E_TEST_EMAIL, E2E_TEST_PASSWORD, NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+          fi
 
       - name: Lighthouse accessibility gate
         shell: bash
