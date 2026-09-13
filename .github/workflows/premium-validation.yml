@@ -22,9 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund --loglevel=error
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund --loglevel=error
 
       - name: Typecheck
         run: npm run typecheck -- --pretty false
@@ -38,7 +39,11 @@ jobs:
       - name: Verify Cloudflare build output
         run: |
           test -d apps/web/dist/client
-          find apps/web/dist -maxdepth 3 -type f -name wrangler.json -print
+          test -f apps/web/dist/server/wrangler.json
+
+      - name: Dry-run Cloudflare deployment bundle
+        working-directory: apps/web
+        run: npx wrangler deploy --dry-run --config dist/server/wrangler.json
 
       - name: Install Playwright
         run: |
