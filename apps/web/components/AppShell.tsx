@@ -29,7 +29,7 @@ const groups: NavGroup[] = [
     ['Informes', '/informes', FileText], ['Multimedia', '/multimedia', Images], ['Integraciones', '/integraciones', Cloud], ['Calendario', '/herramientas', CalendarDays],
   ]},
   { label: 'Sistema', items: [
-    ['Estado del sistema', '/estado', ShieldCheck], ['QA y publicación', '/qa', ShieldCheck], ['Evolución YOYO', '/evolucion', Radar], ['Planes', '/planes', WalletCards], ['Configuración', '/configuracion', Settings],
+    ['Estado del sistema', '/estado', ShieldCheck], ['QA y publicación', '/qa', ShieldCheck], ['Evolución YOYO', '/evolucion', Radar], ['Planes', '/planes', WalletCards], ['Centro normativo', '/legal', FileText], ['Configuración', '/configuracion', Settings],
   ]},
 ]
 
@@ -38,8 +38,8 @@ const mobile: NavItem[] = [
   ['Inicio', '/app', Home], ['Biblioteca', '/biblioteca', Library], ['Crear', '/crear', Sparkles], ['Juegos 3D', '/juegos', Gamepad2], ['Perfil', '/configuracion', UsersRound],
 ]
 const notifications = [
-  { title: 'Misiones de Aprendizaje activas', detail: 'Ahora puedes convertir recursos, evaluaciones, juegos y propuestas de YOYO IA en experiencias asignables con seguimiento.', time: 'Ahora' },
-  { title: '15 recursos premium publicados', detail: 'La biblioteca activa incorpora recursos de Lenguaje, Matemática, Ciencias, caligrafía, grafomotricidad, evaluación y PIE/DUA.', time: 'Ahora' },
+  { title: 'Misiones de Aprendizaje activas', detail: 'Puedes convertir recursos, evaluaciones, juegos y propuestas de YOYO IA en experiencias asignables con seguimiento.', time: 'Ahora' },
+  { title: 'Biblioteca Premium disponible', detail: 'Consulta recursos publicados y borradores según tu institución y permisos. YOYO no muestra una cifra de producción si el backend no la ha verificado.', time: 'Ahora' },
   { title: 'Centro de Evolución YOYO activo', detail: 'Auditoría, benchmark, backlog de mejoras y evaluación reproducible de YOYO IA están disponibles para propietaria.', time: 'Ahora' },
 ]
 
