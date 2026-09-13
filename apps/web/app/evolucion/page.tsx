@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { FlaskConical, ShieldCheck, Target } from 'lucide-react'
+import { Bot, Clock3, FlaskConical, ShieldCheck, Target } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { EvolutionAuditButton } from '@/components/evolution/EvolutionAuditButton'
 import { EvolutionScoreCards } from '@/components/evolution/EvolutionScoreCards'
@@ -30,6 +30,14 @@ export default async function EvolutionCenter() {
   const latest=(auditsResult.data||[])[0]
   return <AppShell active="Evolución YOYO"><div className="evolution-center">
     <section className="evolution-hero"><div><span className="eyebrow">Propietaria · mejora continua gobernada</span><h1>Centro de Evolución YOYO</h1><p>Audita, compara, prioriza y valida la evolución de la plataforma, YOYO IA, recursos y juegos sin aplicar cambios directos a producción.</p><div className="evolution-hero-tags"><span><ShieldCheck size={15}/> Aprobación humana</span><span><FlaskConical size={15}/> Pruebas reproducibles</span><span><Target size={15}/> Benchmark con evidencia</span></div></div><div className="evolution-hero-action"><EvolutionAuditButton/><small>Todo cambio pasa por rama, CI, preview y aprobación propietaria.</small></div></section>
+
+    <section className="premium-card" style={{marginBottom:20}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:18,alignItems:'center',flexWrap:'wrap'}}>
+        <div><span className="eyebrow">Autopiloto gobernado</span><h2 style={{margin:'4px 0 6px'}}>Evolución automática cada 72 horas</h2><p style={{margin:0,maxWidth:780}}>El sistema audita calidad y confiabilidad, detecta brechas y crea propuestas priorizadas. No modifica producción ni publica recursos por sí solo.</p></div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}><span className="btn btn-soft"><Clock3 size={16}/> 72 h</span><span className="btn btn-soft"><Bot size={16}/> Auditar + proponer</span><span className="btn btn-soft"><ShieldCheck size={16}/> Sin autopublicación</span></div>
+      </div>
+    </section>
+
     <EvolutionScoreCards latest={latest}/>
     <EvolutionBenchmarkPanel benchmarks={benchmarksResult.data||[]} evalCases={evalCasesResult.data||[]} evalRuns={evalRunsResult.data||[]}/>
     <EvolutionBacklogPanel actions={actionsResult.data||[]} findings={findingsResult.data||[]}/>
