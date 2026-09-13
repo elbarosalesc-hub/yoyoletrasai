@@ -40,9 +40,9 @@ export default function ThreeChileRoute({activeZone,completed,reducedMotion=fals
    const landColor=active?(highContrast?0xffef55:0xffd166):done?(highContrast?0x2de2a7:0x62b58d):data.color
    const shape=new THREE.Shape();shape.moveTo(-.9,data.height/2);shape.bezierCurveTo(-1.3,data.height*.18,-.65,-data.height*.18,-.85,-data.height/2);shape.bezierCurveTo(-.2,-data.height*.58,.4,-data.height*.4,.62,-data.height/2);shape.bezierCurveTo(.72,-data.height*.12,.42,data.height*.15,.7,data.height/2);shape.bezierCurveTo(.2,data.height*.58,-.35,data.height*.48,-.9,data.height/2)
    const geometry=new THREE.ExtrudeGeometry(shape,{depth:.38,bevelEnabled:true,bevelSize:.05,bevelThickness:.05,bevelSegments:2})
-   const land=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:landColor,roughness:.72,metalness:.04,emissive:active?landColor:0x000000,emissiveIntensity:active?.12:0}));land.rotation.x=Math.PI/2;land.rotation.z=Math.PI;land.position.z=-.15;land.castShadow=true;group.add(land)
+   const land=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color:landColor,roughness:.72,metalness:.04,emissive:active?landColor:0x000000,emissiveIntensity:active ? .12 : 0}));land.rotation.x=Math.PI/2;land.rotation.z=Math.PI;land.position.z=-.15;land.castShadow=true;group.add(land)
    const marker=new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.75,12),new THREE.MeshStandardMaterial({color:active?0xffffff:done?0xeafff7:0x26334c,roughness:.5}));marker.rotation.x=Math.PI/2;marker.position.set(1.15,0,.55);group.add(marker)
-   const light=new THREE.Mesh(new THREE.SphereGeometry(.19,14,14),new THREE.MeshStandardMaterial({color:active?0xfff3a0:done?0x8ff0c8:0xffffff,emissive:active?0xffd166:done?0x2a9d8f:0x000000,emissiveIntensity:active||done?.8:0}));light.position.set(1.15,0,.96);group.add(light)
+   const light=new THREE.Mesh(new THREE.SphereGeometry(.19,14,14),new THREE.MeshStandardMaterial({color:active?0xfff3a0:done?0x8ff0c8:0xffffff,emissive:active?0xffd166:done?0x2a9d8f:0x000000,emissiveIntensity:active||done ? .8 : 0}));light.position.set(1.15,0,.96);group.add(light)
   })
 
   const pathMaterial=new THREE.MeshStandardMaterial({color:highContrast?0xffffff:0xf9f4dc,roughness:.72})
@@ -56,7 +56,7 @@ export default function ThreeChileRoute({activeZone,completed,reducedMotion=fals
 
   const mountains=new THREE.Group();scene.add(mountains)
   for(let i=0;i<13;i++){
-   const cone=new THREE.Mesh(new THREE.ConeGeometry(.35+(i%3)*.12,1+(i%4)*.22,8),new THREE.MeshStandardMaterial({color:highContrast?0xdde9f5:0x8b8f91,roughness:.9}));cone.position.set(3.1+(i%2)*.35,-6+i*.95,.15);cone.rotation.z=(i%2?.08:-.08);mountains.add(cone)
+   const cone=new THREE.Mesh(new THREE.ConeGeometry(.35+(i%3)*.12,1+(i%4)*.22,8),new THREE.MeshStandardMaterial({color:highContrast?0xdde9f5:0x8b8f91,roughness:.9}));cone.position.set(3.1+(i%2)*.35,-6+i*.95,.15);cone.rotation.z=i%2 ? .08 : -.08;mountains.add(cone)
   }
 
   const clock=new THREE.Clock();let raf=0
