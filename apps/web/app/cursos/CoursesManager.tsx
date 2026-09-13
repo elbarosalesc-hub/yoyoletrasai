@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -8,12 +9,23 @@ import {
   Archive,
   BookOpen,
   CheckCircle2,
+  ClipboardCheck,
   Plus,
   Search,
+  Target,
   Users,
 } from 'lucide-react'
 import { archiveCourse, createCourse } from './actions'
 import { initialCourseActionState } from './action-state'
+
+type CourseMetrics = {
+  studentCount: number
+  objectiveCount: number
+  evidenceObjectiveCount: number
+  activeMissionCount: number
+  needsSupport: number
+  averageProgress: number
+}
 
 type Course = {
   id: string
@@ -22,6 +34,7 @@ type Course = {
   academic_year: number
   teacher_id: string | null
   is_active: boolean
+  metrics: CourseMetrics
 }
 
 type Props = {
@@ -72,7 +85,7 @@ export function CoursesManager({ courses, canManage, organizationName }: Props) 
         <div>
           <span className="eyebrow">{organizationName}</span>
           <h1>Cursos y grupos</h1>
-          <p>Administra cursos reales, asociados a la institución activa y protegidos por permisos.</p>
+          <p>Administra matrícula, OA, evidencias y Misiones con métricas reales de la institución activa.</p>
         </div>
         <div className="course-toolbar">
           <div className="search premium-search" style={{ display: 'flex' }}>
@@ -135,11 +148,11 @@ export function CoursesManager({ courses, canManage, organizationName }: Props) 
               </div>
               <span className="course-status">Activo</span>
             </div>
-            <div className="course-progress"><i style={{ width: '12%' }} /></div>
+            <div className="course-progress" aria-label={`Progreso promedio de misiones ${course.metrics.averageProgress}%`}><i style={{ width: `${course.metrics.averageProgress}%` }} /></div>
             <div className="course-card-meta">
-              <div><b>—</b><span>estudiantes</span></div>
-              <div><b>0</b><span>OA con evidencia</span></div>
-              <div><b>0</b><span>grupos flexibles</span></div>
+              <div><b>{course.metrics.studentCount}</b><span>estudiantes</span></div>
+              <div><b>{course.metrics.evidenceObjectiveCount}/{course.metrics.objectiveCount}</b><span>OA con evidencia</span></div>
+              <div><b>{course.metrics.activeMissionCount}</b><span>misiones activas</span></div>
             </div>
           </article>
         ))}
@@ -167,20 +180,29 @@ export function CoursesManager({ courses, canManage, organizationName }: Props) 
               <article className="group-card">
                 <div className="group-icon"><Users size={21} /></div>
                 <div>
-                  <h3>Estudiantes y grupos</h3>
-                  <p>El siguiente avance incorporará matrícula, grupos flexibles y apoyos individuales.</p>
+                  <h3>{selected.metrics.studentCount} estudiantes con matrícula activa</h3>
+                  <p>La matrícula del curso alimenta Misiones, evaluaciones, progreso y seguimiento individual.</p>
                 </div>
               </article>
               <article className="group-card">
-                <div className="group-icon"><BookOpen size={21} /></div>
+                <div className="group-icon"><Target size={21} /></div>
                 <div>
-                  <h3>Recursos y evidencias</h3>
-                  <p>El curso ya está preparado para recibir actividades, OA, evaluaciones y seguimiento.</p>
+                  <h3>{selected.metrics.evidenceObjectiveCount} de {selected.metrics.objectiveCount} OA con evidencia</h3>
+                  <p>El progreso curricular se calcula desde evidencias registradas, no desde datos simulados.</p>
+                </div>
+              </article>
+              <article className="group-card">
+                <div className="group-icon"><ClipboardCheck size={21} /></div>
+                <div>
+                  <h3>{selected.metrics.activeMissionCount} Misiones activas · {selected.metrics.averageProgress}% de avance promedio</h3>
+                  <p>{selected.metrics.needsSupport ? `${selected.metrics.needsSupport} seguimiento(s) requieren apoyo adicional.` : 'No hay seguimientos marcados como “requiere apoyo” en las Misiones activas.'}</p>
                 </div>
               </article>
             </div>
             <div className="course-footer-actions">
-              <button className="btn btn-soft" disabled><BookOpen size={17} /> Asignar recurso</button>
+              <Link className="btn btn-primary" href="/biblioteca"><BookOpen size={17} /> Asignar recurso</Link>
+              <Link className="btn btn-soft" href="/misiones"><ClipboardCheck size={17} /> Ver Misiones</Link>
+              <Link className="btn btn-soft" href="/progreso"><Target size={17} /> Ver progreso</Link>
               {canManage && (
                 <button
                   className="btn btn-soft"
@@ -197,23 +219,20 @@ export function CoursesManager({ courses, canManage, organizationName }: Props) 
           <aside className="premium-card course-section">
             <div className="course-section-head">
               <div>
-                <h2>Estado del módulo</h2>
-                <small>Datos provenientes de Supabase.</small>
+                <h2>Estado del curso</h2>
+                <small>Datos institucionales protegidos por RLS.</small>
               </div>
             </div>
             <div className="course-alerts">
               <div className="course-alert success">
                 <CheckCircle2 size={20} />
-                <div><h4>Curso persistente</h4><p>La información se guarda en la base institucional y respeta RLS.</p></div>
+                <div><h4>Curso persistente</h4><p>Curso, matrícula y seguimiento se guardan en Supabase por organización.</p></div>
               </div>
               <div className="course-alert info">
                 <Accessibility size={20} />
-                <div><h4>Acceso por rol</h4><p>Solo personal autorizado puede crear o archivar cursos.</p></div>
+                <div><h4>DUA/PIE integrado</h4><p>Las Misiones pueden transportar apoyos y diferenciación sin separar el objetivo común.</p></div>
               </div>
-              <div className="course-alert warning">
-                <AlertTriangle size={20} />
-                <div><h4>Próximo bloque</h4><p>Falta incorporar matrícula, grupos, asignaciones y progreso real.</p></div>
-              </div>
+              {selected.metrics.needsSupport > 0 ? <div className="course-alert warning"><AlertTriangle size={20} /><div><h4>Atención pedagógica</h4><p>Hay {selected.metrics.needsSupport} seguimiento(s) marcados para apoyo dentro de Misiones activas.</p></div></div> : <div className="course-alert success"><CheckCircle2 size={20} /><div><h4>Sin alertas de Misión</h4><p>No hay seguimientos activos marcados como “requiere apoyo”.</p></div></div>}
             </div>
           </aside>
         </section>
