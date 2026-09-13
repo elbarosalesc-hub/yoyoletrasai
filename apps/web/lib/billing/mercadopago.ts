@@ -1,4 +1,5 @@
 export type BillingPlanKey = 'premium' | 'institution'
+export type BillingSubscriptionAction = 'pause' | 'reactivate' | 'cancel'
 
 type MercadoPagoPreapproval = {
   id?: string
@@ -89,6 +90,16 @@ export async function getMercadoPagoSubscription(id: string) {
   const safeId = id.trim()
   if (!safeId || safeId.length > 180) throw new Error('MERCADOPAGO_INVALID_SUBSCRIPTION_ID')
   return mercadoPagoFetch<MercadoPagoPreapproval>(`/preapproval/${encodeURIComponent(safeId)}`)
+}
+
+export async function updateMercadoPagoSubscription(id: string, action: BillingSubscriptionAction) {
+  const safeId = id.trim()
+  if (!safeId || safeId.length > 180) throw new Error('MERCADOPAGO_INVALID_SUBSCRIPTION_ID')
+  const status = action === 'pause' ? 'paused' : action === 'cancel' ? 'canceled' : 'authorized'
+  return mercadoPagoFetch<MercadoPagoPreapproval>(`/preapproval/${encodeURIComponent(safeId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  })
 }
 
 function hexToBytes(hex: string) {
