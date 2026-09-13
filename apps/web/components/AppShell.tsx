@@ -21,7 +21,7 @@ const groups: NavGroup[] = [
   ]},
   { label: 'Enseñanza', items: [
     ['Centros Premium', '/centros', Sparkles], ['Biblioteca Premium', '/biblioteca', Library], ['Plan Lector', '/plan-lector', BookOpenCheck],
-    ['Crear con YOYO IA', '/crear', Sparkles], ['Profesor Virtual', '/profesor-virtual', Bot], ['Herramientas', '/herramientas', Wrench],
+    ['Crear con YOYO IA', '/crear', Sparkles], ['Prompts IA', '/prompts', Sparkles], ['Profesor Virtual', '/profesor-virtual', Bot], ['Herramientas', '/herramientas', Wrench],
     ['Caligrafía', '/caligrafia', PenTool], ['Apoyos PIE y DUA', '/inclusion', Accessibility], ['Simuladores', '/simuladores', FlaskConical], ['Juegos 3D', '/juegos', Gamepad2],
   ]},
   { label: 'Gestión', items: [
@@ -97,6 +97,6 @@ export function AppShell({ children, active }: { children: React.ReactNode; acti
       <div className="approved-content">{children}</div>
     </main>
     <nav className="approved-mobile-nav" aria-label="Navegación móvil">{mobile.map(([label,href,Icon])=><Link key={label} href={href} className={label===active?'active':''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
-    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con biblioteca, YOYO IA, juegos, evolución o informes.</span></div>}</div></section></div>}
+    {searchOpen && <div className="command-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSearchOpen(false)}}><section className="command-palette" role="dialog" aria-modal="true" aria-label="Buscador global"><div className="command-input"><Search size={20}/><input ref={searchInput} value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Buscar en toda la plataforma..."/><button onClick={()=>setSearchOpen(false)}><X size={18}/></button></div><div className="command-meta"><span><Command size={14}/> Navegación rápida</span><small>Esc para cerrar</small></div><div className="command-results">{results.length?results.map(([label,href,Icon],index)=><button key={`${label}-${href}`} onClick={()=>navigate(href)}><Icon size={18}/><span><b>{label}</b><small>{href}</small></span><kbd>{index+1}</kbd></button>):<div className="command-empty"><Search/><strong>Sin resultados</strong><span>Prueba con biblioteca, YOYO IA, prompts, juegos, evolución o informes.</span></div>}</div></section></div>}
   </div>
 }
