@@ -1,7 +1,7 @@
 'use client'
 
-import { startTransition, useMemo, useState } from 'react'
-import { CheckCircle2, ClipboardCheck, Copy, Eye, Plus, Save, Search, Send, Sparkles, Trash2, WandSparkles } from 'lucide-react'
+import { startTransition, useEffect, useMemo, useState } from 'react'
+import { CalendarDays, CheckCircle2, ClipboardCheck, Copy, Eye, Plus, Save, Search, Send, Sparkles, Trash2, Users, WandSparkles } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { saveAssessment, type AssessmentDraftInput, type AssessmentQuestion, type AssessmentRubric } from './actions'
 
@@ -15,6 +15,7 @@ type StoredAssessment = {
   description: string | null
 }
 
+type Course={id:string;name:string;level:string;academic_year?:number}
 type Props = { assessments: StoredAssessment[] }
 type AiOutput={title:string;subject:string;objective:string;variant:string;questions:Array<Omit<AssessmentQuestion,'id'>>;rubric:Array<Omit<AssessmentRubric,'id'>>;supports:string[];equivalenceChecks:string[]}
 
@@ -74,6 +75,14 @@ export function EvaluacionesClient({ assessments }: Props) {
   const [feedback, setFeedback] = useState('Borrador listo para editar')
   const [pending, setPending] = useState(false)
   const [targetVariant,setTargetVariant]=useState('TDA/TDAH')
+  const[courses,setCourses]=useState<Course[]>([])
+  const[courseId,setCourseId]=useState('')
+  const[dueDate,setDueDate]=useState('')
+  const[missionPending,setMissionPending]=useState(false)
+
+  useEffect(()=>{
+    fetch('/api/misiones',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then((data:{courses?:Course[]}|null)=>{if(data?.courses)setCourses(data.courses)}).catch(()=>null)
+  },[])
 
   const total = useMemo(() => draft.questions.reduce((sum, q) => sum + q.points, 0), [draft.questions])
   const visibleItems = useMemo(() => items.filter(item => `${item.title} ${item.assessment_type}`.toLowerCase().includes(query.toLowerCase())), [items, query])
@@ -118,9 +127,24 @@ export function EvaluacionesClient({ assessments }: Props) {
         const stored: StoredAssessment = { id: result.id, title: updated.title, assessment_type: updated.variant, status, total_points: total, updated_at: result.updatedAt, description: JSON.stringify(updated) }
         return [stored, ...current.filter(item => item.id !== result.id)]
       })
-      setFeedback(status === 'published' ? 'Evaluación publicada y disponible para el flujo institucional.' : 'Evaluación guardada correctamente en la institución.')
+      setFeedback(status === 'published' ? 'Evaluación publicada. Ya puedes asignarla como Misión YOYO.' : 'Evaluación guardada correctamente en la institución.')
       setPending(false)
     })
+  }
+
+  async function assignMission(){
+    if(!draft.id||draft.status!=='published'){setFeedback('Publica la evaluación antes de asignarla.');return}
+    if(!courseId){setFeedback('Selecciona un curso para crear la misión.');return}
+    setMissionPending(true);setFeedback('Creando Misión YOYO y seguimiento de matrícula…')
+    try{
+      const supportProfile=[draft.variant!=='Estándar'?`Versión ${draft.variant}`:'',...(draft.supports??[])].filter(Boolean).join(' · ')
+      const response=await fetch('/api/misiones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId,title:draft.title,description:`${draft.subject} · ${draft.level} · ${draft.objective}`,experienceType:'assessment',sourceHref:`/evaluaciones?assessment=${encodeURIComponent(draft.id)}`,supportProfile:supportProfile||null,differentiation:{variant:draft.variant,supports:draft.supports??[],equivalenceChecks:draft.equivalenceChecks??[]},dueAt:dueDate?new Date(`${dueDate}T23:59:59`).toISOString():null,status:'assigned'})})
+      const data=await response.json() as {mission?:{id:string};error?:string}
+      if(!response.ok||!data.mission)throw new Error(data.error||'No fue posible asignar la evaluación.')
+      setFeedback('Misión creada. La evaluación quedó asignada a la matrícula activa del curso.')
+      setCourseId('');setDueDate('')
+    }catch(error){setFeedback(error instanceof Error?error.message:'No fue posible crear la misión.')}
+    finally{setMissionPending(false)}
   }
 
   return <AppShell active="Evaluaciones">
@@ -132,9 +156,9 @@ export function EvaluacionesClient({ assessments }: Props) {
 
       <div className="assessment-shell-grid">
         <aside className="assessment-library premium-card">
-          <div className="assessment-library-head"><div><h2>Mis evaluaciones</h2><span>{items.length} guardadas</span></div><button className="icon-button" onClick={() => { setDraft(freshDraft()); setView('editor') }} aria-label="Nueva evaluación"><Plus/></button></div>
+          <div className="assessment-library-head"><div><h2>Mis evaluaciones</h2><span>{items.length} guardadas</span></div><button className="icon-button" onClick={() => { setDraft(freshDraft()); setView('editor');setCourseId('');setDueDate('') }} aria-label="Nueva evaluación"><Plus/></button></div>
           <label className="assessment-search"><Search size={17}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar evaluación"/></label>
-          <div className="assessment-list">{visibleItems.length ? visibleItems.map(item => <button key={item.id} className={draft.id === item.id ? 'active' : ''} onClick={() => { setDraft(parseAssessment(item)); setView('editor'); setFeedback('Evaluación cargada para editar') }}><span><ClipboardCheck/></span><div><b>{item.title}</b><small>{item.assessment_type} · {item.total_points} puntos</small></div><em className={item.status === 'published' ? 'published' : ''}>{item.status === 'published' ? 'Publicada' : 'Borrador'}</em></button>) : <div className="assessment-empty"><ClipboardCheck/><b>No hay resultados</b><span>Prueba otra búsqueda o crea una evaluación.</span></div>}</div>
+          <div className="assessment-list">{visibleItems.length ? visibleItems.map(item => <button key={item.id} className={draft.id === item.id ? 'active' : ''} onClick={() => { setDraft(parseAssessment(item)); setView('editor'); setFeedback('Evaluación cargada para editar');setCourseId('');setDueDate('') }}><span><ClipboardCheck/></span><div><b>{item.title}</b><small>{item.assessment_type} · {item.total_points} puntos</small></div><em className={item.status === 'published' ? 'published' : ''}>{item.status === 'published' ? 'Publicada' : 'Borrador'}</em></button>) : <div className="assessment-empty"><ClipboardCheck/><b>No hay resultados</b><span>Prueba otra búsqueda o crea una evaluación.</span></div>}</div>
         </aside>
 
         <main className="assessment-canvas premium-card">
@@ -161,7 +185,8 @@ export function EvaluacionesClient({ assessments }: Props) {
           {draft.supports?.length?<div className="insight"><b>Apoyos aplicados</b>{draft.supports.map(item=><p key={item}>✓ {item}</p>)}</div>:null}
           {draft.equivalenceChecks?.length?<div className="insight"><b>Equivalencia pedagógica</b>{draft.equivalenceChecks.map(item=><p key={item}>✓ {item}</p>)}</div>:null}
           <div className="assessment-save-box"><p aria-live="polite">{feedback}</p><button disabled={pending} className="btn btn-soft" onClick={() => persist('draft')}><Save/>Guardar borrador</button><button disabled={pending} className="btn btn-primary" onClick={() => persist('published')}><Send/>Publicar</button></div>
-          <button className="duplicate-action" onClick={() => { setDraft(current => ({ ...current, id: undefined, title: `${current.title} · copia`, status: 'draft' })); setFeedback('Copia creada como nuevo borrador.') }}><Copy/>Duplicar instrumento</button>
+          {draft.id&&draft.status==='published'?<section className="insight" style={{display:'grid',gap:9,marginTop:12}}><b><Users size={15}/> Asignar como Misión YOYO</b><label>Curso<select value={courseId} onChange={event=>setCourseId(event.target.value)}><option value="">Selecciona un curso</option>{courses.map(course=><option key={course.id} value={course.id}>{course.name} · {course.level}</option>)}</select></label><label>Fecha de entrega opcional<div style={{display:'flex',alignItems:'center',gap:7}}><CalendarDays size={16}/><input type="date" value={dueDate} onChange={event=>setDueDate(event.target.value)}/></div></label><button className="btn btn-primary" disabled={missionPending||!courseId} onClick={assignMission}><Users size={16}/>{missionPending?'Asignando…':'Asignar al curso'}</button><small>La misión crea seguimiento para la matrícula activa y conserva los apoyos de esta variante.</small></section>:null}
+          <button className="duplicate-action" onClick={() => { setDraft(current => ({ ...current, id: undefined, title: `${current.title} · copia`, status: 'draft' })); setFeedback('Copia creada como nuevo borrador.');setCourseId('');setDueDate('') }}><Copy/>Duplicar instrumento</button>
         </aside>
       </div>
     </div>
