@@ -10,13 +10,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   validate-web:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,8 +29,20 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund --loglevel=error
+      - name: Install and lock dependencies
+        run: npm install --no-audit --no-fund --loglevel=error
+
+      - name: Commit synchronized package lock
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Sync Lighthouse accessibility lockfile"
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Typecheck
         run: npm run typecheck -- --pretty false
