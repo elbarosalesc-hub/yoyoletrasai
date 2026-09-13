@@ -44,6 +44,7 @@ import './premium-home-2026.css'
 import './hero-restored.css'
 import './games-hub-2026.css'
 import './evolution-center.css'
+import './platform-preferences.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',
