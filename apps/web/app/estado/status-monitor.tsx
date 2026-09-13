@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { CheckCircle2, Database, RefreshCw, Server, Settings2, TriangleAlert } from 'lucide-react'
+import { BrainCircuit, CheckCircle2, Database, RefreshCw, Server, Settings2, TriangleAlert } from 'lucide-react'
 import styles from './status.module.css'
 
 type HealthPayload = {
@@ -9,6 +9,8 @@ type HealthPayload = {
   application?: 'operational'
   configuration?: 'valid' | 'missing'
   database?: 'reachable' | 'unreachable' | 'not_configured'
+  aiGateway?: 'configured' | 'not_configured'
+  runtime?: string
   timestamp?: string
 }
 
@@ -34,11 +36,15 @@ export function StatusMonitor() {
       setPayload(result)
 
       if (result.status === 'ok') {
-        setMessage('Los servicios esenciales responden correctamente.')
+        setMessage('Aplicación, configuración, datos y YOYO IA responden correctamente.')
       } else if (result.configuration === 'missing') {
         setMessage('La aplicación responde, pero faltan variables de configuración esenciales.')
+      } else if (result.database !== 'reachable') {
+        setMessage('La aplicación responde, pero Supabase no está disponible o configurado.')
+      } else if (result.aiGateway !== 'configured') {
+        setMessage('La aplicación y Supabase responden; YOYO IA todavía no tiene su runtime Cloudflare configurado.')
       } else {
-        setMessage('La plataforma responde con capacidad limitada. Revisa la conectividad de datos.')
+        setMessage('La plataforma responde con capacidad limitada. Revisa los servicios marcados.')
       }
     } catch {
       setPayload(null)
@@ -56,6 +62,7 @@ export function StatusMonitor() {
   const applicationOk = payload?.application === 'operational'
   const configurationOk = payload?.configuration === 'valid'
   const databaseOk = payload?.database === 'reachable'
+  const aiOk = payload?.aiGateway === 'configured'
   const overallOk = payload?.status === 'ok'
   const checkFailed = !loading && !payload
 
@@ -68,7 +75,7 @@ export function StatusMonitor() {
         <div>
           <strong>{loading ? 'Verificación en curso' : overallOk ? 'Plataforma operativa' : 'Revisión necesaria'}</strong>
           <p>{message}</p>
-          {payload?.timestamp && <small>Última comprobación: {new Date(payload.timestamp).toLocaleString('es-CL')}</small>}
+          {payload?.timestamp && <small>Última comprobación: {new Date(payload.timestamp).toLocaleString('es-CL')} · Runtime: {payload.runtime || 'no informado'}</small>}
         </div>
         <button type="button" onClick={() => void checkHealth()} disabled={loading}>
           <RefreshCw size={17} className={loading ? styles.spinning : undefined} />
@@ -78,8 +85,9 @@ export function StatusMonitor() {
 
       <div className={styles.grid}>
         <StatusCard icon={<Server size={22} />} title="Aplicación web" value={applicationOk ? 'Aplicación disponible' : loading ? 'Comprobando' : 'Sin respuesta verificada'} ok={applicationOk} />
-        <StatusCard icon={<Settings2 size={22} />} title="Configuración" value={configurationOk ? 'Variables configuradas' : loading ? 'Comprobando' : 'Configuración incompleta'} ok={configurationOk} />
+        <StatusCard icon={<Settings2 size={22} />} title="Configuración" value={configurationOk ? 'Variables esenciales configuradas' : loading ? 'Comprobando' : 'Configuración incompleta'} ok={configurationOk} />
         <StatusCard icon={<Database size={22} />} title="Supabase" value={databaseLabel(payload?.database, loading)} ok={databaseOk} />
+        <StatusCard icon={<BrainCircuit size={22} />} title="YOYO IA" value={aiLabel(payload?.aiGateway, loading)} ok={aiOk} />
       </div>
 
       <article className={styles.guide}>
@@ -110,5 +118,12 @@ function databaseLabel(value: HealthPayload['database'], loading: boolean) {
   if (value === 'reachable') return 'Servicio accesible'
   if (value === 'not_configured') return 'Configuración incompleta'
   if (value === 'unreachable') return 'Servicio sin respuesta'
+  return 'No disponible'
+}
+
+function aiLabel(value: HealthPayload['aiGateway'], loading: boolean) {
+  if (loading) return 'Comprobando'
+  if (value === 'configured') return 'Runtime Cloudflare configurado'
+  if (value === 'not_configured') return 'Runtime sin configurar'
   return 'No disponible'
 }
