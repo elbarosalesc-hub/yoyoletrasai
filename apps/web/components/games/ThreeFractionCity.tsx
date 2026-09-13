@@ -46,7 +46,7 @@ export default function ThreeFractionCity({numerator,denominator,targetNumerator
    const height=1.5+(i%3)*.45
    const building=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.5,segmentWidth*.82),height,2.7),new THREE.MeshStandardMaterial({color:i<numerator?activeColor:inactiveColor,roughness:.62,metalness:.06}))
    building.position.set(-3+segmentWidth/2+i*segmentWidth,height/2,-6.2);building.castShadow=true;building.receiveShadow=true;district.add(building)
-   const roof=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.38,segmentWidth*.55),.12,1.5),new THREE.MeshStandardMaterial({color:i<numerator?0xffffff:0xb8bdca,emissive:i<numerator?activeColor:0x000000,emissiveIntensity:i<numerator?.15:0,roughness:.75}));roof.position.set(building.position.x,height+.08,-6.2);district.add(roof)
+   const roof=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.38,segmentWidth*.55),.12,1.5),new THREE.MeshStandardMaterial({color:i<numerator?0xffffff:0xb8bdca,emissive:i<numerator?activeColor:0x000000,emissiveIntensity:i<numerator ? .15 : 0,roughness:.75}));roof.position.set(building.position.x,height+.08,-6.2);district.add(roof)
   }
 
   const targetGroup=new THREE.Group();scene.add(targetGroup)
@@ -69,7 +69,7 @@ export default function ThreeFractionCity({numerator,denominator,targetNumerator
   const fractionValue=denominator?numerator/denominator:0
   const targetValue=targetDenominator?targetNumerator/targetDenominator:0
   const close=Math.abs(fractionValue-targetValue)<.0001
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.8,.08,12,72),new THREE.MeshStandardMaterial({color:close?targetColor:activeColor,emissive:close?targetColor:0x000000,emissiveIntensity:close?.55:0}));ring.rotation.x=Math.PI/2;ring.position.set(0,.12,-6.2);scene.add(ring)
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.8,.08,12,72),new THREE.MeshStandardMaterial({color:close?targetColor:activeColor,emissive:close?targetColor:0x000000,emissiveIntensity:close ? .55 : 0}));ring.rotation.x=Math.PI/2;ring.position.set(0,.12,-6.2);scene.add(ring)
 
   let px=0,py=0
   const pointer=(event:PointerEvent)=>{const rect=mount.getBoundingClientRect();px=((event.clientX-rect.left)/Math.max(rect.width,1)-.5)*2;py=((event.clientY-rect.top)/Math.max(rect.height,1)-.5)*2}
