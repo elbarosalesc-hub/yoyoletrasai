@@ -39,7 +39,22 @@ export default function PromptsPage(){
 
  function usePrompt(prompt:PromptItem){
   try{
-   window.localStorage.setItem('yoyo-prompts-chat-selection',JSON.stringify({title:prompt.title,content:prompt.content,type:prompt.type,source:'prompts.chat',selectedAt:new Date().toISOString()}))
+   const now=new Date().toISOString()
+   const draft={
+    title:prompt.title,
+    level:'3° básico',
+    resourceType:'Guía de aprendizaje',
+    subject:'Lenguaje y Comunicación',
+    objective:`Adaptar la siguiente idea a una experiencia pedagógica clara, inclusiva y alineada al objetivo de aprendizaje: ${prompt.title}`,
+    adaptation:'Acceso universal DUA',
+    visualStyle:'Infantil académico premium',
+    packageMode:'Paquete completo',
+    questions:[{id:Date.now(),text:prompt.content}],
+    aiOutput:null,
+    updatedAt:now,
+   }
+   window.localStorage.setItem('yoyo-prompts-chat-selection',JSON.stringify({title:prompt.title,content:prompt.content,type:prompt.type,source:'prompts.chat',selectedAt:now}))
+   window.localStorage.setItem('yoyo-resource-draft',JSON.stringify(draft))
    router.push('/crear?from=prompts-chat')
   }catch{setStatus('No fue posible transferir este prompt al creador.')}
  }
