@@ -36,13 +36,55 @@ async function expectBasicAccessibility(page: Page) {
   expect(violations).toEqual({ missingAlt: 0, unnamedButtons: 0, unnamedLinks: 0 })
 }
 
+async function expectStructuralAccessibility(page: Page) {
+  const audit = await page.evaluate(() => {
+    const allIds = [...document.querySelectorAll<HTMLElement>('[id]')].map((node) => node.id).filter(Boolean)
+    const duplicateIds = allIds.filter((id, index) => allIds.indexOf(id) !== index)
+    const controls = [...document.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input:not([type="hidden"]), select, textarea')]
+    const unnamedControls = controls.filter((node) => {
+      if (node.getAttribute('aria-label') || node.getAttribute('aria-labelledby') || node.getAttribute('title')) return false
+      if (node.id && document.querySelector(`label[for="${CSS.escape(node.id)}"]`)) return false
+      return !node.closest('label')
+    }).length
+    const h1Count = document.querySelectorAll('h1').length
+    const landmarkCount = document.querySelectorAll('main, [role="main"]').length
+    return {
+      lang: document.documentElement.lang,
+      title: document.title.trim(),
+      duplicateIds: [...new Set(duplicateIds)],
+      unnamedControls,
+      h1Count,
+      landmarkCount,
+    }
+  })
+  expect(audit.lang.toLowerCase()).toMatch(/^es(?:-|$)/)
+  expect(audit.title.length).toBeGreaterThan(2)
+  expect(audit.duplicateIds).toEqual([])
+  expect(audit.unnamedControls).toBe(0)
+  expect(audit.h1Count).toBeGreaterThanOrEqual(1)
+  expect(audit.landmarkCount).toBeGreaterThanOrEqual(1)
+}
+
 async function expectKeyboardEntry(page: Page) {
   await page.keyboard.press('Tab')
   const active = await page.evaluate(() => {
     const element = document.activeElement as HTMLElement | null
-    return { tag: element?.tagName || '', focusable: Boolean(element && element !== document.body) }
+    const style = element ? window.getComputedStyle(element) : null
+    return {
+      tag: element?.tagName || '',
+      focusable: Boolean(element && element !== document.body),
+      focusIndicator: Boolean(style && (style.outlineStyle !== 'none' || style.boxShadow !== 'none')),
+    }
   })
   expect(active.focusable).toBeTruthy()
+  expect(active.focusIndicator).toBeTruthy()
+}
+
+async function runPublicQualityGate(page: Page) {
+  await expectNoHorizontalOverflow(page)
+  await expectBasicAccessibility(page)
+  await expectStructuralAccessibility(page)
+  await expectKeyboardEntry(page)
 }
 
 test.describe('vista previa premium', () => {
@@ -57,9 +99,7 @@ test.describe('vista previa premium', () => {
 
     await page.getByRole('link', { name: 'Explorar el ecosistema' }).click()
     await expect(page).toHaveURL(/#ecosistema$/)
-    await expectNoHorizontalOverflow(page)
-    await expectBasicAccessibility(page)
-    await expectKeyboardEntry(page)
+    await runPublicQualityGate(page)
 
     await mkdir('/tmp/yoyo-preview', { recursive: true })
     await page.screenshot({ path: '/tmp/yoyo-preview/portada-premium.png', fullPage: true })
@@ -77,9 +117,7 @@ test.describe('vista previa premium', () => {
     await expect(page.getByRole('textbox', { name: /Correo electrónico/i })).toBeVisible()
     await expect(page.locator('input[type="password"]')).toBeVisible()
     await expect(page.getByRole('button', { name: /Mostrar contraseña/i })).toBeVisible()
-    await expectNoHorizontalOverflow(page)
-    await expectBasicAccessibility(page)
-    await expectKeyboardEntry(page)
+    await runPublicQualityGate(page)
 
     await page.screenshot({ path: '/tmp/yoyo-preview/acceso-premium.png', fullPage: true })
     expect(browserErrors).toEqual([])
@@ -94,6 +132,7 @@ test.describe('vista previa premium', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto(`${baseUrl}/presentacion`, { waitUntil: 'networkidle' })
       await expectNoHorizontalOverflow(page)
+      await expectStructuralAccessibility(page)
       await mkdir('/tmp/yoyo-preview', { recursive: true })
       await page.screenshot({ path: `/tmp/yoyo-preview/portada-${viewport.name}.png`, fullPage: true })
     })
