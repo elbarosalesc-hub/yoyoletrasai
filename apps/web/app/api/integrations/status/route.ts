@@ -16,10 +16,14 @@ export async function GET() {
 
   const providers = Object.fromEntries(Object.entries(providerRequirements).map(([key, required]) => {
     const missing = required.filter(name => !process.env[name])
+    const credentialsConfigured = missing.length === 0
     return [key, {
-      configured: missing.length === 0,
+      credentialsConfigured,
+      oauthImplemented: false,
+      connected: false,
       missing,
       required: [...required],
+      state: credentialsConfigured ? 'credentials_ready' : 'credentials_missing',
     }]
   }))
 
