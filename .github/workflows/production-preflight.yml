@@ -2,17 +2,22 @@ name: Production preflight
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/production-preflight.yml
+  workflow_run:
+    workflows:
+      - Premium validation
+    types:
+      - completed
 
 permissions:
   contents: read
 
 jobs:
   preflight:
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -33,6 +38,13 @@ jobs:
       MERCADOPAGO_PREMIUM_PLAN_ID: ${{ secrets.MERCADOPAGO_PREMIUM_PLAN_ID }}
       MERCADOPAGO_INSTITUTION_PLAN_ID: ${{ secrets.MERCADOPAGO_INSTITUTION_PLAN_ID }}
     steps:
+      - name: Validate upstream validation context
+        if: ${{ github.event_name == 'workflow_run' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Premium validation aprobada para main. Continuando con preflight de producción."
+
       - name: Validate required production configuration
         shell: bash
         run: |
@@ -112,6 +124,7 @@ jobs:
         shell: bash
         run: |
           echo "## YOYO · Production preflight" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Validación premium previa: requerida para despliegue automático" >> "$GITHUB_STEP_SUMMARY"
           echo "- Secretos obligatorios: comprobados sin exponer valores" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cuenta Cloudflare: validada si este job quedó verde" >> "$GITHUB_STEP_SUMMARY"
           echo "- Worker esperado: yoyoletrasai" >> "$GITHUB_STEP_SUMMARY"
