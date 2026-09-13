@@ -8,7 +8,7 @@ import {
   Accessibility, BarChart3, Bell, BookOpen, BookOpenCheck, Bot, CalendarDays, Check,
   ChevronDown, ChevronRight, ClipboardList, Cloud, Command, FileText, FlaskConical,
   Gamepad2, Home, Images, Library, Mail, Menu, PenTool, Radar, Search, Settings, ShieldCheck,
-  Sparkles, Users, UsersRound, Wrench, X,
+  Sparkles, Users, UsersRound, WalletCards, Wrench, X,
 } from 'lucide-react'
 import { SessionMenu } from '@/components/SessionMenu'
 
@@ -29,7 +29,7 @@ const groups: NavGroup[] = [
     ['Informes', '/informes', FileText], ['Multimedia', '/multimedia', Images], ['Integraciones', '/integraciones', Cloud], ['Calendario', '/herramientas', CalendarDays],
   ]},
   { label: 'Sistema', items: [
-    ['Estado del sistema', '/estado', ShieldCheck], ['QA y publicación', '/qa', ShieldCheck], ['Evolución YOYO', '/evolucion', Radar], ['Configuración', '/configuracion', Settings],
+    ['Estado del sistema', '/estado', ShieldCheck], ['QA y publicación', '/qa', ShieldCheck], ['Evolución YOYO', '/evolucion', Radar], ['Planes', '/planes', WalletCards], ['Configuración', '/configuracion', Settings],
   ]},
 ]
 
