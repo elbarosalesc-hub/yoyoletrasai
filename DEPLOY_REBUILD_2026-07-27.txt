@@ -1,2 +1,0 @@
-Forzar despliegue de la versión premium corregida.
-Commit posterior a la corrección de iconos y rutas.
