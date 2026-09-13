@@ -38,6 +38,10 @@ jobs:
       RUNTIME_YOYO_AI_MODEL_OWNER: ${{ vars.YOYO_AI_MODEL_OWNER }}
       RUNTIME_YOYO_BILLING_PROVIDER: ${{ vars.YOYO_BILLING_PROVIDER }}
       RUNTIME_YOYO_BILLING_CHECKOUT_URL: ${{ secrets.YOYO_BILLING_CHECKOUT_URL }}
+      RUNTIME_MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
+      RUNTIME_MERCADOPAGO_WEBHOOK_SECRET: ${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
+      RUNTIME_MERCADOPAGO_PREMIUM_PLAN_ID: ${{ secrets.MERCADOPAGO_PREMIUM_PLAN_ID }}
+      RUNTIME_MERCADOPAGO_INSTITUTION_PLAN_ID: ${{ secrets.MERCADOPAGO_INSTITUTION_PLAN_ID }}
       RUNTIME_YOYO_PRODUCTION_URL: ${{ vars.YOYO_PRODUCTION_URL }}
     steps:
       - name: Checkout main
@@ -62,6 +66,18 @@ jobs:
               missing=1
             fi
           done
+          if [ "${RUNTIME_YOYO_BILLING_PROVIDER:-}" = "mercadopago" ]; then
+            for key in RUNTIME_MERCADOPAGO_ACCESS_TOKEN RUNTIME_MERCADOPAGO_WEBHOOK_SECRET RUNTIME_YOYO_PRODUCTION_URL; do
+              if [ -z "${!key:-}" ]; then
+                echo "::error::Mercado Pago está habilitado pero falta $key."
+                missing=1
+              fi
+            done
+            if [ -z "${RUNTIME_MERCADOPAGO_PREMIUM_PLAN_ID:-}" ] && [ -z "${RUNTIME_MERCADOPAGO_INSTITUTION_PLAN_ID:-}" ]; then
+              echo "::error::Mercado Pago requiere al menos un plan real (Premium o Institución)."
+              missing=1
+            fi
+          fi
           if [ "$missing" -ne 0 ]; then exit 1; fi
 
       - name: Install locked dependencies
@@ -104,6 +120,10 @@ jobs:
             YOYO_AI_MODEL_OWNER: 'RUNTIME_YOYO_AI_MODEL_OWNER',
             YOYO_BILLING_PROVIDER: 'RUNTIME_YOYO_BILLING_PROVIDER',
             YOYO_BILLING_CHECKOUT_URL: 'RUNTIME_YOYO_BILLING_CHECKOUT_URL',
+            MERCADOPAGO_ACCESS_TOKEN: 'RUNTIME_MERCADOPAGO_ACCESS_TOKEN',
+            MERCADOPAGO_WEBHOOK_SECRET: 'RUNTIME_MERCADOPAGO_WEBHOOK_SECRET',
+            MERCADOPAGO_PREMIUM_PLAN_ID: 'RUNTIME_MERCADOPAGO_PREMIUM_PLAN_ID',
+            MERCADOPAGO_INSTITUTION_PLAN_ID: 'RUNTIME_MERCADOPAGO_INSTITUTION_PLAN_ID',
             YOYO_PRODUCTION_URL: 'RUNTIME_YOYO_PRODUCTION_URL',
           }
           const lines = []
