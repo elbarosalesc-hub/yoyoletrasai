@@ -80,4 +80,32 @@ test.describe('regresión autenticada', () => {
     await expect(page.getByRole('status')).toContainText(/recuperado/i)
     await expect(page.getByRole('checkbox', { name: /Marcar paso completado/i })).toBeChecked()
   })
+
+  test('Inclusión y PIE transfiere su contexto al Profesor Virtual sin rediseñar el flujo', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/inclusion`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(inclusion|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/inclusion`, { waitUntil: 'networkidle' })
+    }
+
+    await page.locator('.visual-board-head input').fill('Rutina PIE de autonomía')
+    await page.getByRole('checkbox', { name: /Marcar paso completado/i }).check()
+    await page.getByRole('link', { name: /Consultar a YOYO/i }).click()
+    await page.waitForURL(/\/profesor-virtual(?:[/?#]|$)/, { timeout: 20_000 })
+
+    await expect(page.getByRole('button', { name: /Adaptar/i })).toHaveClass(/active/)
+    await expect(page.getByLabel(/Necesidades y apoyos/i)).toHaveValue(/Rutina PIE de autonomía/)
+    await expect(page.getByLabel(/Necesidades y apoyos/i)).toHaveValue(/Seguimiento de pasos activado/)
+    await expect(page.getByPlaceholder(/Describe el objetivo, dificultad, curso o recurso/i)).toHaveValue(/Rutina PIE de autonomía/)
+
+    const transferred = await page.evaluate(() => localStorage.getItem('yoyo-profesor-virtual-transfer'))
+    expect(transferred).toBeNull()
+  })
 })
