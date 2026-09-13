@@ -4,7 +4,20 @@ import { CoursesManager } from './CoursesManager'
 
 export const dynamic = 'force-dynamic'
 
-type Row = Record<string, unknown>
+type CourseRow = {
+  id: string
+  name: string
+  level: string
+  academic_year: number
+  teacher_id: string | null
+  is_active: boolean
+}
+
+type EnrollmentRow = { course_id: string; student_id: string; enrollment_status: string }
+type ObjectiveRow = { id: string; course_id: string | null }
+type EvidenceRow = { course_id: string | null; objective_id: string | null; achievement_level: string }
+type MissionRow = { id: string; course_id: string; status: string }
+type MissionProgressRow = { mission_id: string; status: string; progress: number | null }
 
 export default async function CursosPage() {
   const context = await requireOrganizationContext('/cursos')
@@ -19,13 +32,13 @@ export default async function CursosPage() {
 
   if (error) throw new Error(`No fue posible cargar los cursos: ${error.message}`)
 
-  const courseRows = (courses ?? []) as Row[]
-  const courseIds = courseRows.map((course) => String(course.id))
-  let enrollments: Row[] = []
-  let objectives: Row[] = []
-  let evidence: Row[] = []
-  let missions: Row[] = []
-  let missionProgress: Row[] = []
+  const courseRows = (courses ?? []) as CourseRow[]
+  const courseIds = courseRows.map((course) => course.id)
+  let enrollments: EnrollmentRow[] = []
+  let objectives: ObjectiveRow[] = []
+  let evidence: EvidenceRow[] = []
+  let missions: MissionRow[] = []
+  let missionProgress: MissionProgressRow[] = []
 
   if (courseIds.length) {
     const [enrollmentResult, objectiveResult, evidenceResult, missionResult] = await Promise.all([
@@ -34,29 +47,28 @@ export default async function CursosPage() {
       db.from('learning_evidence').select('course_id,objective_id,achievement_level').eq('organization_id', context.organization.id).in('course_id', courseIds),
       db.from('learning_missions').select('id,course_id,status').eq('organization_id', context.organization.id).in('course_id', courseIds).in('status', ['draft','assigned']),
     ])
-    enrollments = enrollmentResult.error ? [] : (enrollmentResult.data ?? [])
-    objectives = objectiveResult.error ? [] : (objectiveResult.data ?? [])
-    evidence = evidenceResult.error ? [] : (evidenceResult.data ?? [])
-    missions = missionResult.error ? [] : (missionResult.data ?? [])
+    enrollments = enrollmentResult.error ? [] : (enrollmentResult.data ?? []) as EnrollmentRow[]
+    objectives = objectiveResult.error ? [] : (objectiveResult.data ?? []) as ObjectiveRow[]
+    evidence = evidenceResult.error ? [] : (evidenceResult.data ?? []) as EvidenceRow[]
+    missions = missionResult.error ? [] : (missionResult.data ?? []) as MissionRow[]
 
-    const missionIds = missions.map((mission) => String(mission.id))
+    const missionIds = missions.map((mission) => mission.id)
     if (missionIds.length) {
       const progressResult = await db.from('learning_mission_progress').select('mission_id,status,progress').eq('organization_id', context.organization.id).in('mission_id', missionIds)
-      missionProgress = progressResult.error ? [] : (progressResult.data ?? [])
+      missionProgress = progressResult.error ? [] : (progressResult.data ?? []) as MissionProgressRow[]
     }
   }
 
   const enriched = courseRows.map((course) => {
-    const id = String(course.id)
-    const courseEnrollments = enrollments.filter((row) => String(row.course_id) === id)
-    const courseObjectives = objectives.filter((row) => String(row.course_id) === id)
-    const courseEvidence = evidence.filter((row) => String(row.course_id) === id)
-    const courseMissions = missions.filter((row) => String(row.course_id) === id)
-    const missionIds = new Set(courseMissions.map((row) => String(row.id)))
-    const progressRows = missionProgress.filter((row) => missionIds.has(String(row.mission_id)))
-    const studentCount = new Set(courseEnrollments.map((row) => String(row.student_id))).size
-    const evidenceObjectiveCount = new Set(courseEvidence.map((row) => String(row.objective_id)).filter(Boolean)).size
-    const needsSupport = progressRows.filter((row) => String(row.status) === 'needs_support').length
+    const courseEnrollments = enrollments.filter((row) => row.course_id === course.id)
+    const courseObjectives = objectives.filter((row) => row.course_id === course.id)
+    const courseEvidence = evidence.filter((row) => row.course_id === course.id)
+    const courseMissions = missions.filter((row) => row.course_id === course.id)
+    const missionIds = new Set(courseMissions.map((row) => row.id))
+    const progressRows = missionProgress.filter((row) => missionIds.has(row.mission_id))
+    const studentCount = new Set(courseEnrollments.map((row) => row.student_id)).size
+    const evidenceObjectiveCount = new Set(courseEvidence.map((row) => row.objective_id).filter((value): value is string => Boolean(value))).size
+    const needsSupport = progressRows.filter((row) => row.status === 'needs_support').length
     const averageProgress = progressRows.length
       ? Math.round(progressRows.reduce((sum, row) => sum + Number(row.progress || 0), 0) / progressRows.length)
       : 0
