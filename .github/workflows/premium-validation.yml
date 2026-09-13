@@ -31,9 +31,15 @@ jobs:
         run: npm run typecheck -- --pretty false
 
       - name: Build Next.js
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Build Cloudflare Worker with vinext
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build:vinext --workspace=web
 
       - name: Verify Cloudflare build output
@@ -49,6 +55,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Start application
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: |
           npm run start > /tmp/yoyoletrasai-next.log 2>&1 &
           echo $! > /tmp/yoyoletrasai-next.pid
@@ -66,6 +75,19 @@ jobs:
 
       - name: Browser and keyboard verification
         run: npx playwright test tests/e2e/public-preview.spec.ts tests/e2e/keyboard-navigation.spec.ts --reporter=line --workers=1
+
+      - name: Authenticated regression gate
+        env:
+          E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
+          E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${E2E_TEST_EMAIL:-}" ] && [ -n "${E2E_TEST_PASSWORD:-}" ]; then
+            npx playwright test tests/e2e/authenticated-regression.spec.ts --reporter=line --workers=1
+          else
+            echo "::notice::Gate autenticado preparado pero omitido: faltan E2E_TEST_EMAIL/E2E_TEST_PASSWORD."
+          fi
 
       - name: Lighthouse accessibility gate
         shell: bash
