@@ -12,11 +12,8 @@ import {
   Search,
   Users,
 } from 'lucide-react'
-import {
-  archiveCourse,
-  createCourse,
-  initialCourseActionState,
-} from './actions'
+import { archiveCourse, createCourse } from './actions'
+import { initialCourseActionState } from './action-state'
 
 type Course = {
   id: string

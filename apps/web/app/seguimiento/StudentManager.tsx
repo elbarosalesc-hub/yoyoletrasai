@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { useActionState, useMemo, useState } from 'react'
 import { Search, UserPlus, Users, GraduationCap, ShieldCheck, ChevronRight } from 'lucide-react'
-import { createStudent, initialStudentActionState } from './actions'
+import { createStudent } from './actions'
+import { initialStudentActionState } from './action-state'
 
 type Course = { id: string; name: string; level: string; academic_year: number }
 type Enrollment = { course_id: string; enrollment_status: string; courses: { name: string; level: string } | null }

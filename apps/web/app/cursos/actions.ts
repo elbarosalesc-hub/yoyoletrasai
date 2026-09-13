@@ -2,16 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { canManageCourses, requireOrganizationContext } from '@/lib/auth/organization-context'
-
-export type CourseActionState = {
-  status: 'idle' | 'success' | 'error'
-  message: string
-}
-
-export const initialCourseActionState: CourseActionState = {
-  status: 'idle',
-  message: '',
-}
+import type { CourseActionState } from './action-state'
 
 function readText(formData: FormData, key: string) {
   const value = formData.get(key)

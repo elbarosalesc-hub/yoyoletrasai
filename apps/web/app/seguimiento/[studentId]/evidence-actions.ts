@@ -2,13 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrganizationContext } from '@/lib/auth/organization-context'
-
-export type EvidenceActionState = {
-  status: 'idle' | 'success' | 'error'
-  message: string
-}
-
-export const initialEvidenceActionState: EvidenceActionState = { status: 'idle', message: '' }
+import type { EvidenceActionState } from './evidence-action-state'
 
 const staffRoles = new Set(['teacher', 'pie', 'utp', 'principal', 'institution_admin', 'platform_admin'])
 const evidenceTypes = new Set(['written', 'oral', 'performance', 'project', 'observation', 'assessment', 'other'])

@@ -2,13 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrganizationContext } from '@/lib/auth/organization-context'
-
-export type StudentActionState = {
-  status: 'idle' | 'success' | 'warning' | 'error'
-  message: string
-}
-
-export const initialStudentActionState: StudentActionState = { status: 'idle', message: '' }
+import type { StudentActionState } from './action-state'
 
 const staffRoles = new Set([
   'teacher',

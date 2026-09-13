@@ -2,9 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireOrganizationContext } from '@/lib/auth/organization-context'
-
-type ActionState = { status: 'idle' | 'success' | 'error'; message: string }
-export const initialProgressState: ActionState = { status: 'idle', message: '' }
+import type { ProgressActionState } from './action-state'
 
 const staffRoles = new Set(['teacher','pie','utp','principal','institution_admin','platform_admin'])
 const evidenceTypes = new Set(['written','oral','performance','project','observation','assessment','other'])
@@ -16,7 +14,7 @@ function text(formData: FormData, key: string) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-export async function createObjective(_state: ActionState, formData: FormData): Promise<ActionState> {
+export async function createObjective(_state: ProgressActionState, formData: FormData): Promise<ProgressActionState> {
   const context = await requireOrganizationContext('/progreso')
   if (!staffRoles.has(context.role)) return { status: 'error', message: 'Tu rol no puede crear objetivos.' }
 
@@ -64,7 +62,7 @@ export async function createObjective(_state: ActionState, formData: FormData): 
   return { status: 'success', message: 'Objetivo creado correctamente.' }
 }
 
-export async function createEvidence(_state: ActionState, formData: FormData): Promise<ActionState> {
+export async function createEvidence(_state: ProgressActionState, formData: FormData): Promise<ProgressActionState> {
   const context = await requireOrganizationContext('/progreso')
   if (!staffRoles.has(context.role)) return { status: 'error', message: 'Tu rol no puede registrar evidencias.' }
 
