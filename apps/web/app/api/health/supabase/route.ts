@@ -9,6 +9,7 @@ const requiredTables = [
   'learning_missions',
   'learning_mission_progress',
   'learning_evidence',
+  'virtual_teacher_history',
 ] as const
 
 type TableCheck = {
