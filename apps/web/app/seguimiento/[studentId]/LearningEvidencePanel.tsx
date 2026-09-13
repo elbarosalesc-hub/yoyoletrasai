@@ -5,8 +5,8 @@ import { BarChart3, BookOpenCheck, CalendarDays, Plus, Save, Target } from 'luci
 import {
   createLearningEvidence,
   createLearningObjective,
-  initialEvidenceActionState,
 } from './evidence-actions'
+import { initialEvidenceActionState } from './evidence-action-state'
 
 type Objective = {
   id: string
