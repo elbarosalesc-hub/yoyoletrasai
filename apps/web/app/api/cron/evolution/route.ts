@@ -4,7 +4,6 @@ import { runEvolutionAudit, type EvolutionDb } from '@/lib/evolution/run-audit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
 
 const CADENCE_MS = 72 * 60 * 60 * 1000
 
@@ -45,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const result = await runEvolutionAudit(db, organizationId, 'vercel_cron')
+      const result = await runEvolutionAudit(db, organizationId, 'system')
       results.push({ organizationId, status: 'audited', auditId: result.auditId, proposed: result.proposed })
     } catch {
       results.push({ organizationId, status: 'failed' })
@@ -54,6 +53,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     cadenceHours: 72,
+    scheduler: 'provider-neutral',
     governance: 'audit-and-propose-only',
     productionChangesApplied: false,
     audited: results.filter(item => item.status === 'audited').length,
