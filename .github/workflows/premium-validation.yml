@@ -17,6 +17,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Protect approved surfaces
+        run: npm run verify:approved-surfaces
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,6 +80,9 @@ jobs:
 
       - name: Visual regression gate
         run: npx playwright test tests/e2e/visual-regression.spec.ts --reporter=line --workers=1
+
+      - name: Game catalog regression gate
+        run: npx playwright test tests/e2e/game-catalog-regression.spec.ts --reporter=line --workers=1
 
       - name: Browser and keyboard verification
         run: npx playwright test tests/e2e/public-preview.spec.ts tests/e2e/keyboard-navigation.spec.ts --reporter=line --workers=1

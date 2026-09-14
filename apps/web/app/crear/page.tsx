@@ -13,7 +13,7 @@ type StudentVersion={instructions?:string[];activities?:string[]}
 type AiOutput={title?:string;summary?:string;teacherVersion?:TeacherVersion;studentVersion?:StudentVersion;answerKey?:string[];duaSupports?:string[];accessibility?:string[];qualityChecklist?:Record<string,boolean>}
 type PendingSource={id:string;fileName:string;reason:string}
 type GenerateResponse={output?:AiOutput;planName?:string;modelTier?:string;generationId?:string;sources?:{verified?:number;analyzedSourceIds?:string[];pending?:PendingSource[]};error?:string}
-type Draft={title:string;level:string;resourceType:string;subject:string;objective:string;adaptation:string;visualStyle:string;packageMode:string;questions:Question[];aiOutput?:AiOutput|null;updatedAt:string}
+type Draft={title:string;level:string;resourceType:string;subject:string;objective:string;adaptation:string;visualStyle:string;packageMode:string;questions:Question[];aiOutput?:AiOutput|null;origin?:'manual'|'profesor-virtual';updatedAt:string}
 type SavedVersion=Draft&{id:string}
 type RegenerableSection='teacherVersion'|'studentVersion'|'answerKey'|'duaSupports'
 
@@ -25,6 +25,7 @@ function pendingLabel(reason:string){if(reason==='office-extraction-pending')ret
 function slugify(value:string){return value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'recurso-yoyo'}
 function escapeHtml(value:string){return value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]||char))}
 function downloadBlob(content:string,type:string,fileName:string){const url=URL.createObjectURL(new Blob([content],{type}));const anchor=document.createElement('a');anchor.href=url;anchor.download=fileName;anchor.click();URL.revokeObjectURL(url)}
+function normalizeLevel(value:string){const normalized=value.replace(/\.º/g,'°').replace(/º/g,'°');return levels.includes(normalized)?normalized:value}
 
 export default function Crear(){
  const[title,setTitle]=useState('Comprensión lectora: El bosque nativo')
@@ -37,6 +38,7 @@ export default function Crear(){
  const[packageMode,setPackageMode]=useState('Paquete completo')
  const[questions,setQuestions]=useState<Question[]>(defaultQuestions.map((text,index)=>({id:index+1,text})))
  const[status,setStatus]=useState('Listo para crear')
+ const[origin,setOrigin]=useState<Draft['origin']>('manual')
  const[entitlement,setEntitlement]=useState<Entitlement|null>(null)
  const[sourceFiles,setSourceFiles]=useState<UploadedSource[]>([])
  const[pendingSources,setPendingSources]=useState<PendingSource[]>([])
@@ -54,8 +56,11 @@ export default function Crear(){
    const stored=window.localStorage.getItem('yoyo-resource-draft')
    if(!stored)return
    const draft=JSON.parse(stored) as Draft
+   const fromVirtualTeacher=new URLSearchParams(window.location.search).get('from')==='profesor-virtual'
    restoreDraft(draft)
-   setStatus(`Borrador recuperado · ${new Date(draft.updatedAt).toLocaleString('es-CL')}`)
+   if(fromVirtualTeacher)setOrigin('profesor-virtual')
+   const recoveredOrigin=fromVirtualTeacher?'profesor-virtual':draft.origin
+   setStatus(`${recoveredOrigin==='profesor-virtual'?'Borrador recuperado desde Profesor Virtual':'Borrador recuperado'} · ${new Date(draft.updatedAt).toLocaleString('es-CL')}`)
   }catch{setStatus('No fue posible recuperar el borrador anterior')}
  },[])
 
@@ -76,13 +81,13 @@ export default function Crear(){
   'TEA':'Anticipación de secuencia, lenguaje literal, apoyos visuales y opción de pausa.',
   'Dificultades específicas del aprendizaje':'Andamiaje, menor carga simultánea, modelado y oportunidades de relectura o práctica.',
   'Lenguaje claro y baja carga cognitiva':'Frases directas, segmentación visual, ejemplos y un foco por bloque.',
- } as Record<string,string>)[adaptation]||'Acceso universal DUA',[adaptation])
+ } as Record<string,string>)[adaptation]||adaptation||'Acceso universal DUA',[adaptation])
 
  function restoreDraft(draft:Draft){
-  setTitle(draft.title);setLevel(draft.level);setResourceType(draft.resourceType);setSubject(draft.subject);setObjective(draft.objective);setAdaptation(draft.adaptation);setVisualStyle(draft.visualStyle||'Infantil académico premium');setPackageMode(draft.packageMode||'Paquete completo');setQuestions(draft.questions||[]);setAiOutput(draft.aiOutput||null)
+  setTitle(draft.title);setLevel(normalizeLevel(draft.level));setResourceType(draft.resourceType);setSubject(draft.subject);setObjective(draft.objective);setAdaptation(draft.adaptation);setVisualStyle(draft.visualStyle||'Infantil académico premium');setPackageMode(draft.packageMode||'Paquete completo');setQuestions(draft.questions||[]);setAiOutput(draft.aiOutput||null);if(draft.origin)setOrigin(draft.origin)
  }
 
- function currentDraft():Draft{return{title,level,resourceType,subject,objective,adaptation,visualStyle,packageMode,questions,aiOutput,updatedAt:new Date().toISOString()}}
+ function currentDraft():Draft{return{title,level,resourceType,subject,objective,adaptation,visualStyle,packageMode,questions,aiOutput,origin,updatedAt:new Date().toISOString()}}
 
  async function requestGeneration(progressMessage:string){
   if(generating||uploading)return null
@@ -176,7 +181,7 @@ export default function Crear(){
    <label htmlFor="resourceType">Tipo de recurso</label><select id="resourceType" value={resourceType} onChange={e=>setResourceType(e.target.value)}>{premiumResourceTypes.map(item=><option key={item.id}>{item.label}</option>)}</select>
    <label htmlFor="title">Título o tema</label><input id="title" value={title} onChange={e=>setTitle(e.target.value)}/><label htmlFor="subject">Asignatura</label><input id="subject" value={subject} onChange={e=>setSubject(e.target.value)}/>
    <label htmlFor="level">Nivel</label><select id="level" value={level} onChange={e=>setLevel(e.target.value)}>{levels.map(item=><option key={item}>{item}</option>)}</select>
-   <label htmlFor="objective">Objetivo de aprendizaje / OA</label><textarea id="objective" rows={4} value={objective} onChange={e=>setObjective(e.target.value)}/><label htmlFor="adaptation">Perfil de apoyo</label><select id="adaptation" value={adaptation} onChange={e=>setAdaptation(e.target.value)}>{supportProfiles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="visualStyle">Estilo visual</label><select id="visualStyle" value={visualStyle} onChange={e=>setVisualStyle(e.target.value)}>{visualStyles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="packageMode">Salida</label><select id="packageMode" value={packageMode} onChange={e=>setPackageMode(e.target.value)}>{['Paquete completo','Versión estudiante','Versión docente','Adaptación accesible'].map(item=><option key={item}>{item}</option>)}</select>
+   <label htmlFor="objective">Objetivo de aprendizaje / OA</label><textarea id="objective" rows={4} value={objective} onChange={e=>setObjective(e.target.value)}/><label htmlFor="adaptation">Perfil de apoyo</label><select id="adaptation" value={adaptation} onChange={e=>setAdaptation(e.target.value)}>{!(supportProfiles as readonly string[]).includes(adaptation)&&adaptation?<option value={adaptation}>{adaptation}</option>:null}{supportProfiles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="visualStyle">Estilo visual</label><select id="visualStyle" value={visualStyle} onChange={e=>setVisualStyle(e.target.value)}>{visualStyles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="packageMode">Salida</label><select id="packageMode" value={packageMode} onChange={e=>setPackageMode(e.target.value)}>{['Paquete completo','Versión estudiante','Versión docente','Adaptación accesible'].map(item=><option key={item}>{item}</option>)}</select>
    <div className="yoyo-upload-zone"><FileUp size={24}/><div><strong>Fuentes para YOYO IA</strong><span>Se suben a Storage privado y se verifican antes de usarse.</span></div><label className={`btn btn-soft ${uploading?'is-disabled':''}`}>{uploading?'Subiendo...':'Seleccionar'}<input type="file" hidden multiple disabled={uploading} onChange={onFiles}/></label></div>
    {sourceFiles.length>0&&<div className="yoyo-source-list">{sourceFiles.map(file=>{const pending=pendingSources.find(item=>item.id===file.id);const analyzed=analyzedSourceIds.includes(file.id);return <div key={file.id}><span><b>{file.name}</b><small>{mb(file.size)} · {analyzed?'Analizado en esta generación':pending?pendingLabel(pending.reason):'Verificado · listo para analizar'}</small></span><span className={`yoyo-source-state ${analyzed?'is-analyzed':pending?'is-pending':'is-ready'}`}><FileCheck2 size={14}/>{analyzed?'Analizado':pending?'Pendiente':'Listo'}</span><button aria-label={`Quitar ${file.name}`} onClick={()=>removeSource(file.id)}><Trash2 size={15}/></button></div>})}</div>}
    <small className="yoyo-upload-note">{sourceFiles.length}{maxFiles===null?'':` / ${maxFiles}`} archivos verificados · {mb(totalBytes)} usados</small><button className="btn btn-coral yoyo-generate-button" disabled={generating||uploading} onClick={generate}>{generating?<RefreshCw size={17}/>:<Sparkles size={17}/>} {generating?'Trabajando con YOYO IA...':'Generar paquete premium'}</button>

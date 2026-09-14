@@ -71,6 +71,14 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const audited = results.filter(item => item.status === 'audited').length
+  const skipped = results.filter(item => item.status === 'skipped').length
+  const failed = results.filter(item => item.status === 'failed').length
+  const factoryFailed = results.filter(item => item.status === 'audited' && item.draftFactory === 'failed').length
+  const factorySkipped = results.filter(item => item.status === 'audited' && item.draftFactory === 'skipped').length
+  const draftsGenerated = results.reduce((sum, item) => sum + (item.draftsGenerated || 0), 0)
+  const operational = failed === 0 && factoryFailed === 0
+
   return NextResponse.json({
     cadenceHours: 72,
     scheduler: 'provider-neutral',
@@ -78,10 +86,13 @@ export async function GET(request: NextRequest) {
     automaticPublishing: false,
     humanReviewRequired: true,
     productionChangesApplied: false,
-    audited: results.filter(item => item.status === 'audited').length,
-    skipped: results.filter(item => item.status === 'skipped').length,
-    failed: results.filter(item => item.status === 'failed').length,
-    draftsGenerated: results.reduce((sum, item) => sum + (item.draftsGenerated || 0), 0),
+    operational,
+    audited,
+    skipped,
+    failed,
+    factoryFailed,
+    factorySkipped,
+    draftsGenerated,
     results,
-  })
+  }, { status: operational ? 200 : 503 })
 }
