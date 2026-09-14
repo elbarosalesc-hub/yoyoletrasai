@@ -29,7 +29,7 @@ test.describe('integridad del catálogo de juegos', () => {
       if (game.status === 'playable') expect(game.route).toBeTruthy()
     }
 
-    const response = await page.goto(`${baseUrl}/juegos`, { waitUntil: 'networkidle' })
+    const response = await page.goto(`${baseUrl}/juegos`, { waitUntil: 'domcontentloaded' })
     expect(response?.ok()).toBeTruthy()
 
     for (const title of titles) {
