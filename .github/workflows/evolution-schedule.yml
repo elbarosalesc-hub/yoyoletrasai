@@ -59,12 +59,15 @@ jobs:
           if (body.humanReviewRequired !== true) failures.push('humanReviewRequired debe permanecer en true')
           if (body.productionChangesApplied !== false) failures.push('productionChangesApplied debe permanecer en false')
           if (body.governance !== 'audit-propose-and-draft-only') failures.push(`governance inesperado: ${body.governance}`)
+          if (body.operational !== true) failures.push('el ciclo de autoevolución reportó estado no operativo')
+          if ((body.failed ?? 0) > 0) failures.push(`${body.failed} auditoría(s) fallaron`)
+          if ((body.factoryFailed ?? 0) > 0) failures.push(`${body.factoryFailed} fábrica(s) de recursos fallaron`)
           if (!Array.isArray(body.results)) failures.push('results debe ser un arreglo auditable')
           if (failures.length) {
             for (const failure of failures) console.error(`::error::${failure}`)
             process.exit(1)
           }
-          console.log(`Gobernanza verificada: ${body.audited ?? 0} auditadas, ${body.skipped ?? 0} omitidas, ${body.failed ?? 0} fallidas, ${body.draftsGenerated ?? 0} borradores.`)
+          console.log(`Operación y gobernanza verificadas: ${body.audited ?? 0} auditadas, ${body.skipped ?? 0} omitidas, ${body.failed ?? 0} fallidas, ${body.draftsGenerated ?? 0} borradores.`)
           NODE
 
       - name: Resumen de gobernanza
@@ -74,6 +77,7 @@ jobs:
           echo "## YOYO · Evolución gobernada" >> "$GITHUB_STEP_SUMMARY"
           echo "- Heartbeat: diario" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cadencia real: 72 horas, aplicada por la API" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Auditoría y fábrica: deben reportar estado operativo" >> "$GITHUB_STEP_SUMMARY"
           echo "- Publicación automática: bloqueada" >> "$GITHUB_STEP_SUMMARY"
           echo "- Cambios directos en producción: bloqueados" >> "$GITHUB_STEP_SUMMARY"
           echo "- Revisión humana: obligatoria" >> "$GITHUB_STEP_SUMMARY"
