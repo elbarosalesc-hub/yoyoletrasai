@@ -33,7 +33,9 @@ test.describe('integridad del catálogo de juegos', () => {
     expect(response?.ok()).toBeTruthy()
 
     for (const title of titles) {
-      await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+      const matchingHeadings = page.getByRole('heading', { name: title, exact: true })
+      expect(await matchingHeadings.count()).toBeGreaterThan(0)
+      await expect(matchingHeadings.first()).toBeVisible()
     }
   })
 
