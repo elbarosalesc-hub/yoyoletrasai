@@ -47,10 +47,7 @@ import './evolution-center.css'
 import './platform-preferences.css'
 import './public-accessibility-fixes.css'
 
-const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://yoyoletrasai.vercel.app'
-
 export const metadata:Metadata={
- metadataBase:new URL(publicSiteUrl),
  title:'YOYOLETRASAI | Plataforma educativa inteligente',
  description:'Plataforma educativa para docentes, equipos PIE e instituciones con planificación, DUA, evaluación, recursos, seguimiento y herramientas pedagógicas.',
  applicationName:'YOYOLETRASAI',
@@ -62,7 +59,6 @@ export const metadata:Metadata={
  openGraph:{
   title:'YOYOLETRASAI | Plataforma educativa inteligente',
   description:'Planificación, inclusión, PIE, DUA, evaluación y recursos pedagógicos en una plataforma educativa conectada.',
-  url:publicSiteUrl,
   siteName:'YOYOLETRASAI',
   locale:'es_CL',
   type:'website'
