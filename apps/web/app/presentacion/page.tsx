@@ -33,8 +33,7 @@ import styles from './presentacion.module.css'
 
 export const metadata: Metadata = {
   title: 'YOYOLETRASAI | Ecosistema educativo inteligente',
-  description: 'Plataforma educativa integral para docentes, equipos PIE e instituciones: planificación, DUA, evaluación, recursos y seguimiento pedagógico.',
-  alternates: { canonical: '/' },
+  description: 'Plataforma educativa integral para gestión pedagógica, inclusión, evaluación y acompañamiento institucional.',
 }
 
 const modules = [
@@ -57,31 +56,8 @@ const assurances = [
 ]
 
 export default function PublicPresentationPage() {
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Organization',
-        name: 'YOYOLETRASAI',
-        description: 'Plataforma educativa para docentes, equipos PIE e instituciones educativas.',
-      },
-      {
-        '@type': 'SoftwareApplication',
-        name: 'YOYOLETRASAI',
-        applicationCategory: 'EducationalApplication',
-        operatingSystem: 'Web',
-        inLanguage: 'es-CL',
-        description: 'Ecosistema educativo para planificación, inclusión, DUA, evaluación, recursos y seguimiento pedagógico.',
-      },
-    ],
-  }
-
   return (
     <main className={styles.page}>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
       <header className={styles.topbar}>
         <Link href="/" className={styles.brand} aria-label="YOYOLETRASAI, inicio">
           <span className={styles.brandMark}><School size={22} /></span>
