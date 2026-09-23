@@ -47,12 +47,26 @@ import './evolution-center.css'
 import './platform-preferences.css'
 import './public-accessibility-fixes.css'
 
+const publicSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://yoyoletrasai.vercel.app'
+
 export const metadata:Metadata={
- title:'YoYo Letras AI | Plataforma educativa inteligente',
- description:'Plataforma educativa institucional con IA, inclusión, recursos, evaluación, seguimiento y gestión pedagógica.',
- applicationName:'YoYo Letras AI',
- keywords:['educación','Chile','PIE','DUA','recursos educativos','inteligencia artificial','gestión escolar'],
- authors:[{name:'Elba Rosales'}]
+ metadataBase:new URL(publicSiteUrl),
+ title:'YOYOLETRASAI | Plataforma educativa inteligente',
+ description:'Plataforma educativa para docentes, equipos PIE e instituciones con planificación, DUA, evaluación, recursos, seguimiento y herramientas pedagógicas.',
+ applicationName:'YOYOLETRASAI',
+ keywords:['plataforma educativa','educación Chile','PIE','DUA','recursos educativos','evaluación formativa','inteligencia artificial educativa','gestión pedagógica'],
+ authors:[{name:'Elba Rosales'}],
+ creator:'YOYOLETRASAI',
+ publisher:'YOYOLETRASAI',
+ robots:{index:true,follow:true,googleBot:{index:true,follow:true,'max-image-preview':'large','max-snippet':-1,'max-video-preview':-1}},
+ openGraph:{
+  title:'YOYOLETRASAI | Plataforma educativa inteligente',
+  description:'Planificación, inclusión, PIE, DUA, evaluación y recursos pedagógicos en una plataforma educativa conectada.',
+  url:publicSiteUrl,
+  siteName:'YOYOLETRASAI',
+  locale:'es_CL',
+  type:'website'
+ }
 }
 
 export const viewport:Viewport={width:'device-width',initialScale:1,maximumScale:5,viewportFit:'cover',themeColor:'#0d1530'}
