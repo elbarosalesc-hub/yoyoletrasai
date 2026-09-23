@@ -22,7 +22,7 @@ import { AppShell } from '@/components/AppShell'
 const tools = [
   { title: 'Centros Premium', description: 'MathLab, Ciencia Viva, caligrafía, grafomotricidad, pictogramas con fotografía real y Plan Lector.', icon: Shapes, href: '/centros-premium', status: 'Premium', featured: true },
   { title: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica con contexto institucional.', icon: BrainCircuit, href: '/profesor-virtual', status: 'Interactivo', featured: true },
-  { title: 'Centro de Aula', description: 'Temporizador, selector equitativo, grupos, calificaciones y velocidad lectora.', icon: Gauge, href: '/herramientas/aula', status: 'Nuevo', featured: true },
+  { title: 'Centro de Aula', description: 'Temporizador, selector equitativo, grupos, semáforo visual, calificaciones y velocidad lectora.', icon: Gauge, href: '/herramientas/aula', status: 'Sin APIs pagadas', featured: true },
   { title: 'Planificador semanal', description: 'Organiza OA, actividades, apoyos y evaluaciones en una semana editable.', icon: CalendarDays, href: '/planificador', status: 'Nuevo', featured: true },
   { title: 'Estudio de creación', description: 'Genera guías, evaluaciones y rúbricas editables con apoyos DUA y PIE.', icon: WandSparkles, href: '/crear', status: 'Operativo', featured: true },
   { title: 'Constructor de evaluaciones', description: 'Diseña instrumentos, variantes diversificadas, puntajes y rúbricas.', icon: ClipboardCheck, href: '/evaluaciones', status: 'Conectado' },
