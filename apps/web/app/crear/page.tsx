@@ -44,7 +44,6 @@ export default function Crear(){
  const[pendingSources,setPendingSources]=useState<PendingSource[]>([])
  const[analyzedSourceIds,setAnalyzedSourceIds]=useState<string[]>([])
  const[aiOutput,setAiOutput]=useState<AiOutput|null>(null)
- const[generationSource,setGenerationSource]=useState<'manual'|'local'|'ai'>('manual')
  const[history,setHistory]=useState<SavedVersion[]>([])
  const[generating,setGenerating]=useState(false)
  const[uploading,setUploading]=useState(false)
@@ -84,65 +83,6 @@ export default function Crear(){
   'Lenguaje claro y baja carga cognitiva':'Frases directas, segmentación visual, ejemplos y un foco por bloque.',
  } as Record<string,string>)[adaptation]||adaptation||'Acceso universal DUA',[adaptation])
 
- function generateLocal(){
-  const isAssessment=resourceType.toLowerCase().includes('evalu')
-  const topic=title.trim()||'Recurso de aprendizaje'
-  const target=objective.trim()||'Aplicar el aprendizaje priorizado por el docente.'
-  const studentActivities=isAssessment?[
-   `Lee u observa la situación relacionada con “${topic}” y selecciona la respuesta que mejor demuestra el objetivo.`,
-   `Explica con una oración, dibujo, esquema o respuesta oral cómo llegaste a tu respuesta.`,
-   `Resuelve una situación nueva en la que debas aplicar: ${target}`,
-   'Revisa tu trabajo usando la pauta visible antes de entregar.',
-  ]:[
-   `Activa lo que ya sabes: escribe, dibuja o comenta dos ideas relacionadas con “${topic}”.`,
-   `Observa el ejemplo modelado por la docente e identifica el paso o idea más importante para lograr: ${target}`,
-   `Practica con apoyo: resuelve una situación breve y explica qué estrategia utilizaste.`,
-   `Aplica de manera autónoma el aprendizaje en una situación nueva de ${subject}.`,
-   'Cierra con una autoevaluación breve: ¿qué aprendí, qué apoyo me sirvió y qué necesito seguir practicando?',
-  ]
-  const output:AiOutput={
-   title:topic,
-   summary:`Paquete local editable para ${subject} en ${level}. Se creó sin modelos de IA ni llamadas externas.`,
-   teacherVersion:{
-    purpose:target,
-    instructions:[
-     'Presenta el objetivo en lenguaje breve y comprensible.',
-     'Modela un ejemplo completo antes de solicitar trabajo autónomo.',
-     `Aplica el apoyo seleccionado: ${supportText}`,
-     'Comprueba comprensión y retira ayudas progresivamente cuando aumente la autonomía.',
-    ],
-    activities:[
-     'Inicio: activar conocimientos previos con una pregunta, imagen, objeto o situación cercana.',
-     'Desarrollo: modelado explícito, práctica guiada y aplicación.',
-     'Cierre: recoger una evidencia breve y definir el siguiente paso.',
-    ],
-    assessment:isAssessment?'Aplicar pauta de corrección y registrar tipo de error, apoyo requerido y autonomía.':'Usar ticket de salida, observación o producto breve alineado al objetivo.',
-   },
-   studentVersion:{
-    instructions:['Lee o escucha cada instrucción antes de responder.','Puedes utilizar los apoyos autorizados sin cambiar el objetivo de aprendizaje.'],
-    activities:studentActivities,
-   },
-   answerKey:studentActivities.map((_,index)=>isAssessment
-    ?`Ítem ${index+1}: corregir según el objetivo “${target}”; valorar respuesta, procedimiento/evidencia y autonomía.`
-    :`Actividad ${index+1}: verificar participación, comprensión del objetivo, estrategia utilizada y nivel de apoyo.`
-   ),
-   duaSupports:[
-    supportText,
-    'Permitir distintas formas de representación y respuesta cuando el formato no sea parte del objetivo.',
-    'Usar instrucciones segmentadas, ejemplo visible y tiempo suficiente.',
-    'Registrar apoyos utilizados para favorecer su retiro progresivo.',
-   ],
-   accessibility:['Lenguaje claro','Orden visual predecible','Navegación por teclado','Alternativas de respuesta','Compatible con impresión'],
-   qualityChecklist:{objectiveAligned:true,duaIncluded:true,teacherVersion:true,studentVersion:true,editable:true,printable:true},
-  }
-  setAiOutput(output)
-  setQuestions(studentActivities.map((text,index)=>({id:Date.now()+index,text})))
-  setGenerationSource('local')
-  setAnalyzedSourceIds([])
-  setPendingSources([])
-  setStatus('Paquete creado en modo local gratuito · sin consumo de IA, tokens ni APIs externas')
- }
-
  function restoreDraft(draft:Draft){
   setTitle(draft.title);setLevel(normalizeLevel(draft.level));setResourceType(draft.resourceType);setSubject(draft.subject);setObjective(draft.objective);setAdaptation(draft.adaptation);setVisualStyle(draft.visualStyle||'Infantil académico premium');setPackageMode(draft.packageMode||'Paquete completo');setQuestions(draft.questions||[]);setAiOutput(draft.aiOutput||null);if(draft.origin)setOrigin(draft.origin)
  }
@@ -166,7 +106,7 @@ export default function Crear(){
   try{
    const data=await requestGeneration('YOYO IA está creando el paquete premium con tus fuentes verificadas...')
    if(!data)return
-   const output=data.output||{};setAiOutput(output);setGenerationSource('ai')
+   const output=data.output||{};setAiOutput(output)
    const sequence=[...(output.studentVersion?.instructions||[]),...(output.studentVersion?.activities||[])].filter(Boolean)
    if(sequence.length)setQuestions(sequence.map((text,index)=>({id:Date.now()+index,text})))
    if(output.title)setTitle(output.title)
@@ -223,20 +163,20 @@ export default function Crear(){
 
  function downloadText(){
   const teacher=[aiOutput?.teacherVersion?.purpose,...(aiOutput?.teacherVersion?.instructions||[]),...(aiOutput?.teacherVersion?.activities||[]),aiOutput?.teacherVersion?.assessment].filter(Boolean) as string[]
-  const text=[`${generationSource==='local'?'YOYO Local · sin costo':'YOYO IA'} · ${resourceType}`,title,`${subject} · ${level}`,`Objetivo: ${objective}`,`Estilo: ${visualStyle}`,`Salida: ${packageMode}`,'','VERSIÓN DOCENTE',...teacher,'','VERSIÓN ESTUDIANTE',...questions.map((q,i)=>`${i+1}. ${q.text}`),'','APOYOS DUA / PIE',...(aiOutput?.duaSupports||[supportText]),'','PAUTA / RESPUESTAS',...(aiOutput?.answerKey||['Pendiente de generación'])].join('\n')
+  const text=[`YOYO IA · ${resourceType}`,title,`${subject} · ${level}`,`Objetivo: ${objective}`,`Estilo: ${visualStyle}`,`Salida: ${packageMode}`,'','VERSIÓN DOCENTE',...teacher,'','VERSIÓN ESTUDIANTE',...questions.map((q,i)=>`${i+1}. ${q.text}`),'','APOYOS DUA / PIE',...(aiOutput?.duaSupports||[supportText]),'','PAUTA / RESPUESTAS',...(aiOutput?.answerKey||['Pendiente de generación'])].join('\n')
   downloadBlob(text,'text/plain;charset=utf-8',`${slugify(title)}.txt`)
  }
 
  function downloadWord(){
   const list=(items:string[]|undefined)=>items?.length?`<ol>${items.map(item=>`<li>${escapeHtml(item)}</li>`).join('')}</ol>`:'<p>Sin contenido generado todavía.</p>'
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;line-height:1.5;color:#1f2937;max-width:850px;margin:40px auto}h1{color:#5f43cf}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:6px}.meta{background:#f5f3ff;padding:14px;border-radius:12px}.support{background:#f0fdf4;padding:14px;border-radius:12px}</style></head><body><p><b>${generationSource==='local'?'YOYO Local · sin costo':'YOYO IA'} · ${escapeHtml(resourceType)}</b></p><h1>${escapeHtml(title)}</h1><div class="meta"><b>${escapeHtml(subject)} · ${escapeHtml(level)}</b><br>Objetivo: ${escapeHtml(objective)}<br>Perfil de apoyo: ${escapeHtml(adaptation)}</div><h2>Versión docente</h2><p>${escapeHtml(aiOutput?.teacherVersion?.purpose||'Propósito pedagógico pendiente de generación.')}</p>${list(aiOutput?.teacherVersion?.instructions)}${list(aiOutput?.teacherVersion?.activities)}${aiOutput?.teacherVersion?.assessment?`<p><b>Evaluación:</b> ${escapeHtml(aiOutput.teacherVersion.assessment)}</p>`:''}<h2>Versión estudiante</h2>${list(questions.map(item=>item.text))}<h2>Apoyos DUA / PIE</h2><div class="support">${list(aiOutput?.duaSupports||[supportText])}</div><h2>Pauta / respuestas</h2>${list(aiOutput?.answerKey)}</body></html>`
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;line-height:1.5;color:#1f2937;max-width:850px;margin:40px auto}h1{color:#5f43cf}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:6px}.meta{background:#f5f3ff;padding:14px;border-radius:12px}.support{background:#f0fdf4;padding:14px;border-radius:12px}</style></head><body><p><b>YOYO IA · ${escapeHtml(resourceType)}</b></p><h1>${escapeHtml(title)}</h1><div class="meta"><b>${escapeHtml(subject)} · ${escapeHtml(level)}</b><br>Objetivo: ${escapeHtml(objective)}<br>Perfil de apoyo: ${escapeHtml(adaptation)}</div><h2>Versión docente</h2><p>${escapeHtml(aiOutput?.teacherVersion?.purpose||'Propósito pedagógico pendiente de generación.')}</p>${list(aiOutput?.teacherVersion?.instructions)}${list(aiOutput?.teacherVersion?.activities)}${aiOutput?.teacherVersion?.assessment?`<p><b>Evaluación:</b> ${escapeHtml(aiOutput.teacherVersion.assessment)}</p>`:''}<h2>Versión estudiante</h2>${list(questions.map(item=>item.text))}<h2>Apoyos DUA / PIE</h2><div class="support">${list(aiOutput?.duaSupports||[supportText])}</div><h2>Pauta / respuestas</h2>${list(aiOutput?.answerKey)}</body></html>`
   downloadBlob(html,'application/msword;charset=utf-8',`${slugify(title)}.doc`)
  }
 
  return <AppShell active="Crear con IA"><div className="yoyo-ai-studio">
-  <section className="yoyo-ai-hero"><div><span className="eyebrow">Estudio YOYO · modo local gratis + IA opcional</span><h1>Crear recursos pedagógicos editables sin depender de servicios de pago</h1><p>Genera una estructura local con DUA/PIE directamente en el navegador o utiliza YOYO IA cuando quieras análisis y generación avanzada.</p></div><div className="yoyo-plan-card"><Sparkles/><div><small>Ruta gratuita</small><strong>Generador local activo</strong><span>YOYO IA queda como complemento opcional</span></div></div></section>
+  <section className="yoyo-ai-hero"><div><span className="eyebrow">YOYO IA · motor exclusivo</span><h1>Crear recursos premium con contexto pedagógico real</h1><p>Combina currículo, DUA, PIE/NEE, fuentes verificadas y diseño para producir materiales editables, imprimibles, versionables y reutilizables.</p></div><div className="yoyo-plan-card"><Sparkles/><div><small>Plan activo</small><strong>{plan?.name||'Verificando...'}</strong><span>{plan?.model_tier==='owner'?'Modo propietaria · capacidad ampliada':plan?.model_tier||'YOYO IA'}</span></div></div></section>
   <section className="yoyo-capacity-strip"><div><strong>{maxFiles===null?'Ilimitados':maxFiles}</strong><span>archivos por solicitud</span></div><div><strong>{mb(maxFileBytes)}</strong><span>máximo por archivo actual</span></div><div><strong>{maxTotalBytes>=1024*1024*1024?gb(maxTotalBytes):mb(maxTotalBytes)}</strong><span>carga total por solicitud</span></div><div><strong>{plan?.max_output_tokens?plan.max_output_tokens.toLocaleString('es-CL'):'—'}</strong><span>tokens de salida</span></div></section>
-  <div className="page-head"><div><span className="eyebrow">Estudio de creación</span><h2>Diseña tu paquete educativo</h2><p>Configura el recurso y elige: crear localmente sin costo o usar YOYO IA de forma opcional.</p><small aria-live="polite">{status}</small></div><div className="tool-row"><button className="btn btn-soft" onClick={()=>window.print()}><Printer size={17}/>Imprimir / PDF</button><button className="btn btn-soft" onClick={downloadText}><Download size={17}/>TXT</button><button className="btn btn-soft" onClick={downloadWord}><FileText size={17}/>Word editable</button><button className="btn btn-primary" onClick={save}><Save size={17}/>Guardar versión</button></div></div>
+  <div className="page-head"><div><span className="eyebrow">Estudio de creación</span><h2>Diseña tu paquete educativo</h2><p>Configura el recurso, carga fuentes reales y deja que YOYO IA construya el paquete pedagógico.</p><small aria-live="polite">{status}</small></div><div className="tool-row"><button className="btn btn-soft" onClick={()=>window.print()}><Printer size={17}/>Imprimir / PDF</button><button className="btn btn-soft" onClick={downloadText}><Download size={17}/>TXT</button><button className="btn btn-soft" onClick={downloadWord}><FileText size={17}/>Word editable</button><button className="btn btn-primary" onClick={save}><Save size={17}/>Guardar versión</button></div></div>
   <div className="creator-layout yoyo-creator-layout"><section className="panel form-panel yoyo-config-panel"><h2>Configuración pedagógica</h2>
    <label htmlFor="resourceType">Tipo de recurso</label><select id="resourceType" value={resourceType} onChange={e=>setResourceType(e.target.value)}>{premiumResourceTypes.map(item=><option key={item.id}>{item.label}</option>)}</select>
    <label htmlFor="title">Título o tema</label><input id="title" value={title} onChange={e=>setTitle(e.target.value)}/><label htmlFor="subject">Asignatura</label><input id="subject" value={subject} onChange={e=>setSubject(e.target.value)}/>
@@ -244,10 +184,10 @@ export default function Crear(){
    <label htmlFor="objective">Objetivo de aprendizaje / OA</label><textarea id="objective" rows={4} value={objective} onChange={e=>setObjective(e.target.value)}/><label htmlFor="adaptation">Perfil de apoyo</label><select id="adaptation" value={adaptation} onChange={e=>setAdaptation(e.target.value)}>{!(supportProfiles as readonly string[]).includes(adaptation)&&adaptation?<option value={adaptation}>{adaptation}</option>:null}{supportProfiles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="visualStyle">Estilo visual</label><select id="visualStyle" value={visualStyle} onChange={e=>setVisualStyle(e.target.value)}>{visualStyles.map(item=><option key={item}>{item}</option>)}</select><label htmlFor="packageMode">Salida</label><select id="packageMode" value={packageMode} onChange={e=>setPackageMode(e.target.value)}>{['Paquete completo','Versión estudiante','Versión docente','Adaptación accesible'].map(item=><option key={item}>{item}</option>)}</select>
    <div className="yoyo-upload-zone"><FileUp size={24}/><div><strong>Fuentes para YOYO IA</strong><span>Se suben a Storage privado y se verifican antes de usarse.</span></div><label className={`btn btn-soft ${uploading?'is-disabled':''}`}>{uploading?'Subiendo...':'Seleccionar'}<input type="file" hidden multiple disabled={uploading} onChange={onFiles}/></label></div>
    {sourceFiles.length>0&&<div className="yoyo-source-list">{sourceFiles.map(file=>{const pending=pendingSources.find(item=>item.id===file.id);const analyzed=analyzedSourceIds.includes(file.id);return <div key={file.id}><span><b>{file.name}</b><small>{mb(file.size)} · {analyzed?'Analizado en esta generación':pending?pendingLabel(pending.reason):'Verificado · listo para analizar'}</small></span><span className={`yoyo-source-state ${analyzed?'is-analyzed':pending?'is-pending':'is-ready'}`}><FileCheck2 size={14}/>{analyzed?'Analizado':pending?'Pendiente':'Listo'}</span><button aria-label={`Quitar ${file.name}`} onClick={()=>removeSource(file.id)}><Trash2 size={15}/></button></div>})}</div>}
-   <small className="yoyo-upload-note">{sourceFiles.length}{maxFiles===null?'':` / ${maxFiles}`} archivos verificados · {mb(totalBytes)} usados</small><div className="yoyo-generation-options"><button className="btn btn-primary yoyo-generate-button" disabled={generating||uploading} onClick={generateLocal}><FileText size={17}/>Crear gratis local</button><button className="btn btn-soft yoyo-generate-button" disabled={generating||uploading} onClick={generate}>{generating?<RefreshCw size={17}/>:<Sparkles size={17}/>} {generating?'Trabajando con YOYO IA...':'YOYO IA · opcional'}</button></div>
+   <small className="yoyo-upload-note">{sourceFiles.length}{maxFiles===null?'':` / ${maxFiles}`} archivos verificados · {mb(totalBytes)} usados</small><button className="btn btn-coral yoyo-generate-button" disabled={generating||uploading} onClick={generate}>{generating?<RefreshCw size={17}/>:<Sparkles size={17}/>} {generating?'Trabajando con YOYO IA...':'Generar paquete premium'}</button>
    {history.length>0&&<div className="insight"><b><History size={15}/> Historial local</b>{history.slice(0,4).map(version=><p key={version.id}><button className="btn btn-soft" onClick={()=>restoreVersion(version)}>Restaurar</button> {new Date(version.updatedAt).toLocaleString('es-CL')} · {version.resourceType}</p>)}</div>}
   </section>
-  <section className="preview-paper yoyo-premium-preview" aria-label="Vista previa editable"><div className="tool-row"><span className="tag">{level}</span><span className="tag">{subject}</span><span className="tag">{resourceType}</span><span className="tag">{visualStyle}</span></div><div className="yoyo-preview-head"><div><small>{generationSource==='local'?'YOYO Local · sin costo':'YOYO IA'} · {packageMode}</small><h2>{title||'Recurso sin título'}</h2><p><b>Objetivo:</b> {objective}</p>{aiOutput?.summary&&<p>{aiOutput.summary}</p>}</div><span className="yoyo-quality-badge">{qualityTotal?`Checklist ${qualityPassed}/${qualityTotal}`:'Meta premium ≥92/100'}</span></div>
+  <section className="preview-paper yoyo-premium-preview" aria-label="Vista previa editable"><div className="tool-row"><span className="tag">{level}</span><span className="tag">{subject}</span><span className="tag">{resourceType}</span><span className="tag">{visualStyle}</span></div><div className="yoyo-preview-head"><div><small>YOYO IA · {packageMode}</small><h2>{title||'Recurso sin título'}</h2><p><b>Objetivo:</b> {objective}</p>{aiOutput?.summary&&<p>{aiOutput.summary}</p>}</div><span className="yoyo-quality-badge">{qualityTotal?`Checklist ${qualityPassed}/${qualityTotal}`:'Meta premium ≥92/100'}</span></div>
    <div className="yoyo-package-grid"><div><strong>Docente</strong><span>{aiOutput?.teacherVersion?.purpose||'Objetivo, mediación, respuestas y evaluación.'}</span></div><div><strong>Estudiante</strong><span>{questions.length} elementos editables listos para usar.</span></div><div><strong>Adaptación</strong><span>{adaptation}</span></div><div><strong>Fuentes</strong><span>{sourceFiles.length?`${analyzedSourceIds.length}/${sourceFiles.length} analizadas en la última generación`:'Creación desde contexto pedagógico'}</span></div></div>
 
    <div className="section-title"><h3>Versión docente</h3><button className="btn btn-soft" disabled={generating||uploading} onClick={()=>regenerateSection('teacherVersion')}><RefreshCw size={16}/>Regenerar sección</button></div>
@@ -260,6 +200,6 @@ export default function Crear(){
 
    <div className="section-title"><h3>Pauta / respuestas</h3><button className="btn btn-soft" disabled={generating||uploading} onClick={()=>regenerateSection('answerKey')}><RefreshCw size={16}/>Regenerar sección</button></div><div className="insight">{aiOutput?.answerKey?.length?aiOutput.answerKey.map((item,index)=><p key={`answer-${index}`}>{index+1}. {item}</p>):<p>La pauta aparecerá aquí después de generar el paquete.</p>}</div>
 
-   <div className="yoyo-preview-actions"><button className="btn btn-primary" disabled={generating||uploading} onClick={generateLocal}><RefreshCw size={16}/>Regenerar gratis local</button><button className="btn btn-soft" disabled={generating||uploading} onClick={generate}><Sparkles size={16}/>Regenerar con YOYO IA</button><button className="btn btn-soft" onClick={save}><Save size={16}/>Guardar versión</button></div>
+   <div className="yoyo-preview-actions"><button className="btn btn-soft" disabled={generating||uploading} onClick={generate}><RefreshCw size={16}/>Regenerar paquete completo</button><button className="btn btn-primary" onClick={save}><Save size={16}/>Guardar versión</button></div>
   </section></div></div></AppShell>
 }
