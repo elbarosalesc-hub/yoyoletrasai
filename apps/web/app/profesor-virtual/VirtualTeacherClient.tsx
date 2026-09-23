@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowRight, BarChart3, BookOpen, Bot, BrainCircuit, CheckCircle2, ClipboardCheck, Copy,
-  FileText, GraduationCap, HeartHandshake, History, MessageSquareText, Save, Send, Sparkles, Square, UserRound, Volume2, WandSparkles, WifiOff,
+  FileText, GraduationCap, HeartHandshake, History, MessageSquareText, Save, Send, Sparkles, UserRound, WandSparkles,
 } from 'lucide-react'
 
 type TeacherMode='planificar'|'adaptar'|'evaluar'|'analizar'|'comunicar'
@@ -45,62 +45,6 @@ function readLocalHistory(){
 }
 function saveLocalHistory(items:HistoryItem[]){try{localStorage.setItem('yoyo-virtual-teacher-history',JSON.stringify(items.slice(0,12)))}catch{}}
 
-function localTeacherResult(mode:TeacherMode,level:string,subject:string,prompt:string,supportProfile:string,objective:string,duration:string):VirtualTeacherResult{
- const focus=prompt.trim()||'la necesidad pedagógica descrita'
- const objectiveText=objective.trim()||'el aprendizaje priorizado por el docente'
- const supports=supportProfile.trim()||'acceso universal DUA'
- const baseChecks=['Objetivo pedagógico conservado','Apoyos DUA/PIE sin estigmatizar','Instrucciones claras y observables','Evidencia de aprendizaje incluida']
- if(mode==='planificar')return{
-  title:`Planificación local · ${subject} · ${level}`,
-  summary:`Propuesta de ${duration} para abordar ${focus}. Objetivo de referencia: ${objectiveText}.`,
-  sections:[
-   {title:'Inicio',items:['Comunica el propósito con lenguaje breve y una referencia visual.','Activa conocimientos previos con una pregunta, objeto, imagen o ejemplo cercano.']},
-   {title:'Modelado y práctica guiada',items:['Resuelve o demuestra un ejemplo paso a paso verbalizando la estrategia.','Comprueba comprensión antes del trabajo autónomo mediante una respuesta breve o señalada.']},
-   {title:'Aplicación',items:['Propón una tarea central con la misma meta y distintas formas de acceso o respuesta.','Entrega apoyos graduados y retíralos cuando el estudiante muestra mayor autonomía.']},
-   {title:'Cierre',items:['Recoge una evidencia breve del aprendizaje.','Registra qué apoyo funcionó y define el siguiente paso.']},
-  ],pedagogicalChecks:baseChecks,nextSteps:['Ajustar ejemplos al contexto real del curso','Preparar material visual o concreto','Registrar evidencia después de aplicar']
- }
- if(mode==='adaptar')return{
-  title:`Adaptación local DUA/PIE · ${level}`,
-  summary:`Adaptación para ${focus}. Se mantiene ${objectiveText}. Perfil de apoyo considerado: ${supports}.`,
-  sections:[
-   {title:'Acceso',items:['Divide la instrucción en pasos breves y visibles.','Destaca palabras clave y agrega ejemplo modelado, apoyo visual o material concreto.']},
-   {title:'Participación',items:['Permite elegir entre respuesta oral, señalada, manipulativa o escrita cuando el formato no sea parte del objetivo.','Anticipa la secuencia y ofrece pausas breves si la tarea exige atención sostenida.']},
-   {title:'Producción y autonomía',items:['Reduce copia mecánica sin reducir el aprendizaje central.','Registra el nivel de ayuda y retira apoyos de forma progresiva.']},
-  ],pedagogicalChecks:baseChecks,nextSteps:['Probar la adaptación con una actividad breve','Comparar desempeño con y sin apoyo','Conservar solo los apoyos que mejoran el acceso']
- }
- if(mode==='evaluar')return{
-  title:`Evaluación local diversificada · ${subject} · ${level}`,
-  summary:`Instrumento base para evaluar ${focus} manteniendo como referencia ${objectiveText}.`,
-  sections:[
-   {title:'Estructura sugerida',items:['4 ítems de selección o asociación para verificar conocimientos clave.','2 respuestas breves para explicar procedimiento o justificar una elección.','1 tarea de aplicación contextualizada.']},
-   {title:'Diversificación',items:['Usa tipografía legible, instrucciones breves y espacio suficiente.','Permite apoyos de acceso que no entreguen la respuesta ni cambien el objetivo.']},
-   {title:'Pauta rápida',items:['Respuesta correcta y autónoma: logro esperado.','Respuesta correcta con apoyo menor: logro con apoyo.','Respuesta parcial o procedimiento incompleto: en desarrollo.','Requiere modelado directo para iniciar: nivel inicial.']},
-  ],pedagogicalChecks:baseChecks,nextSteps:['Asignar puntajes antes de aplicar','Preparar pauta de corrección','Registrar errores frecuentes para la reenseñanza']
- }
- if(mode==='analizar')return{
-  title:`Análisis pedagógico local · ${level}`,
-  summary:`Marco de análisis para ${focus}, considerando ${supports}.`,
-  sections:[
-   {title:'Qué observar',items:['Precisión de la respuesta y tipo de error.','Tiempo necesario para iniciar y completar.','Cantidad y tipo de apoyos requeridos.','Capacidad para explicar lo realizado.']},
-   {title:'Hipótesis pedagógicas a comprobar',items:['La instrucción puede no estar siendo comprendida completamente.','Puede existir una barrera de vocabulario, conocimientos previos, atención, memoria de trabajo o acceso al formato.','La dificultad puede aparecer en un paso específico del procedimiento y no en todo el objetivo.']},
-   {title:'Próxima intervención',items:['Modela el paso con mayor frecuencia de error.','Reduce variables simultáneas y aumenta gradualmente la complejidad.','Recoge una nueva evidencia comparable después del apoyo.']},
-  ],pedagogicalChecks:baseChecks,nextSteps:['Registrar una línea base breve','Aplicar un apoyo a la vez','Comparar nueva evidencia antes de modificar el objetivo']
- }
- return{
-  title:`Comunicación local a familia · ${level}`,
-  summary:`Borrador respetuoso para comunicar avances y apoyos relacionados con ${focus}.`,
-  sections:[
-   {title:'Mensaje sugerido',items:['Comenzar destacando un avance observable o una fortaleza.','Describir la habilidad que se está fortaleciendo con ejemplos concretos, evitando etiquetas o juicios absolutos.','Explicar brevemente qué apoyo se utilizará en la escuela.']},
-   {title:'Acuerdos posibles',items:['Proponer una acción breve y realista para el hogar.','Indicar cómo y cuándo se revisará el avance.','Mantener un canal de comunicación claro para resolver dudas.']},
-  ],pedagogicalChecks:baseChecks,nextSteps:['Personalizar el borrador con hechos observados','Revisar tono y privacidad antes de enviar','Registrar acuerdos y fecha de seguimiento']
- }
-}
-
-function resultPlainText(result:VirtualTeacherResult){
- return [result.title,result.summary,...result.sections.flatMap(section=>[`\n${section.title}`,...section.items.map(item=>`• ${item}`)]),...(result.nextSteps?.length?['\nSiguientes pasos',...result.nextSteps.map(item=>`• ${item}`)]:[])].join('\n')
-}
-
 export function VirtualTeacherClient({organization,displayName}:{organization:string;displayName:string}){
  const[mode,setMode]=useState<TeacherMode>('planificar')
  const[prompt,setPrompt]=useState('Planifica una clase para fortalecer la justificación de inferencias a partir de pistas del texto.')
@@ -124,7 +68,6 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
  const[objectiveId,setObjectiveId]=useState('')
  const[contextMetrics,setContextMetrics]=useState<ContextResponse['metrics']|null>(null)
  const[contextLoading,setContextLoading]=useState(false)
- const[speaking,setSpeaking]=useState(false)
  const selectedMode=useMemo(()=>modes.find(item=>item.id===mode)??modes[0],[mode])
 
  useEffect(()=>{
@@ -218,30 +161,6 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
   }
  }
 
- function generateLocal(){
-  if(!prompt.trim())return
-  const localResult=localTeacherResult(mode,level,subject,prompt,supportProfile,objective,duration)
-  setResult(localResult)
-  const item:HistoryItem={...localResult,id:crypto.randomUUID(),mode,generatedAt:new Date().toISOString(),prompt,level,subject}
-  setHistory(current=>{const next=[item,...current].slice(0,12);saveLocalHistory(next);return next})
-  setStatus('Propuesta lista · modo local gratuito · sin consumo de IA ni tokens')
- }
-
- function speakResult(){
-  if(!result)return
-  if(!('speechSynthesis' in window)){setStatus('La lectura en voz alta no está disponible en este navegador.');return}
-  window.speechSynthesis.cancel()
-  if(speaking){setSpeaking(false);setStatus('Lectura detenida');return}
-  const utterance=new SpeechSynthesisUtterance(resultPlainText(result))
-  utterance.lang='es-CL'
-  utterance.rate=0.95
-  utterance.onend=()=>setSpeaking(false)
-  utterance.onerror=()=>{setSpeaking(false);setStatus('No fue posible reproducir la voz del navegador.')}
-  setSpeaking(true)
-  setStatus('Leyendo con la voz disponible en el navegador · sin API de voz')
-  window.speechSynthesis.speak(utterance)
- }
-
  async function generate(){
   if(!prompt.trim()||loading)return
   setLoading(true);setStatus(courseId?'Profesor Virtual YOYO está razonando con contexto institucional protegido...':'Profesor Virtual YOYO está razonando con tu contexto pedagógico...')
@@ -260,7 +179,7 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
 
  async function copyResult(){
   if(!result)return
-  const text=resultPlainText(result)
+  const text=[result.title,result.summary,...result.sections.flatMap(section=>[`\n${section.title}`,...section.items.map(item=>`• ${item}`)]),...(result.nextSteps?.length?['\nSiguientes pasos',...result.nextSteps.map(item=>`• ${item}`)]:[])].join('\n')
   try{await navigator.clipboard.writeText(text);setStatus('Contenido copiado')}catch{setStatus('No fue posible copiar desde este navegador.')}
  }
 
@@ -289,7 +208,7 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
  }
 
  return <div className="virtual-teacher-workspace">
-  <section className="virtual-command-center"><div><span className="virtual-kicker"><Sparkles size={15}/> Profesor Virtual YOYO</span><h1>Copiloto pedagógico con IA y modo local gratuito.</h1><p>Planifica, adapta, evalúa, analiza y comunica. Puedes usar YOYO IA con contexto institucional o generar una propuesta local sin consumir modelos, tokens ni APIs pagadas.</p></div><div className="virtual-context-card"><span><BrainCircuit size={20}/> Contexto activo</span><strong>{organization}</strong><small>{displayName} · Sesión institucional protegida</small></div></section>
+  <section className="virtual-command-center"><div><span className="virtual-kicker"><Sparkles size={15}/> Profesor Virtual YOYO</span><h1>Copiloto pedagógico con IA real y contexto institucional protegido.</h1><p>Planifica, adapta, evalúa, analiza y comunica usando cursos, OA, evidencias y apoyos registrados, sin exponer notas sensibles.</p></div><div className="virtual-context-card"><span><BrainCircuit size={20}/> Contexto activo</span><strong>{organization}</strong><small>{displayName} · Sesión institucional protegida</small></div></section>
 
   <section className="virtual-mode-grid" aria-label="Modos del profesor virtual">{modes.map(({id,label,description,icon:Icon})=><button key={id} className={mode===id?'active':''} onClick={()=>setMode(id)}><span><Icon size={19}/></span><div><strong>{label}</strong><small>{description}</small></div></button>)}</section>
 
@@ -311,8 +230,8 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
    </aside>
 
    <main className="virtual-conversation-panel premium-card"><div className="virtual-panel-heading"><Bot/><div><h2>{selectedMode.label} con YOYO</h2><p>{selectedMode.description}</p></div></div>
-    <div className="virtual-prompt-box"><textarea rows={6} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Describe el objetivo, dificultad, curso o recurso que necesitas..."/><div><small>{status}</small><span className="virtual-generation-actions"><button className="btn btn-primary" onClick={generateLocal} disabled={!prompt.trim()}><WifiOff size={17}/>Generar gratis local</button><button className="btn btn-soft" onClick={generate} disabled={loading||!prompt.trim()}>{loading?<Sparkles size={17}/>:<Send size={17}/>} {loading?'Generando...':'YOYO IA · opcional'}</button></span></div></div>
-    {!result?<div className="virtual-empty-state"><Bot size={40}/><h3>Describe tu necesidad pedagógica</h3><p>Selecciona un curso para que YOYO incorpore contexto académico real. Puedes trabajar con el curso completo o, cuando tengas permisos PIE, con un estudiante seleccionado.</p></div>:<article className="virtual-result-card"><header><div><span>{subject} · {level}</span><h2>{result.title}</h2><p>{result.summary}</p></div><div className="virtual-result-header-actions"><button onClick={speakResult} aria-label={speaking?'Detener lectura':'Leer propuesta en voz alta'}>{speaking?<Square size={17}/>:<Volume2 size={18}/>}</button><button onClick={copyResult} aria-label="Copiar propuesta"><Copy size={18}/></button></div></header><div className="virtual-result-sections">{result.sections.map(section=><section key={section.title}><h3>{section.title}</h3>{section.items.map(item=><div key={item}><CheckCircle2 size={16}/><span>{item}</span></div>)}</section>)}</div>{result.pedagogicalChecks?.length?<section className="insight"><b>Control pedagógico</b>{result.pedagogicalChecks.map(item=><p key={item}>✓ {item}</p>)}</section>:null}<div className="virtual-result-actions"><button onClick={sendToMission}>Convertir en Misión YOYO <ArrowRight size={16}/></button><button onClick={sendToCreator}>Convertir en recurso editable <ArrowRight size={16}/></button><Link href={`/evaluaciones?tema=${encodeURIComponent(prompt)}`}>Crear evaluación <ArrowRight size={16}/></Link><Link href={`/biblioteca?q=${encodeURIComponent(prompt)}`}>Buscar recursos <ArrowRight size={16}/></Link><Link href="/seguimiento/evidencias">Registrar evidencia <ArrowRight size={16}/></Link></div></article>}
+    <div className="virtual-prompt-box"><textarea rows={6} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Describe el objetivo, dificultad, curso o recurso que necesitas..."/><div><small>{status}</small><button className="btn btn-primary" onClick={generate} disabled={loading||!prompt.trim()}>{loading?<Sparkles size={17}/>:<Send size={17}/>} {loading?'Generando...':'Generar con YOYO IA'}</button></div></div>
+    {!result?<div className="virtual-empty-state"><Bot size={40}/><h3>Describe tu necesidad pedagógica</h3><p>Selecciona un curso para que YOYO incorpore contexto académico real. Puedes trabajar con el curso completo o, cuando tengas permisos PIE, con un estudiante seleccionado.</p></div>:<article className="virtual-result-card"><header><div><span>{subject} · {level}</span><h2>{result.title}</h2><p>{result.summary}</p></div><button onClick={copyResult} aria-label="Copiar propuesta"><Copy size={18}/></button></header><div className="virtual-result-sections">{result.sections.map(section=><section key={section.title}><h3>{section.title}</h3>{section.items.map(item=><div key={item}><CheckCircle2 size={16}/><span>{item}</span></div>)}</section>)}</div>{result.pedagogicalChecks?.length?<section className="insight"><b>Control pedagógico</b>{result.pedagogicalChecks.map(item=><p key={item}>✓ {item}</p>)}</section>:null}<div className="virtual-result-actions"><button onClick={sendToMission}>Convertir en Misión YOYO <ArrowRight size={16}/></button><button onClick={sendToCreator}>Convertir en recurso editable <ArrowRight size={16}/></button><Link href={`/evaluaciones?tema=${encodeURIComponent(prompt)}`}>Crear evaluación <ArrowRight size={16}/></Link><Link href={`/biblioteca?q=${encodeURIComponent(prompt)}`}>Buscar recursos <ArrowRight size={16}/></Link><Link href="/seguimiento/evidencias">Registrar evidencia <ArrowRight size={16}/></Link></div></article>}
    </main>
 
    <aside className="virtual-history-panel premium-card"><div className="virtual-panel-heading"><History/><div><h2>{historyPersistence==='institutional'?'Historial institucional':'Historial'}</h2><p>{historyPersistence==='institutional'?'Hasta 12 propuestas recientes disponibles en tu institución.':historyPersistence==='loading'?'Comprobando almacenamiento institucional…':'Hasta 12 propuestas recientes guardadas sólo en este dispositivo.'}</p></div></div>{history.length?<div className="virtual-history-list">{history.map(item=><button key={item.id} onClick={()=>{setResult(item);setMode(item.mode);setPrompt(item.prompt);setLevel(item.level);setSubject(item.subject)}}><span><FileText size={17}/></span><div><strong>{item.title}</strong><small>{new Date(item.generatedAt).toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</small></div></button>)}</div>:<div className="virtual-history-empty">Tus propuestas recientes aparecerán aquí.</div>}{historyPersistence==='local-fallback'?<div className="insight"><b>Persistencia local temporal</b><p>La tabla institucional aún no está disponible o no es accesible. Tus propuestas permanecen en este dispositivo y se identifica claramente este estado.</p></div>:null}<div className="virtual-control-note"><CheckCircle2/><div><strong>Privacidad y control docente</strong><p>El historial institucional conserva sólo la propuesta pedagógica, modo, nivel y asignatura. No guarda nombres de estudiantes, perfiles de apoyo individuales ni notas sensibles.</p></div></div></aside>
