@@ -63,7 +63,6 @@ export default function PublicPresentationPage() {
       {
         '@type': 'Organization',
         name: 'YOYOLETRASAI',
-        url: 'https://yoyoletrasai.vercel.app',
         description: 'Plataforma educativa para docentes, equipos PIE e instituciones educativas.',
       },
       {
@@ -71,7 +70,6 @@ export default function PublicPresentationPage() {
         name: 'YOYOLETRASAI',
         applicationCategory: 'EducationalApplication',
         operatingSystem: 'Web',
-        url: 'https://yoyoletrasai.vercel.app',
         inLanguage: 'es-CL',
         description: 'Ecosistema educativo para planificación, inclusión, DUA, evaluación, recursos y seguimiento pedagógico.',
       },
