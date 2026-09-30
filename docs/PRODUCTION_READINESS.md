@@ -1,37 +1,91 @@
 # YOYOLETRASAI · Production readiness
 
-Actualizado: 2026-09-13
+Actualizado: 2026-09-30
+
+Este documento describe el estado y la configuración que exige el `main` actual. No contiene valores de secretos ni placeholders.
 
 ## Arquitectura canónica
 
 - Código: GitHub (`main`).
 - Runtime: Cloudflare Workers mediante vinext/Cloudflare Vite.
 - Backend y autenticación: Supabase.
-- YOYO IA: Cloudflare AI mediante runtime server-side.
-- Vercel no forma parte de la infraestructura activa.
+- YOYO IA: integración server-side configurable para Cloudflare AI/Gateway.
+- Vercel no forma parte de la infraestructura activa documentada aquí.
 
-## Validación automática disponible
+## Cadena actual de validación y despliegue
 
-La CI premium ejecuta:
+La ruta automática actual es:
 
-1. `npm ci` con lockfile.
-2. TypeScript.
-3. build Next.js.
-4. build vinext para Cloudflare Workers.
-5. validación de `apps/web/dist/server/wrangler.json`.
-6. `wrangler deploy --dry-run`.
-7. regresión visual Playwright.
-8. Axe + navegación por teclado.
-9. regresión autenticada cuando existen credenciales E2E y configuración pública de Supabase.
-10. Lighthouse accessibility con umbral interno >= 95 en las vistas públicas evaluadas.
+1. `Premium validation` se ejecuta en `push` a `main` (además de las ramas explícitas del workflow) y en `pull_request` hacia `main`.
+2. Cuando una ejecución de `Premium validation` termina con `success` y su `head_branch` es `main`, dispara `Production preflight`.
+3. Cuando `Production preflight` termina con `success` y su `head_branch` es `main`, dispara `Deploy Cloudflare production`.
 
-## Despliegue
+`Production preflight` también admite ejecución manual mediante `workflow_dispatch`.
 
-`.github/workflows/deploy-cloudflare.yml` es el único flujo canónico de publicación. Es manual, protegido por el environment `production` y exige escribir `DEPLOY` antes de ejecutar.
+`Deploy Cloudflare production` también admite ejecución manual mediante `workflow_dispatch`, pero en ese caso exige que el input `confirm_production` sea exactamente `DEPLOY`.
 
-El workflow no debe ejecutarse hasta completar el environment `production` de GitHub.
+Por lo tanto, `.github/workflows/deploy-cloudflare.yml` **no es exclusivamente manual**: publica automáticamente después de un `Production preflight` exitoso en `main`, y ese preflight puede provenir de una `Premium validation` exitosa en `main`.
 
-### Valores obligatorios detectados por el preflight
+El job de preflight y el job de deploy declaran `environment: production`. El deploy hace checkout explícito de `main`.
+
+## Premium validation
+
+Archivo: `.github/workflows/premium-validation.yml`.
+
+### Disparadores
+
+- `push` a:
+  - `main`
+  - `agent/full-premium-rebuild-v2`
+  - `agent/corregir-mejorar-plataforma`
+- `pull_request` hacia `main`
+
+### Gates actuales
+
+1. protección de superficies aprobadas (`npm run verify:approved-surfaces`);
+2. instalación con lockfile;
+3. TypeScript;
+4. build Next.js;
+5. build vinext para Cloudflare Workers;
+6. verificación de `apps/web/dist/client` y `apps/web/dist/server/wrangler.json`;
+7. `wrangler deploy --dry-run`;
+8. regresión visual Playwright;
+9. regresión del catálogo de juegos;
+10. verificación de preview pública y navegación por teclado;
+11. regresión autenticada cuando existe toda su configuración;
+12. Lighthouse accessibility con mínimo 95% en `/presentacion` y `/acceso`;
+13. subida de evidencias de regresión visual, Lighthouse y preview cuando correspondan.
+
+### Configuración
+
+No hay secretos o variables obligatorios para que el workflow ejecute sus gates públicos y de build.
+
+**Opcional para iniciar la aplicación con Supabase público:**
+
+- variable `NEXT_PUBLIC_SUPABASE_URL`
+- secret `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Si ambos están presentes, se exportan durante el arranque de la aplicación. Si falta alguno, el workflow conserva el fallback de preview pública.
+
+**Condicional para ejecutar el gate autenticado:** deben existir los cuatro valores siguientes; si falta cualquiera, ese gate se omite con un notice:
+
+- secret `E2E_TEST_EMAIL`
+- secret `E2E_TEST_PASSWORD`
+- variable `NEXT_PUBLIC_SUPABASE_URL`
+- secret `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+## Production preflight
+
+Archivo: `.github/workflows/production-preflight.yml`.
+
+### Disparadores
+
+- manual: `workflow_dispatch`;
+- automático: al completarse `Premium validation`, solo si la ejecución upstream terminó con `success` y su `head_branch` es `main`.
+
+El job usa el environment `production`.
+
+### Configuración obligatoria
 
 Secrets:
 
@@ -48,42 +102,146 @@ Variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 
-Opcionales:
+El preflight falla si falta cualquiera de esos valores.
 
-- `YOYO_PRODUCTION_URL`
+### Configuración opcional
+
+- variable `YOYO_PRODUCTION_URL`
+- variable `YOYO_BILLING_PROVIDER`
+
+Si `YOYO_PRODUCTION_URL` está configurada, el preflight exige que use `https://` y consulta `/api/health`. Una respuesta distinta de HTTP 200 genera warning en este paso, no un fallo por sí sola.
+
+### Configuración condicional: Mercado Pago
+
+Solo cuando `YOYO_BILLING_PROVIDER == "mercadopago"` pasan a ser obligatorios:
+
+- secret `MERCADOPAGO_ACCESS_TOKEN`
+- secret `MERCADOPAGO_WEBHOOK_SECRET`
+- variable `YOYO_PRODUCTION_URL`
+
+Además, debe existir **al menos uno** de estos secrets:
+
+- `MERCADOPAGO_PREMIUM_PLAN_ID`
+- `MERCADOPAGO_INSTITUTION_PLAN_ID`
+
+## Deploy Cloudflare production
+
+Archivo: `.github/workflows/deploy-cloudflare.yml`.
+
+### Disparadores
+
+- manual: `workflow_dispatch` con `confirm_production=DEPLOY`;
+- automático: al completarse `Production preflight`, solo si terminó con `success` y su `head_branch` es `main`.
+
+El job usa el environment `production`, hace checkout explícito de `main`, vuelve a ejecutar validación de configuración, typecheck y builds, despliega el Worker y exige que `/api/health` responda correctamente después de publicar.
+
+### Configuración obligatoria
+
+Secrets:
+
+- `CF_DEPLOY_API_TOKEN`
+- `CF_DEPLOY_ACCOUNT_ID`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CRON_SECRET`
+- `YOYO_OWNER_EMAIL`
+- `YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID`
+- `YOYO_RUNTIME_CLOUDFLARE_API_TOKEN`
+
+Variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+
+### Configuración opcional
+
+Estos valores se incorporan al archivo efímero de runtime solo cuando están definidos, pero el workflow no los exige de forma general:
+
+Secrets:
+
 - `YOYO_AI_GATEWAY_URL`
-- variables de modelos YOYO IA
+- `YOYO_BILLING_CHECKOUT_URL`
+- `MERCADOPAGO_ACCESS_TOKEN`
+- `MERCADOPAGO_WEBHOOK_SECRET`
+- `MERCADOPAGO_PREMIUM_PLAN_ID`
+- `MERCADOPAGO_INSTITUTION_PLAN_ID`
 
-El preflight ejecutado el 2026-09-13 confirmó que el environment `production` no tenía configurados los valores obligatorios. No se debe sustituir esta configuración por valores placeholder ni almacenar secretos en el repositorio.
+Variables:
+
+- `YOYO_AI_MODEL_ESSENTIAL`
+- `YOYO_AI_MODEL_ADVANCED`
+- `YOYO_AI_MODEL_INSTITUTION`
+- `YOYO_AI_MODEL_OWNER`
+- `YOYO_BILLING_PROVIDER`
+- `YOYO_PRODUCTION_URL`
+
+`YOYO_PRODUCTION_URL` tiene además una función operativa: si está definida, se usa como URL pública para el health check posterior al deploy; si no está definida, el workflow intenta detectar una URL `workers.dev` en la salida de Wrangler. Si ninguna de las dos rutas produce una URL pública, el deploy falla.
+
+### Configuración condicional: Mercado Pago
+
+Cuando `YOYO_BILLING_PROVIDER == "mercadopago"`, son obligatorios:
+
+- secret `MERCADOPAGO_ACCESS_TOKEN`
+- secret `MERCADOPAGO_WEBHOOK_SECRET`
+- variable `YOYO_PRODUCTION_URL`
+
+Y debe existir al menos uno de:
+
+- `MERCADOPAGO_PREMIUM_PLAN_ID`
+- `MERCADOPAGO_INSTITUTION_PLAN_ID`
+
+## Evolución YOYO programada
+
+Archivo: `.github/workflows/evolution-schedule.yml`.
+
+### Disparadores
+
+- schedule diario: `0 5 * * *`;
+- manual: `workflow_dispatch`.
+
+El workflow no declara `environment: production`.
+
+### Configuración obligatoria
+
+- `CRON_SECRET` como secret.
+- `YOYO_PRODUCTION_URL`, obtenida con esta precedencia:
+  1. variable `YOYO_PRODUCTION_URL`;
+  2. secret `YOYO_PRODUCTION_URL` como fallback.
+
+La URL resultante debe existir y comenzar con `https://`.
+
+El heartbeat es diario, pero la API debe reportar `cadenceHours == 72`. El workflow también comprueba que la publicación automática y los cambios directos en producción permanezcan bloqueados y que la revisión humana siga siendo obligatoria.
+
+## Matriz resumida de configuración
+
+| Workflow | Obligatoria | Opcional | Condicional |
+| --- | --- | --- | --- |
+| Premium validation | Ninguna para build/gates públicos | Supabase público | E2E autenticado requiere email, password y par público de Supabase |
+| Production preflight | Credenciales Cloudflare deploy/runtime, Supabase público + service role, `CRON_SECRET`, `YOYO_OWNER_EMAIL` | `YOYO_PRODUCTION_URL`, `YOYO_BILLING_PROVIDER` | Con Mercado Pago: token, webhook, URL de producción y al menos un plan |
+| Deploy Cloudflare production | Mismo núcleo obligatorio del preflight | IA, modelos, billing checkout/provider, `YOYO_PRODUCTION_URL`, datos Mercado Pago mientras no esté habilitado | Con Mercado Pago: token, webhook, URL de producción y al menos un plan |
+| Evolución YOYO programada | `CRON_SECRET` y `YOYO_PRODUCTION_URL` (variable o secret fallback) | Ninguna declarada | Fallback de `YOYO_PRODUCTION_URL` desde variable a secret |
 
 ## Supabase
 
 El repositorio contiene migraciones versionadas para preferencias, misiones, evidencias, evolución, historial del Profesor Virtual y fábrica de recursos, entre otras.
 
-La verificación directa de esquema/migraciones en el proyecto productivo está pendiente de evidencia porque el canal SQL del conector Supabase devolvió timeout en los intentos de lectura realizados. La API de administración sí confirmó que existe al menos una clave publicable activa para el proyecto.
-
-No declarar las migraciones como aplicadas en producción hasta comprobarlas contra el proyecto real.
+La verificación directa de esquema/migraciones en el proyecto productivo sigue requiriendo evidencia independiente del contenido de estos workflows. No declarar migraciones como aplicadas en producción sin comprobarlas contra el proyecto real.
 
 ## Fábrica automática y autoevolución
 
-- Cadencia: 72 horas.
-- Genera candidatos de recurso, no publicaciones directas.
-- `quality_score` inicia sin aprobar.
-- La publicación requiere revisión humana y quality gate.
-- No se inventan códigos OA.
-- No se envían `sensitive_notes` a YOYO IA.
-
-## Juegos
-
-El catálogo canónico contiene 12/12 experiencias marcadas como jugables. Todas las incorporaciones recientes fueron sometidas a build Next, vinext, dry-run Cloudflare y QA premium antes del merge.
+- Cadencia esperada por la API: 72 horas.
+- El workflow programado verifica que `automaticPublishing` permanezca en `false`.
+- Verifica que `humanReviewRequired` sea `true`.
+- Verifica que `productionChangesApplied` permanezca en `false`.
+- Verifica la gobernanza `audit-propose-and-draft-only`.
+- La revisión humana sigue siendo obligatoria antes de aplicar cambios.
 
 ## Producción online
 
-No registrar ni mostrar una URL como producción oficial hasta que se cumplan los cuatro puntos:
+No registrar ni mostrar una URL como producción oficial hasta disponer de evidencia de que:
 
-1. environment `production` completo;
-2. migraciones/RLS de Supabase verificadas;
-3. workflow protegido de Cloudflare ejecutado con éxito;
-4. `/api/health` y navegación pública comprobados sobre la URL desplegada.
+1. la configuración obligatoria aplicable está completa;
+2. las migraciones/RLS necesarias de Supabase están verificadas contra el proyecto real;
+3. la cadena de validación/despliegue correspondiente terminó con éxito;
+4. `/api/health` y la navegación pública fueron comprobados sobre la URL desplegada.
 
-La ausencia de una URL verificada no debe sustituirse por una dirección `workers.dev` inferida o inventada.
+No inventar, inferir ni documentar valores de secretos. Una URL `workers.dev` solo debe tratarse como URL desplegada cuando haya sido detectada por el propio workflow o verificada directamente.
