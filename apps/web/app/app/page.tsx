@@ -1,20 +1,27 @@
 import Link from 'next/link'
 import {
+  Accessibility,
   ArrowRight,
   BarChart3,
   BookOpen,
+  BookOpenCheck,
   Bot,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  FileText,
+  FlaskConical,
   Gamepad2,
   GraduationCap,
   Library,
   Plus,
   ShieldCheck,
   Sparkles,
+  PenTool,
   Target,
   Users,
+  UsersRound,
+  Wrench,
 } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { ActivityArtwork } from '@/components/dashboard/DashboardIllustrations'
@@ -28,6 +35,34 @@ const moduleGroups = [
   { label: 'Profesor Virtual', href: '/profesor-virtual', icon: Bot, tone: 'blue' },
   { label: 'Evaluaciones', href: '/evaluaciones', icon: ClipboardCheck, tone: 'mint' },
   { label: 'Juegos 3D', href: '/juegos', icon: Gamepad2, tone: 'rose' },
+]
+
+const realModules = [
+  { label: 'Cursos y grupos', description: 'Organiza cursos activos y grupos institucionales.', href: '/cursos', icon: GraduationCap },
+  { label: 'Estudiantes', description: 'Seguimiento individual, apoyos y progreso por estudiante.', href: '/seguimiento', icon: Users },
+  { label: 'PIE y DUA', description: 'Pictogramas, rutinas, perfiles de apoyo y accesibilidad.', href: '/inclusion', icon: Accessibility },
+  { label: 'Progreso por OA', description: 'Avance curricular y evidencias vinculadas a objetivos.', href: '/progreso', icon: BarChart3 },
+  { label: 'Evaluaciones', description: 'Instrumentos, variantes diversificadas y pautas.', href: '/evaluaciones', icon: ClipboardCheck },
+  { label: 'Biblioteca Premium', description: 'Recursos validados, adaptables y asignables.', href: '/biblioteca', icon: Library },
+  { label: 'Crear con YOYO IA', description: 'Guías, evaluaciones, rúbricas y recursos editables.', href: '/crear', icon: Sparkles },
+  { label: 'Profesor Virtual', description: 'Planifica, adapta, evalúa, analiza y comunica.', href: '/profesor-virtual', icon: Bot },
+  { label: 'Juegos 3D', description: '12 mundos pedagógicos con misiones y accesibilidad.', href: '/juegos', icon: Gamepad2 },
+  { label: 'Herramientas', description: 'Centro de aula, planificación y utilidades docentes.', href: '/herramientas', icon: Wrench },
+  { label: 'Familias', description: 'Comunicación y seguimiento con la comunidad educativa.', href: '/familias', icon: UsersRound },
+  { label: 'Informes', description: 'Informes pedagógicos, PIE y seguimiento institucional.', href: '/informes', icon: FileText },
+]
+
+const approvedExperiences = [
+  { label: 'Bosque de las inferencias', detail: 'Lenguaje · 3°–5° básico', href: '/juegos#bosque-inferencias', icon: BookOpenCheck },
+  { label: 'Feria matemática', detail: 'Matemática · 3°–6° básico', href: '/juegos#feria-matematica', icon: Target },
+  { label: 'Misión agua', detail: 'Ciencias · 5°–7° básico', href: '/juegos#mision-agua', icon: FlaskConical },
+  { label: 'Laboratorio de ecosistemas', detail: 'Ciencias · 4°–6° básico', href: '/juegos/laboratorio-ecosistemas', icon: FlaskConical },
+  { label: 'Ciudad de las fracciones', detail: 'Matemática · 4°–7° básico', href: '/juegos/ciudad-fracciones', icon: Target },
+  { label: 'Expedición cuerpo humano', detail: 'Ciencias · 5°–8° básico', href: '/juegos/cuerpo-humano', icon: FlaskConical },
+  { label: 'Plan Lector', detail: 'Fluidez, comprensión y evidencia', href: '/plan-lector', icon: BookOpenCheck },
+  { label: 'Manipulativos matemáticos', detail: 'Base diez y valor posicional', href: '/manipulativos', icon: Target },
+  { label: 'Simuladores', detail: 'Circuitos, ecosistemas, agua y movimiento', href: '/simuladores', icon: FlaskConical },
+  { label: 'Caligrafía y grafomotricidad', detail: 'Trazos y recorridos imprimibles', href: '/caligrafia', icon: PenTool },
 ]
 
 const auditedModules = [
@@ -186,6 +221,46 @@ export default async function Dashboard() {
         <section className="approved-panel approved-ai-tools premium-command-center">
           <div className="approved-panel-heading"><div><span className="approved-kicker">Acciones rápidas</span><h2>¿Qué quieres hacer ahora?</h2><p>Los flujos centrales quedan a un toque para reducir pasos y mantener continuidad entre módulos.</p></div><Link href="/herramientas">Ver todas</Link></div>
           <div className="approved-tools-row">{moduleGroups.map(({ label, href, icon: Icon, tone }) => <Link href={href} key={label} className={`tool-${tone}`}><span><Icon/></span><strong>{label}</strong><ArrowRight/></Link>)}</div>
+        </section>
+
+        <section className="approved-panel approved-real-modules" aria-labelledby="real-modules-title">
+          <div className="approved-panel-heading">
+            <div>
+              <span className="approved-kicker">Plataforma operativa</span>
+              <h2 id="real-modules-title">Módulos reales de YOYOLETRASAI</h2>
+              <p>Accesos directos a las áreas funcionales ya implementadas en la plataforma aprobada.</p>
+            </div>
+            <Link href="/herramientas">Ver ecosistema completo</Link>
+          </div>
+          <div className="approved-real-module-grid">
+            {realModules.map(({ label, description, href, icon: Icon }) => (
+              <Link href={href} key={label} className="approved-real-module-card">
+                <span><Icon size={21}/></span>
+                <div><strong>{label}</strong><small>{description}</small></div>
+                <ArrowRight size={16}/>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="approved-panel approved-experience-panel" aria-labelledby="approved-experiences-title">
+          <div className="approved-panel-heading">
+            <div>
+              <span className="approved-kicker">Actividades aprobadas</span>
+              <h2 id="approved-experiences-title">Experiencias y herramientas listas para abrir</h2>
+              <p>No son tarjetas de presentación: cada acceso lleva a una actividad o módulo funcional existente.</p>
+            </div>
+            <Link href="/juegos">Abrir catálogo 3D</Link>
+          </div>
+          <div className="approved-experience-grid">
+            {approvedExperiences.map(({ label, detail, href, icon: Icon }) => (
+              <Link href={href} key={label} className="approved-experience-card">
+                <span><Icon size={20}/></span>
+                <div><strong>{label}</strong><small>{detail}</small></div>
+                <ArrowRight size={16}/>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <section className="approved-main-grid">
