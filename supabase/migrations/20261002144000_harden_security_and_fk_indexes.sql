@@ -763,4 +763,40 @@ revoke all on function public.set_ai_entitlement(
   timestamptz
 ) from public, anon, authenticated, service_role;
 
+
+-- Keep learning mission objective/course relationships internally consistent.
+drop policy if exists "staff can manage learning missions" on public.learning_missions;
+create policy "staff can manage learning missions"
+on public.learning_missions
+for all
+to authenticated
+using (
+  private.has_organization_role(
+    organization_id,
+    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+)
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+  and exists (
+    select 1
+    from public.courses c
+    where c.id = course_id
+      and c.organization_id = organization_id
+  )
+  and (
+    objective_id is null
+    or exists (
+      select 1
+      from public.learning_objectives o
+      where o.id = objective_id
+        and o.organization_id = organization_id
+        and (o.course_id is null or o.course_id = course_id)
+    )
+  )
+);
+
 notify pgrst, 'reload schema';
