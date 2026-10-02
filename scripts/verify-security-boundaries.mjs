@@ -52,6 +52,11 @@ const checks = [
     reason: 'Virtual Teacher AI authorization must be scoped to the active organization.',
   },
   {
+    path: 'apps/web/app/api/evaluaciones/adapt/route.ts',
+    forbidden: [/rpc\(['"]authorize_ai_request['"]/],
+    reason: 'Assessment AI authorization must be scoped to the active organization.',
+  },
+  {
     path: 'supabase/config.toml',
     forbidden: [/vercel\.app/i],
     reason: 'Supabase auth config must not contain legacy Vercel redirects.',
