@@ -12,6 +12,10 @@ const requiredTables = [
   'virtual_teacher_history',
   'billing_subscriptions',
   'inclusion_boards',
+  'student_guardians',
+  'reports',
+  'report_versions',
+  'family_communications',
 ] as const
 
 type TableCheck = {
