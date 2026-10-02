@@ -884,4 +884,22 @@ with check (
   )
 );
 
+
+-- Remove inherited non-CRUD privileges from critical exposed tables.
+revoke truncate, references, trigger, maintain on table
+  public.ai_entitlements,
+  public.ai_eval_cases,
+  public.ai_eval_runs,
+  public.ai_generations,
+  public.ai_plans,
+  public.ai_usage_events,
+  public.assessment_questions,
+  public.evolution_actions,
+  public.evolution_audit_runs,
+  public.evolution_benchmarks,
+  public.platform_resources,
+  public.platform_settings,
+  public.resource_assignments
+from anon, authenticated;
+
 notify pgrst, 'reload schema';
