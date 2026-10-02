@@ -87,7 +87,7 @@ export async function GET() {
     const email = typeof claims?.email === 'string' ? claims.email : ''
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
     const displayName = profile?.display_name?.trim() || fullName || email.split('@')[0] || 'Usuario'
-    const access = resolveProductAccess(email, role)
+    const access = resolveProductAccess(email, role, undefined, userId)
 
     return NextResponse.json({
       displayName,
