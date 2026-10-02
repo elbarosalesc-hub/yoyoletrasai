@@ -56,6 +56,15 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Protect approved surfaces
+        run: npm run verify:approved-surfaces
+
+      - name: Verify security and architecture boundaries
+        run: npm run verify:security-boundaries
+
+      - name: Verify migration schema contract
+        run: npm run verify:schema-contract
+
       - name: Validate production configuration
         shell: bash
         run: |
@@ -84,6 +93,9 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund --loglevel=error
 
+      - name: Check vinext compatibility
+        run: npm exec --workspace=web -- vinext check
+
       - name: Typecheck
         run: npm run typecheck -- --pretty false
 
@@ -99,6 +111,10 @@ jobs:
           set -euo pipefail
           test -d apps/web/dist/client
           test -f apps/web/dist/server/wrangler.json
+
+      - name: Dry-run Cloudflare deployment bundle
+        working-directory: apps/web
+        run: npx wrangler deploy --dry-run --config dist/server/wrangler.json
 
       - name: Create ephemeral runtime secrets file
         shell: bash
