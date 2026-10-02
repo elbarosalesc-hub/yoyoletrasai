@@ -23,8 +23,13 @@ const checks = [
   },
   {
     path: 'apps/web/lib/product/access.ts',
-    forbidden: [/FALLBACK_OWNER_EMAIL/i, /@gmail\.com/i],
-    reason: 'Owner authorization must not depend on a hardcoded personal email.',
+    forbidden: [/FALLBACK_OWNER_EMAIL/i, /@gmail\.com/i, /premiumRole/],
+    reason: 'Product access must come from a real plan/entitlement, not a hardcoded email or staff role.',
+  },
+  {
+    path: 'apps/web/app/api/session/context/route.ts',
+    forbidden: [/resolveProductAccess\(email,\s*role,\s*undefined/],
+    reason: 'Session premium access must be derived from verified subscription state.',
   },
   {
     path: 'apps/web/app/api/billing/checkout/route.ts',
