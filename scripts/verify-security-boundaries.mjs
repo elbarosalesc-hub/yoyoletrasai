@@ -106,6 +106,8 @@ const guardedRoutes = [
   ['apps/web/app/api/evaluaciones/adapt/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/audit/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/ai-eval/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/reports/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/family-communications/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/health/supabase/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/inclusion/board/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/integrations/status/route.ts', /auth\.getClaims\(/],
@@ -132,6 +134,8 @@ const organizationScopedRoutes = [
   'apps/web/app/api/evaluaciones/adapt/route.ts',
   'apps/web/app/api/evolution/audit/route.ts',
   'apps/web/app/api/evolution/ai-eval/route.ts',
+  'apps/web/app/api/reports/route.ts',
+  'apps/web/app/api/family-communications/route.ts',
   'apps/web/app/api/inclusion/board/route.ts',
   'apps/web/app/api/misiones/route.ts',
   'apps/web/app/api/misiones/evidencia/route.ts',
@@ -232,7 +236,7 @@ for (const check of checks) {
 }
 
 const proxy = fs.readFileSync('apps/web/lib/supabase/proxy.ts', 'utf8')
-for (const requiredPrefix of ['/inclusion', '/profesor-virtual', '/seguimiento', '/informes', '/misiones', '/configuracion']) {
+for (const requiredPrefix of ['/inclusion', '/profesor-virtual', '/seguimiento', '/informes', '/familias', '/misiones', '/configuracion']) {
   if (!proxy.includes(`'${requiredPrefix}'`)) {
     console.error(`::error::Protected route prefix missing from proxy: ${requiredPrefix}`)
     failed = true
