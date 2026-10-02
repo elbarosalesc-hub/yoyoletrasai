@@ -157,16 +157,57 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
   try{await navigator.clipboard.writeText(text);setStatus('Contenido copiado')}catch{setStatus('No fue posible copiar desde este navegador.')}
  }
 
- function sendToCreator(){
+ async function sendToCreator(){
   if(!result)return
-  setStatus('Abriendo creador. Por seguridad, el borrador no se guarda en el navegador.')
-  window.location.href='/crear?from=profesor-virtual'
+  setStatus('Preparando recurso editable institucional...')
+  try{
+   const existingResponse=await fetch('/api/resource-drafts',{cache:'no-store'})
+   const existing=existingResponse.ok?await existingResponse.json() as {history?:Array<Record<string,unknown>>}:{history:[]}
+   const questions=result.sections.flatMap(section=>section.items).slice(0,20).map((text,index)=>({id:Date.now()+index,text}))
+   const draft={
+    title:result.title,
+    level,
+    resourceType:mode==='evaluar'?'Evaluación':'Guía de aprendizaje',
+    subject,
+    objective:objective||prompt,
+    adaptation:supportProfile||'Acceso universal DUA',
+    visualStyle:'Infantil académico premium',
+    packageMode:'Paquete completo',
+    questions,
+    aiOutput:null,
+    origin:'profesor-virtual',
+    updatedAt:new Date().toISOString(),
+   }
+   const history=[{...draft,id:String(Date.now())},...(Array.isArray(existing.history)?existing.history:[])].slice(0,10)
+   const saved=await fetch('/api/resource-drafts',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({draft,history})})
+   const data=await saved.json() as {ok?:boolean;error?:string}
+   if(!saved.ok||!data.ok)throw new Error(data.error||'No fue posible preparar el recurso editable.')
+   window.location.href='/crear?from=profesor-virtual'
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible preparar el recurso editable.')}
  }
 
- function sendToMission(){
+ async function sendToMission(){
   if(!result)return
-  setStatus('Abriendo Misiones YOYO. Por seguridad, el borrador no se guarda en el navegador.')
-  window.location.href='/misiones?from=profesor-virtual'
+  if(!courseId){setStatus('Selecciona un curso real antes de convertir la propuesta en Misión YOYO.');return}
+  setStatus('Creando Misión YOYO institucional...')
+  try{
+   const detail=[result.summary,...result.sections.flatMap(section=>[section.title,...section.items.map(item=>`• ${item}`)])].join('\n').slice(0,2000)
+   const experienceType=mode==='evaluar'?'assessment':mode==='planificar'?'lesson':'practice'
+   const response=await fetch('/api/misiones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    courseId,
+    objectiveId:objectiveId||null,
+    title:result.title,
+    description:detail,
+    experienceType,
+    sourceHref:null,
+    supportProfile:supportProfile||'Acceso universal DUA',
+    differentiation:{source:'profesor-virtual',mode},
+    status:'assigned',
+   })})
+   const data=await response.json() as {mission?:{id?:string};error?:string}
+   if(!response.ok||!data.mission?.id)throw new Error(data.error||'No fue posible crear la Misión YOYO.')
+   window.location.href='/misiones?from=profesor-virtual'
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible crear la Misión YOYO.')}
  }
 
  function saveBrief(){
