@@ -30,6 +30,10 @@ export async function GET() {
       .eq('organization_id', organizationId)
       .maybeSingle()
 
+    if (entitlementResult.error) {
+      return NextResponse.json({ error: 'No fue posible verificar el entitlement de YOYO IA.' }, { status: 503 })
+    }
+
     const now = Date.now()
     const entitlementStatus = String(entitlementResult.data?.status ?? '')
     const periodStart = Date.parse(String(entitlementResult.data?.period_start ?? ''))
@@ -70,6 +74,10 @@ export async function GET() {
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    if (institutionSubscription.error) {
+      return NextResponse.json({ error: 'No fue posible verificar la suscripción institucional.' }, { status: 503 })
+    }
 
     const nextPaymentAt = Date.parse(String(institutionSubscription.data?.next_payment_at ?? ''))
     const institutionSubscriptionActive =
