@@ -15,14 +15,11 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'No autenticado.' }, { status: 401 })
 
   const providers = Object.fromEntries(Object.entries(providerRequirements).map(([key, required]) => {
-    const missing = required.filter(name => !process.env[name])
-    const credentialsConfigured = missing.length === 0
+    const credentialsConfigured = required.every(name => Boolean(process.env[name]))
     return [key, {
       credentialsConfigured,
       oauthImplemented: false,
       connected: false,
-      missing,
-      required: [...required],
       state: credentialsConfigured ? 'credentials_ready' : 'credentials_missing',
     }]
   }))
