@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { cloudflareChatCompletion, getCloudflareAIConfig } from '@/lib/ai/cloudflare-gateway'
+import { createAIUsageServiceClient } from '@/lib/ai/usage-service'
 import { createClient } from '@/lib/supabase/server'
 
 const modes = new Set(['planificar','adaptar','evaluar','analizar','comunicar'])
@@ -73,6 +74,8 @@ export async function POST(request:Request){
   const courseId=safeId(body.courseId),studentId=safeId(body.studentId),objectiveId=safeId(body.objectiveId)
   if(!prompt)return NextResponse.json({error:'Describe la necesidad pedagógica.'},{status:400})
   if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'Profesor Virtual requiere la configuración de IA real en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
+  const usageDb=createAIUsageServiceClient()
+  if(!usageDb)return NextResponse.json({error:'Profesor Virtual requiere el backend seguro de consumo.',code:'AI_USAGE_BACKEND_NOT_CONFIGURED'},{status:503})
   const institutionalContext=await loadInstitutionalContext(supabase as any,organizationId,courseId,studentId,objectiveId)
   const db=supabase as unknown as LooseDb
   const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:mode==='evaluar'?'assessment':'activity',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:Math.min(9000,4500+institutionalContext.length)})
@@ -85,11 +88,11 @@ export async function POST(request:Request){
   try{
     const response=await cloudflareChatCompletion({model,messages:[{role:'system',content:system},{role:'user',content:user}],maxTokens:Math.min(Number(auth.limits?.maxOutputTokens)||6000,12000),temperature:0.3,timeoutMs:90000})
     const result=extractJson(response.text)
-    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_error_code:null})
+    await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_error_code:null})
     return NextResponse.json({result,model,fallback:false,contextUsed:Boolean(institutionalContext),provider:response.provider})
   }catch(error){
     const code=error instanceof Error?error.message.slice(0,120):'TEACHER_GENERATION_FAILED'
-    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:code})
+    await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:code})
     return NextResponse.json({error:'Profesor Virtual no pudo completar esta generación. Conserva tu borrador y vuelve a intentarlo.',code:'TEACHER_GENERATION_FAILED'},{status:502})
   }
 }
