@@ -28,6 +28,9 @@ jobs:
       - name: Verify security and architecture boundaries
         run: npm run verify:security-boundaries
 
+      - name: Verify migration schema contract
+        run: npm run verify:schema-contract
+
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund --loglevel=error
 
