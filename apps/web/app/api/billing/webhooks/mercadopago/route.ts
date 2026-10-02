@@ -44,12 +44,43 @@ export async function POST(request: NextRequest) {
     payload: body,
   }).select('id').single()
 
+  let eventId = ''
   if (inserted.error) {
-    if (inserted.error.code === '23505') return NextResponse.json({ received: true, duplicate: true })
-    return NextResponse.json({ error: 'No fue posible registrar el evento.' }, { status: 503 })
+    if (inserted.error.code !== '23505') {
+      return NextResponse.json({ error: 'No fue posible registrar el evento.' }, { status: 503 })
+    }
+
+    const existing = await admin.from('billing_events')
+      .select('id,processed_at,processing_error')
+      .eq('provider', 'mercadopago')
+      .eq('provider_event_key', eventKey)
+      .maybeSingle()
+
+    if (existing.error || !existing.data) {
+      return NextResponse.json({ error: 'No fue posible recuperar el evento para reintento.' }, { status: 503 })
+    }
+
+    if (existing.data.processed_at && !existing.data.processing_error) {
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+
+    eventId = String(existing.data.id)
+    const reset = await admin.from('billing_events').update({
+      topic,
+      external_resource_id: dataId || null,
+      signature_valid: true,
+      payload: body,
+      processed_at: null,
+      processing_error: null,
+    }).eq('id', eventId)
+
+    if (reset.error) {
+      return NextResponse.json({ error: 'No fue posible preparar el evento para reintento.' }, { status: 503 })
+    }
+  } else {
+    eventId = String(inserted.data.id)
   }
 
-  const eventId = String(inserted.data.id)
   try {
     if (topic === 'subscription_preapproval' || String(body.action || '').includes('preapproval')) {
       const remote = await getMercadoPagoSubscription(dataId)
@@ -106,9 +137,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true })
   } catch (error) {
     await admin.from('billing_events').update({
-      processed_at: new Date().toISOString(),
+      processed_at: null,
       processing_error: error instanceof Error ? error.message.slice(0, 500) : 'BILLING_EVENT_PROCESSING_FAILED',
     }).eq('id', eventId)
-    return NextResponse.json({ received: true, processing: 'deferred' }, { status: 202 })
+    return NextResponse.json({ received: false, retry: true }, { status: 503 })
   }
 }
