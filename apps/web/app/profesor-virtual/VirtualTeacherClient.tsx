@@ -166,13 +166,13 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
   setLoading(true);setStatus(courseId?'Profesor Virtual YOYO está razonando con contexto institucional protegido...':'Profesor Virtual YOYO está razonando con tu contexto pedagógico...')
   try{
    const response=await fetch('/api/profesor-virtual/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,mode,level,subject,objective,supportProfile,duration,tone,depth,courseId,studentId,objectiveId})})
-   const data=await response.json() as {result?:VirtualTeacherResult;error?:string;fallback?:boolean;model?:string;contextUsed?:boolean}
+   const data=await response.json() as {result?:VirtualTeacherResult;error?:string;model?:string;contextUsed?:boolean}
    if(!response.ok||!data.result)throw new Error(data.error||'No fue posible generar la propuesta.')
    setResult(data.result)
    const item:HistoryItem={...data.result,id:crypto.randomUUID(),mode,generatedAt:new Date().toISOString(),prompt,level,subject}
    setHistory(current=>{const next=[item,...current].slice(0,12);saveLocalHistory(next);return next})
    void persistHistory(item)
-   setStatus(data.fallback?'Propuesta lista · modo de respaldo seguro activo':data.contextUsed?'Propuesta lista · YOYO IA + contexto institucional':'Propuesta lista · YOYO IA activa')
+   setStatus(data.contextUsed?'Propuesta lista · YOYO IA + contexto institucional':'Propuesta lista · YOYO IA activa')
   }catch(error){setStatus(error instanceof Error?error.message:'No fue posible generar la propuesta.')}
   finally{setLoading(false)}
  }
