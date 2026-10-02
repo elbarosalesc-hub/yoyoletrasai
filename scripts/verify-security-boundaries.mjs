@@ -96,20 +96,51 @@ const deprecatedFiles = [
 ]
 
 const guardedRoutes = [
+  ['apps/web/app/api/ai/entitlement/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/ai/generate/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/ai/sources/prepare/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/ai/sources/finalize/route.ts', /auth\.getClaims\(/],
-  ['apps/web/app/api/inclusion/board/route.ts', /auth\.getClaims\(/],
-  ['apps/web/app/api/profesor-virtual/chat/route.ts', /auth\.getClaims\(/],
-  ['apps/web/app/api/profesor-virtual/history/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/billing/status/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/billing/checkout/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/billing/subscription/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/evaluaciones/adapt/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/audit/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/ai-eval/route.ts', /auth\.getClaims\(/],
-  ['apps/web/app/api/prompts-chat/search/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/health/supabase/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/inclusion/board/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/integrations/status/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/misiones/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/misiones/evidencia/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profile/preferences/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profesor-virtual/chat/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profesor-virtual/context/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profesor-virtual/history/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/prompts-chat/search/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/session/context/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/session/organization/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/billing/webhooks/mercadopago/route.ts', /verifyMercadoPagoWebhookSignature/],
   ['apps/web/app/api/cron/evolution/route.ts', /CRON_SECRET/],
+]
+
+const organizationScopedRoutes = [
+  'apps/web/app/api/ai/entitlement/route.ts',
+  'apps/web/app/api/ai/generate/route.ts',
+  'apps/web/app/api/ai/sources/prepare/route.ts',
+  'apps/web/app/api/ai/sources/finalize/route.ts',
+  'apps/web/app/api/billing/checkout/route.ts',
+  'apps/web/app/api/billing/subscription/route.ts',
+  'apps/web/app/api/evaluaciones/adapt/route.ts',
+  'apps/web/app/api/evolution/audit/route.ts',
+  'apps/web/app/api/evolution/ai-eval/route.ts',
+  'apps/web/app/api/inclusion/board/route.ts',
+  'apps/web/app/api/misiones/route.ts',
+  'apps/web/app/api/misiones/evidencia/route.ts',
+  'apps/web/app/api/profile/preferences/route.ts',
+  'apps/web/app/api/profesor-virtual/chat/route.ts',
+  'apps/web/app/api/profesor-virtual/context/route.ts',
+  'apps/web/app/api/profesor-virtual/history/route.ts',
+  'apps/web/app/api/session/context/route.ts',
+  'apps/web/app/api/session/organization/route.ts',
 ]
 
 let failed = false
@@ -130,6 +161,14 @@ for (const [routePath, guardPattern] of guardedRoutes) {
   const source = fs.readFileSync(routePath, 'utf8')
   if (!guardPattern.test(source)) {
     console.error(`::error::Sensitive route lost its required guard: ${routePath}`)
+    failed = true
+  }
+}
+
+for (const routePath of organizationScopedRoutes) {
+  const source = fs.readFileSync(routePath, 'utf8')
+  if (!source.includes('yoyo-organization-id')) {
+    console.error(`::error::Organization-scoped route lost its tenant selector: ${routePath}`)
     failed = true
   }
 }
