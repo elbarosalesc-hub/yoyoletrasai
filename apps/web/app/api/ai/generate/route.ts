@@ -43,6 +43,7 @@ export async function POST(request:Request){
   const resourceType=safeText(body.resourceType,120),title=safeText(body.title,300),subject=safeText(body.subject,120),level=safeText(body.level,80),objective=safeText(body.objective,2000),supportProfile=safeText(body.supportProfile,180)||'Acceso universal DUA',visualStyle=safeText(body.visualStyle,180)||'Infantil académico premium'
   const sourceIds=[...new Set((Array.isArray(body.sourceIds)?body.sourceIds:[]).filter(id=>typeof id==='string'&&id.length>10))].slice(0,200)
   if(!resourceType||!title||!subject||!level||!objective)return NextResponse.json({error:'Faltan datos pedagógicos obligatorios.'},{status:400})
+  if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
 
   let sourceMetadata:SourceMetadata[]=[]
   if(sourceIds.length){const lookup=await (supabase as any).from('ai_source_files').select('id,file_name,actual_bytes,status').in('id',sourceIds).eq('user_id',userId).eq('organization_id',organizationId).eq('status','ready');if(lookup.error)return NextResponse.json({error:'No fue posible verificar las fuentes.'},{status:503});sourceMetadata=(lookup.data||[]) as SourceMetadata[];if(sourceMetadata.length!==sourceIds.length)return NextResponse.json({error:'Una o más fuentes todavía no están listas.'},{status:409})}
@@ -56,7 +57,6 @@ export async function POST(request:Request){
   if((maxFiles!==-1&&fileCount>maxFiles)||(fileCount>0&&(largestFileBytes>maxFileBytes||totalFileBytes>maxTotalFileBytes))){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'blocked',p_model_route:'not-routed',p_error_code:'FILE_LIMIT_EXCEEDED'});return NextResponse.json({error:'Las fuentes superan los límites del plan activo.',code:'FILE_LIMIT_EXCEEDED'},{status:413})}
 
   const model=modelByTier[auth.modelTier||'essential']||modelByTier.essential
-  if(!getCloudflareAIConfig().configured){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'CLOUDFLARE_AI_NOT_CONFIGURED'});return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})}
   let sourceContext
   try{sourceContext=await loadVerifiedSourceContext(supabase,userId,organizationId,sourceIds)}catch{await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'SOURCE_CONTEXT_FAILED'});return NextResponse.json({error:'No fue posible cargar una o más fuentes verificadas.',code:'SOURCE_CONTEXT_FAILED'},{status:502})}
   const pendingNames=sourceContext.pendingSources.map(item=>item.fileName)
