@@ -49,6 +49,9 @@ jobs:
       - name: Verify migration schema contract
         run: npm run verify:schema-contract
 
+      - name: Verify live Supabase schema
+        run: npm run verify:live-schema
+
       - name: Validate required production configuration
         shell: bash
         run: |
