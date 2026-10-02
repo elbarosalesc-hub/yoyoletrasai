@@ -120,7 +120,10 @@ export async function POST(request: NextRequest) {
           : normalizedStatus === 'paused'
             ? 'suspended'
             : 'cancelled'
-        const periodEnd = remote.next_payment_date || new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString()
+        const candidatePeriodEnd = Date.parse(String(remote.next_payment_date || ''))
+        const periodEnd = Number.isFinite(candidatePeriodEnd) && candidatePeriodEnd > Date.now()
+          ? new Date(candidatePeriodEnd).toISOString()
+          : new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString()
         const entitlement = await admin.rpc('set_ai_entitlement_for_org', {
           p_user_id: lookup.data.user_id,
           p_organization_id: lookup.data.organization_id,
