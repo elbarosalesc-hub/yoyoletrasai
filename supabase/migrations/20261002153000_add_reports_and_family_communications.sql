@@ -27,7 +27,12 @@ create table if not exists public.reports (
   approved_at timestamptz,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint reports_scope_check check (
+    (report_type = 'curso' and course_id is not null)
+    or
+    (report_type in ('familia','avance','pie') and student_id is not null)
+  )
 );
 
 create table if not exists public.report_versions (
@@ -221,8 +226,21 @@ with check (
   ))
   and (objective_id is null or exists (
     select 1 from public.learning_objectives o
-    where o.id = objective_id and o.organization_id = organization_id
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (course_id is null or o.course_id is null or o.course_id = course_id)
   ))
+  and (
+    course_id is null
+    or student_id is null
+    or exists (
+      select 1 from public.course_enrollments e
+      where e.organization_id = organization_id
+        and e.course_id = course_id
+        and e.student_id = student_id
+        and e.enrollment_status = 'active'
+    )
+  )
   and (
     (status = 'approved' and approved_by = (select auth.uid()) and approved_at is not null)
     or (status = 'draft' and approved_by is null and approved_at is null)
@@ -270,8 +288,21 @@ with check (
   ))
   and (objective_id is null or exists (
     select 1 from public.learning_objectives o
-    where o.id = objective_id and o.organization_id = organization_id
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (course_id is null or o.course_id is null or o.course_id = course_id)
   ))
+  and (
+    course_id is null
+    or student_id is null
+    or exists (
+      select 1 from public.course_enrollments e
+      where e.organization_id = organization_id
+        and e.course_id = course_id
+        and e.student_id = student_id
+        and e.enrollment_status = 'active'
+    )
+  )
   and (
     (status = 'approved' and approved_by = (select auth.uid()) and approved_at is not null)
     or (status = 'draft' and approved_by is null and approved_at is null)
