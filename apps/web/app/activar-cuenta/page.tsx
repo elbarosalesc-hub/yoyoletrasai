@@ -44,7 +44,7 @@ function ActivationContent() {
     <main className="activation-shell">
       <section className="activation-card">
         <div className="activation-icon">{failed ? <ShieldCheck /> : <KeyRound />}</div>
-        <span>YOYOLETRASAI · ACCESO PROPIETARIA</span>
+        <span>YOYOLETRASAI · ACCESO SEGURO</span>
         <h1>{failed ? 'No pudimos validar el enlace' : 'Activando tu cuenta'}</h1>
         <p>{status}</p>
         {!failed && <div className="activation-progress"><i /></div>}
