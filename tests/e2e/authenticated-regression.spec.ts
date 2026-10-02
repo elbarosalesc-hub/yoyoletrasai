@@ -178,6 +178,53 @@ test.describe('regresión autenticada', () => {
     expect(familyApproved.communication?.status).toBe('approved')
   })
 
+  test('Crear persiste borrador e historial institucional sin localStorage', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/crear`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(crear|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/crear`, { waitUntil: 'networkidle' })
+    }
+
+    const stamp = Date.now()
+    const draft = {
+      title: `E2E recurso ${stamp}`,
+      level: '3° básico',
+      resourceType: 'Guía de aprendizaje',
+      subject: 'Lenguaje y Comunicación',
+      objective: 'Validar persistencia institucional del creador.',
+      adaptation: 'Acceso universal DUA',
+      visualStyle: 'Infantil académico premium',
+      packageMode: 'Paquete completo',
+      questions: [{ id: stamp, text: 'Actividad E2E.' }],
+      aiOutput: null,
+      origin: 'manual',
+      updatedAt: new Date().toISOString(),
+    }
+    const history = [{ ...draft, id: String(stamp) }]
+
+    const saved = await page.request.put(`${baseUrl}/api/resource-drafts`, { data: { draft, history } })
+    expect(saved.ok()).toBeTruthy()
+
+    const loaded = await page.request.get(`${baseUrl}/api/resource-drafts`)
+    expect(loaded.ok()).toBeTruthy()
+    const data = await loaded.json() as { draft?: { title?: string }; history?: Array<{ id?: string }> }
+    expect(data.draft?.title).toBe(draft.title)
+    expect(data.history?.[0]?.id).toBe(String(stamp))
+
+    const localCopies = await page.evaluate(() => ({
+      draft: localStorage.getItem('yoyo-resource-draft'),
+      history: localStorage.getItem('yoyo-resource-history'),
+    }))
+    expect(localCopies).toEqual({ draft: null, history: null })
+  })
+
   test('Inclusión y PIE transfiere su contexto al Profesor Virtual sin rediseñar el flujo', async ({ page }) => {
     await page.goto(`${baseUrl}/acceso?next=/inclusion`, { waitUntil: 'networkidle' })
     await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
