@@ -44,17 +44,25 @@ export default function Inclusion(){
  const speak=(text:string)=>{if('speechSynthesis'in window){speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(text))}}
  const sequence=useMemo(()=>board.map(x=>x.label).join(', '),[board])
  const filteredLibrary=useMemo(()=>{const normalized=query.trim().toLocaleLowerCase('es');return normalized?library.filter(item=>item.label.toLocaleLowerCase('es').includes(normalized)):library},[query])
- const saveBoard=async()=>{
+ const persistBoard=async()=>{
   const payload:SavedBoard={title,board,showNumbers,includeAudio,markCompleted,size,visualMode,textMode,updatedAt:new Date().toISOString()}
-  setStatus('Guardando tablero institucional...')
-  try{
-   const response=await fetch('/api/inclusion/board',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-   const data=await response.json() as {ok?:boolean;error?:string}
-   if(!response.ok||!data.ok)throw new Error(data.error||'No fue posible guardar el tablero')
-   setStatus('Tablero institucional guardado')
-  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar el tablero institucional')}
+  const response=await fetch('/api/inclusion/board',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+  const data=await response.json() as {ok?:boolean;error?:string}
+  if(!response.ok||!data.ok)throw new Error(data.error||'No fue posible guardar el tablero')
  }
- const prepareTeacherContext=()=>{setStatus('Abriendo Profesor Virtual con contexto institucional seguro')}
+ const saveBoard=async()=>{
+  setStatus('Guardando tablero institucional...')
+  try{await persistBoard();setStatus('Tablero institucional guardado')}
+  catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar el tablero institucional')}
+ }
+ const prepareTeacherContext=async(event:React.MouseEvent<HTMLAnchorElement>)=>{
+  event.preventDefault()
+  setStatus('Guardando contexto PIE institucional...')
+  try{
+   await persistBoard()
+   window.location.href='/profesor-virtual?from=inclusion'
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible preparar el contexto PIE institucional')}
+ }
  return <AppShell active="Inclusión y PIE">
   <section className="premium-hero inclusion-hero"><span className="eyebrow">Inclusión, PIE y comunicación visual</span><h1>Pictogramas, rutinas y apoyos editables</h1><p>Crea secuencias visuales, escucha cada paso, adapta el tamaño y comparte el tablero con estudiantes, familias y equipo PIE.</p><div className="hero-cta"><button className="btn btn-coral" onClick={saveBoard}><Save size={17}/>Guardar tablero</button><button className="btn btn-soft" onClick={()=>speak(`${title}. ${sequence}`)}><Volume2 size={17}/>Escuchar secuencia</button></div></section>
   <div className="pictogram-workspace">
