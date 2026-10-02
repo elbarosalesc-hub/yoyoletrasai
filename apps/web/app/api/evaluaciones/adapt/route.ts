@@ -1,3 +1,4 @@
+import {cookies} from 'next/headers'
 import {NextResponse} from 'next/server'
 import {cloudflareChatCompletion,getCloudflareAIConfig} from '@/lib/ai/cloudflare-gateway'
 import {createClient} from '@/lib/supabase/server'
@@ -83,6 +84,8 @@ export async function POST(request:Request){
  const supabase=await createClient();const db=supabase as unknown as LooseClient
  const claims=(await supabase.auth.getClaims()).data?.claims
  if(typeof claims?.sub!=='string')return NextResponse.json({error:'No autenticado.'},{status:401})
+ const organizationId=(await cookies()).get('yoyo-organization-id')?.value||''
+ if(!organizationId)return NextResponse.json({error:'No hay institución activa.'},{status:409})
  const body=(await request.json().catch(()=>({}))) as RequestBody
  const operation=body.operation==='generate'?'generate':'adapt'
  const title=text(body.title,300),level=text(body.level,100),subject=text(body.subject,160),objective=text(body.objective,2200),variant=text(body.variant,120)||'Estándar',targetVariant=text(body.targetVariant,120)||variant
@@ -91,7 +94,7 @@ export async function POST(request:Request){
  if(!title||!level||!subject||!objective)return NextResponse.json({error:'Completa título, nivel, asignatura y objetivo antes de usar YOYO IA.'},{status:400})
  if(operation==='adapt'&&!questions.length)return NextResponse.json({error:'La variante necesita un instrumento base con preguntas.'},{status:400})
 
- const authorization=await db.rpc('authorize_ai_request',{p_mode:'assessment',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:6500})
+ const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:'assessment',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:6500})
  if(authorization.error)return NextResponse.json({error:'No fue posible verificar el plan de YOYO IA.'},{status:503})
  const auth=(authorization.data||{}) as AuthResult
  if(!auth.allowed||!auth.eventId)return NextResponse.json({error:'Solicitud no autorizada por el plan.',code:auth.code||'NOT_ALLOWED'},{status:403})
