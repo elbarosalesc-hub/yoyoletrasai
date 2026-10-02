@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server'
+import {createClient} from '@/lib/supabase/server'
 
 export const runtime='nodejs'
 export const dynamic='force-dynamic'
@@ -39,6 +40,10 @@ function extractPrompts(payload:unknown):RemotePrompt[]{
 }
 
 export async function GET(request:NextRequest){
+ const supabase=await createClient()
+ const claims=(await supabase.auth.getClaims()).data?.claims
+ const userId=typeof claims?.sub==='string'?claims.sub:null
+ if(!userId)return NextResponse.json({error:'No autenticado.'},{status:401})
  const query=(request.nextUrl.searchParams.get('q')||'').trim().slice(0,180)
  const requestedType=(request.nextUrl.searchParams.get('type')||'').trim().toUpperCase()
  const type=ALLOWED_TYPES.has(requestedType)?requestedType:''
