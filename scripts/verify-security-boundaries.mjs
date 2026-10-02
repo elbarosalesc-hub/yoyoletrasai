@@ -41,6 +41,19 @@ const checks = [
     forbidden: [/vercel\.app/i],
     reason: 'Supabase auth config must not contain legacy Vercel redirects.',
   },
+  {
+    path: 'apps/web/app/api/ai/sources/prepare/route.ts',
+    forbidden: [
+      /\.eq\('user_id',\s*userId\)\.in\('status'/,
+      /const objectPath = \`\$\{userId\}\/\$\{batchId\}/,
+    ],
+    reason: 'AI source uploads must be scoped to the active organization.',
+  },
+  {
+    path: 'apps/web/app/api/ai/sources/finalize/route.ts',
+    forbidden: [/\.eq\('id',\s*sourceId\)\.maybeSingle\(\)/],
+    reason: 'AI source finalization must filter by active organization.',
+  },
 ]
 
 let failed = false
