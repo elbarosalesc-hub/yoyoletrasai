@@ -1,9 +1,6 @@
 name: Evolución YOYO programada
 
 on:
-  schedule:
-    # Heartbeat diario; la API aplica internamente la cadencia real de 72 horas.
-    - cron: '0 5 * * *'
   workflow_dispatch:
 
 permissions:
