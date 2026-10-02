@@ -448,6 +448,40 @@ begin
   limit 1;
 
   if not found then
+    select
+      v_user_id as user_id,
+      p_organization_id as organization_id,
+      p.id as plan_id,
+      ('institution:' || p_organization_id::text) as credential_id,
+      'active'::text as status,
+      b.created_at as period_start,
+      coalesce(b.next_payment_at, now() + interval '31 days') as period_end,
+      '{}'::jsonb as quota_overrides,
+      p.name as plan_name,
+      p.monthly_ai_requests,
+      p.monthly_research_requests,
+      p.monthly_token_limit,
+      p.max_output_tokens,
+      p.max_files_per_request,
+      p.max_file_bytes,
+      p.max_total_file_bytes,
+      p.unlimited_file_analysis,
+      p.model_tier,
+      p.allowed_modes
+    into v_ent
+    from public.billing_subscriptions b
+    join public.ai_plans p
+      on p.id = 'institucion'
+     and p.active
+    where b.organization_id = p_organization_id
+      and b.plan_key = 'institution'
+      and b.status = 'authorized'
+      and (b.next_payment_at is null or b.next_payment_at > now())
+    order by b.updated_at desc
+    limit 1;
+  end if;
+
+  if not found then
     return jsonb_build_object('allowed', false, 'code', 'PLAN_REQUIRED');
   end if;
 
