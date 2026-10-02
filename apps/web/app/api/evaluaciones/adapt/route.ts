@@ -1,6 +1,7 @@
 import {cookies} from 'next/headers'
 import {NextResponse} from 'next/server'
 import {cloudflareChatCompletion,getCloudflareAIConfig} from '@/lib/ai/cloudflare-gateway'
+import {createAIUsageServiceClient} from '@/lib/ai/usage-service'
 import {createClient} from '@/lib/supabase/server'
 
 type Question={id?:string;prompt:string;type:'Selección múltiple'|'Desarrollo'|'Respuesta oral';points:number;options?:string[]}
@@ -94,6 +95,8 @@ export async function POST(request:Request){
  if(!title||!level||!subject||!objective)return NextResponse.json({error:'Completa título, nivel, asignatura y objetivo antes de usar YOYO IA.'},{status:400})
  if(operation==='adapt'&&!questions.length)return NextResponse.json({error:'La variante necesita un instrumento base con preguntas.'},{status:400})
  if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI para generar una adaptación real.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
+ const usageDb=createAIUsageServiceClient()
+ if(!usageDb)return NextResponse.json({error:'YOYO IA requiere el backend seguro de consumo.',code:'AI_USAGE_BACKEND_NOT_CONFIGURED'},{status:503})
 
  const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:'assessment',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:6500})
  if(authorization.error)return NextResponse.json({error:'No fue posible verificar el plan de YOYO IA.'},{status:503})
@@ -107,10 +110,10 @@ export async function POST(request:Request){
   const inputTokens=Number((usage as Record<string,unknown>).prompt_tokens||(usage as Record<string,unknown>).input_tokens||0)
   const outputTokens=Number((usage as Record<string,unknown>).completion_tokens||(usage as Record<string,unknown>).output_tokens||0)
   const totalTokens=Number((usage as Record<string,unknown>).total_tokens||inputTokens+outputTokens)
-  await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_token_usage:usage,p_input_tokens:inputTokens,p_output_tokens:outputTokens,p_total_tokens:totalTokens})
+  await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_token_usage:usage,p_input_tokens:inputTokens,p_output_tokens:outputTokens,p_total_tokens:totalTokens})
   return NextResponse.json({output,provider:response.provider,modelTier:auth.modelTier})
  }catch(error){
-  await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:'ASSESSMENT_ADAPTATION_FAILED'})
+  await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:'ASSESSMENT_ADAPTATION_FAILED'})
   console.error('[assessment-adapt]',error)
   return NextResponse.json({error:'YOYO IA no pudo completar una variante válida. El instrumento original no fue modificado.',code:'ASSESSMENT_ADAPTATION_FAILED'},{status:502})
  }
