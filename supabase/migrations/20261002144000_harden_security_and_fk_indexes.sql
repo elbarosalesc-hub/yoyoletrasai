@@ -249,6 +249,19 @@ using (
 );
 
 
+revoke select on table public.billing_subscriptions from authenticated;
+grant select (
+  id,
+  organization_id,
+  user_id,
+  provider,
+  plan_key,
+  status,
+  next_payment_at,
+  created_at,
+  updated_at
+) on public.billing_subscriptions to authenticated;
+
 drop policy if exists "members read authorized institution subscriptions" on public.billing_subscriptions;
 create policy "members read authorized institution subscriptions"
 on public.billing_subscriptions
