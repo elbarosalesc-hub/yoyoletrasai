@@ -133,6 +133,20 @@ for (const [routePath, guardPattern] of guardedRoutes) {
   }
 }
 
+for (const routePath of [
+  'apps/web/app/api/ai/generate/route.ts',
+  'apps/web/app/api/profesor-virtual/chat/route.ts',
+  'apps/web/app/api/evaluaciones/adapt/route.ts',
+]) {
+  const source = fs.readFileSync(routePath, 'utf8')
+  const configIndex = source.indexOf('getCloudflareAIConfig().configured')
+  const authorizationIndex = source.indexOf('authorize_ai_request_for_org')
+  if (configIndex === -1 || authorizationIndex === -1 || configIndex > authorizationIndex) {
+    console.error(`::error::AI runtime configuration must be checked before quota reservation: ${routePath}`)
+    failed = true
+  }
+}
+
 for (const check of checks) {
   if (!fs.existsSync(check.path)) {
     console.error(`::error::Missing security-critical file: ${check.path}`)
