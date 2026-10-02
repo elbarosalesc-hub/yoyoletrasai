@@ -13,7 +13,7 @@ type StudentVersion={instructions?:string[];activities?:string[]}
 type AiOutput={title?:string;summary?:string;teacherVersion?:TeacherVersion;studentVersion?:StudentVersion;answerKey?:string[];duaSupports?:string[];accessibility?:string[];qualityChecklist?:Record<string,boolean>}
 type PendingSource={id:string;fileName:string;reason:string}
 type GenerateResponse={output?:AiOutput;planName?:string;modelTier?:string;generationId?:string;sources?:{verified?:number;analyzedSourceIds?:string[];pending?:PendingSource[]};error?:string}
-type Draft={title:string;level:string;resourceType:string;subject:string;objective:string;adaptation:string;visualStyle:string;packageMode:string;questions:Question[];aiOutput?:AiOutput|null;origin?:'manual'|'profesor-virtual';updatedAt:string}
+type Draft={title:string;level:string;resourceType:string;subject:string;objective:string;adaptation:string;visualStyle:string;packageMode:string;questions:Question[];aiOutput?:AiOutput|null;origin?:'manual'|'profesor-virtual'|'prompts-chat';updatedAt:string}
 type SavedVersion=Draft&{id:string}
 type RegenerableSection='teacherVersion'|'studentVersion'|'answerKey'|'duaSupports'
 
