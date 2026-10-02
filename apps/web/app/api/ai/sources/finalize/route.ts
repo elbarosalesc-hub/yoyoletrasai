@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { YOYO_SOURCE_BUCKET } from '@/lib/ai/source-files'
@@ -15,19 +16,22 @@ export async function POST(request: Request) {
   const userId = typeof claims?.sub === 'string' ? claims.sub : null
   if (!userId) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
+  const organizationId = (await cookies()).get('yoyo-organization-id')?.value || ''
+  if (!organizationId) return NextResponse.json({ error: 'No hay institución activa.' }, { status: 409 })
+
   const body = await request.json().catch(() => ({})) as { sourceId?: string }
   const sourceId = typeof body.sourceId === 'string' ? body.sourceId : ''
   if (!sourceId) return NextResponse.json({ error: 'Falta sourceId.' }, { status: 400 })
 
   const db = supabase as unknown as LooseClient
-  const source = await db.from('ai_source_files').select('id,user_id,object_path,expected_bytes,status').eq('id', sourceId).maybeSingle()
+  const source = await db.from('ai_source_files').select('id,user_id,organization_id,object_path,expected_bytes,status').eq('id', sourceId).eq('organization_id', organizationId).maybeSingle()
   if (source.error || !source.data || source.data.user_id !== userId) return NextResponse.json({ error: 'Fuente no encontrada.' }, { status: 404 })
 
   const objectPath = String(source.data.object_path || '')
   const parts = objectPath.split('/')
   const fileName = parts.pop() || ''
   const folder = parts.join('/')
-  if (!fileName || !folder || !objectPath.startsWith(`${userId}/`)) return NextResponse.json({ error: 'Ruta de Storage inválida.' }, { status: 400 })
+  if (!fileName || !folder || !objectPath.startsWith(`${userId}/${organizationId}/`)) return NextResponse.json({ error: 'Ruta de Storage inválida.' }, { status: 400 })
 
   const listing = await supabase.storage.from(YOYO_SOURCE_BUCKET).list(folder, { search: fileName, limit: 10 })
   if (listing.error) return NextResponse.json({ error: 'No fue posible verificar el archivo en Storage.' }, { status: 503 })
