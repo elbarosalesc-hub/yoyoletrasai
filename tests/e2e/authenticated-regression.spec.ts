@@ -73,11 +73,11 @@ test.describe('regresión autenticada', () => {
     await page.getByRole('button', { name: /Guardar tablero/i }).click()
     await expect(page.getByRole('status')).toContainText(/guardado/i)
 
-    const saved = await page.evaluate(() => localStorage.getItem('yoyo-inclusion-board'))
-    expect(saved).toContain('Respirar')
+    const localCopy = await page.evaluate(() => localStorage.getItem('yoyo-inclusion-board'))
+    expect(localCopy).toBeNull()
 
     await page.reload({ waitUntil: 'networkidle' })
-    await expect(page.getByRole('status')).toContainText(/recuperado/i)
+    await expect(page.getByRole('status')).toContainText(/institucional recuperado/i)
     await expect(page.getByRole('checkbox', { name: /Marcar paso completado/i })).toBeChecked()
   })
 
