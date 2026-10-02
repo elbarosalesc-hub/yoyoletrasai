@@ -30,6 +30,18 @@ create table if not exists public.reports (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.report_versions (
+  id uuid primary key default gen_random_uuid(),
+  report_id uuid not null references public.reports(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  version integer not null check (version > 0),
+  body text not null,
+  status_snapshot text not null check (status_snapshot in ('draft','approved','archived')),
+  created_by uuid not null references auth.users(id),
+  created_at timestamptz not null default now(),
+  unique (report_id, version)
+);
+
 create table if not exists public.family_communications (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
@@ -59,6 +71,8 @@ create index if not exists reports_org_status_idx
 create index if not exists reports_student_idx
   on public.reports (student_id, updated_at desc)
   where student_id is not null;
+create index if not exists report_versions_report_idx
+  on public.report_versions (report_id, version desc);
 create index if not exists family_communications_org_status_idx
   on public.family_communications (organization_id, status, updated_at desc);
 create index if not exists family_communications_student_idx
@@ -67,16 +81,18 @@ create index if not exists family_communications_student_idx
 
 alter table public.student_guardians enable row level security;
 alter table public.reports enable row level security;
+alter table public.report_versions enable row level security;
 alter table public.family_communications enable row level security;
 
-revoke all on table public.student_guardians, public.reports, public.family_communications from anon;
-revoke all on table public.student_guardians, public.reports, public.family_communications from authenticated;
+revoke all on table public.student_guardians, public.reports, public.report_versions, public.family_communications from anon;
+revoke all on table public.student_guardians, public.reports, public.report_versions, public.family_communications from authenticated;
 
 grant select, insert, update, delete on table public.student_guardians to authenticated;
 grant select, insert, update, delete on table public.reports to authenticated;
+grant select, insert on table public.report_versions to authenticated;
 grant select, insert, update, delete on table public.family_communications to authenticated;
 
-grant all on table public.student_guardians, public.reports, public.family_communications to service_role;
+grant all on table public.student_guardians, public.reports, public.report_versions, public.family_communications to service_role;
 
 create policy "staff read guardian links"
 on public.student_guardians for select to authenticated
@@ -186,6 +202,51 @@ using (
   and private.has_organization_role(
     organization_id,
     array['utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+);
+
+create policy "staff and authorized guardians read report versions"
+on public.report_versions for select to authenticated
+using (
+  exists (
+    select 1
+    from public.reports r
+    where r.id = report_versions.report_id
+      and r.organization_id = report_versions.organization_id
+      and (
+        private.has_organization_role(
+          r.organization_id,
+          array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+        )
+        or (
+          r.status = 'approved'
+          and r.student_id is not null
+          and exists (
+            select 1
+            from public.student_guardians g
+            where g.organization_id = r.organization_id
+              and g.student_id = r.student_id
+              and g.guardian_user_id = (select auth.uid())
+              and g.is_active
+          )
+        )
+      )
+  )
+);
+
+create policy "staff append report versions"
+on public.report_versions for insert to authenticated
+with check (
+  created_by = (select auth.uid())
+  and exists (
+    select 1
+    from public.reports r
+    where r.id = report_versions.report_id
+      and r.organization_id = report_versions.organization_id
+      and private.has_organization_role(
+        r.organization_id,
+        array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+      )
   )
 );
 
