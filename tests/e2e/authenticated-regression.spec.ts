@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { gameExperiences } from '../../apps/web/lib/games/catalog'
 
 const baseUrl = 'http://127.0.0.1:3000'
 const email = process.env.E2E_TEST_EMAIL?.trim() || ''
@@ -43,6 +44,14 @@ test.describe('regresión autenticada', () => {
       await page.keyboard.press('Tab')
       const focusable = await page.evaluate(() => document.activeElement !== document.body)
       expect(focusable).toBeTruthy()
+    }
+
+    for (const game of gameExperiences.filter((item) => item.status === 'playable' && item.route)) {
+      const route = game.route!.startsWith('#') ? `/juegos${game.route}` : game.route!
+      const response = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' })
+      expect(response?.ok(), `${game.title} debe abrir con sesión válida`).toBeTruthy()
+      await expect(page.locator('body')).not.toContainText('Application error')
+      await expect(page.locator('body')).not.toContainText('Internal Server Error')
     }
 
     expect(browserErrors).toEqual([])
