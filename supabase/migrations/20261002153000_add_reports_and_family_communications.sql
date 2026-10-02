@@ -447,8 +447,8 @@ begin
         body = p_body,
         status = p_status,
         version = v_version,
-        approved_by = case when p_status='approved' then v_user_id else approved_by end,
-        approved_at = case when p_status='approved' then coalesce(approved_at,now()) else approved_at end,
+        approved_by = case when p_status='approved' then v_user_id when p_status='draft' then null else approved_by end,
+        approved_at = case when p_status='approved' then now() when p_status='draft' then null else approved_at end,
         archived_at = case when p_status='archived' then now() else null end
     where id = p_report_id
     returning * into v_report;
