@@ -74,7 +74,7 @@ export async function POST(request:Request){
   if(!prompt)return NextResponse.json({error:'Describe la necesidad pedagógica.'},{status:400})
   const institutionalContext=await loadInstitutionalContext(supabase as any,organizationId,courseId,studentId,objectiveId)
   const db=supabase as unknown as LooseDb
-  const authorization=await db.rpc('authorize_ai_request',{p_mode:mode==='evaluar'?'assessment':'activity',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:Math.min(9000,4500+institutionalContext.length)})
+  const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:mode==='evaluar'?'assessment':'activity',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:Math.min(9000,4500+institutionalContext.length)})
   if(authorization.error)return NextResponse.json({error:'No fue posible verificar el acceso a YOYO IA.'},{status:503})
   const auth=authorization.data||{}
   if(!auth.allowed||!auth.eventId)return NextResponse.json({error:'Tu plan no autoriza esta solicitud.',code:auth.code||'NOT_ALLOWED'},{status:403})
