@@ -451,6 +451,31 @@ begin
     return jsonb_build_object('allowed', false, 'code', 'PLAN_REQUIRED');
   end if;
 
+  if v_ent.status = 'active'
+     and v_ent.plan_id = 'premium'
+     and not exists (
+       select 1
+       from public.billing_subscriptions b
+       where b.organization_id = p_organization_id
+         and b.user_id = v_user_id
+         and b.plan_key = 'premium'
+         and b.status = 'authorized'
+     ) then
+    return jsonb_build_object('allowed', false, 'code', 'PAYMENT_REQUIRED');
+  end if;
+
+  if v_ent.status = 'active'
+     and v_ent.plan_id = 'institucion'
+     and not exists (
+       select 1
+       from public.billing_subscriptions b
+       where b.organization_id = p_organization_id
+         and b.plan_key = 'institution'
+         and b.status = 'authorized'
+     ) then
+    return jsonb_build_object('allowed', false, 'code', 'PAYMENT_REQUIRED');
+  end if;
+
   if not (p_mode = any(v_ent.allowed_modes)) then
     return jsonb_build_object(
       'allowed', false,
