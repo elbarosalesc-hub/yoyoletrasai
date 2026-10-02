@@ -53,13 +53,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${CI_SUPABASE_URL:-}" ] && [ -n "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
-            export NEXT_PUBLIC_SUPABASE_URL="$CI_SUPABASE_URL"
-            export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$CI_SUPABASE_PUBLISHABLE_KEY"
-            echo "Supabase público disponible para pruebas autenticadas."
-          else
-            echo "::notice::Supabase público no está configurado en CI; se conserva el fallback de preview pública."
+          if [ -z "${CI_SUPABASE_URL:-}" ] || [ -z "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            echo "::error::Supabase público debe estar configurado para ejecutar el gate crítico autenticado."
+            exit 1
           fi
+          export NEXT_PUBLIC_SUPABASE_URL="$CI_SUPABASE_URL"
+          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$CI_SUPABASE_PUBLISHABLE_KEY"
+          echo "Supabase público disponible para pruebas autenticadas."
           npm run start > /tmp/yoyoletrasai-next.log 2>&1 &
           echo $! > /tmp/yoyoletrasai-next.pid
           for attempt in {1..30}; do
@@ -89,11 +89,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${E2E_TEST_EMAIL:-}" ] && [ -n "${E2E_TEST_PASSWORD:-}" ] && [ -n "${CI_SUPABASE_URL:-}" ] && [ -n "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
-            npx playwright test tests/e2e/authenticated-regression.spec.ts --reporter=line --workers=1
-          else
-            echo "::notice::Gate autenticado preparado pero omitido: requiere E2E_TEST_EMAIL, E2E_TEST_PASSWORD, NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY."
+          if [ -z "${E2E_TEST_EMAIL:-}" ] || [ -z "${E2E_TEST_PASSWORD:-}" ] || [ -z "${CI_SUPABASE_URL:-}" ] || [ -z "${CI_SUPABASE_PUBLISHABLE_KEY:-}" ]; then
+            echo "::error::Gate autenticado crítico no puede quedar SKIPPED."
+            exit 1
           fi
+          npx playwright test tests/e2e/authenticated-regression.spec.ts --reporter=line --workers=1
 
       - name: Lighthouse accessibility gate
         shell: bash
