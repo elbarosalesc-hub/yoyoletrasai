@@ -71,6 +71,21 @@ const checks = [
     reason: 'Assessment AI authorization must be scoped to the active organization.',
   },
   {
+    path: 'apps/web/app/api/ai/generate/route.ts',
+    forbidden: [/\bdb\.rpc\(['"]complete_ai_request['"]/],
+    reason: 'AI usage completion must use the server-only service-role client.',
+  },
+  {
+    path: 'apps/web/app/api/profesor-virtual/chat/route.ts',
+    forbidden: [/\bdb\.rpc\(['"]complete_ai_request['"]/],
+    reason: 'Virtual Teacher usage completion must use the server-only service-role client.',
+  },
+  {
+    path: 'apps/web/app/api/evaluaciones/adapt/route.ts',
+    forbidden: [/\bdb\.rpc\(['"]complete_ai_request['"]/],
+    reason: 'Assessment usage completion must use the server-only service-role client.',
+  },
+  {
     path: 'supabase/config.toml',
     forbidden: [/vercel\.app/i],
     reason: 'Supabase auth config must not contain legacy Vercel redirects.',
@@ -212,9 +227,16 @@ for (const routePath of [
 ]) {
   const source = fs.readFileSync(routePath, 'utf8')
   const configIndex = source.indexOf('getCloudflareAIConfig().configured')
+  const serviceClientIndex = source.indexOf('createAIUsageServiceClient')
   const authorizationIndex = source.indexOf('authorize_ai_request_for_org')
-  if (configIndex === -1 || authorizationIndex === -1 || configIndex > authorizationIndex) {
-    console.error(`::error::AI runtime configuration must be checked before quota reservation: ${routePath}`)
+  if (
+    configIndex === -1 ||
+    serviceClientIndex === -1 ||
+    authorizationIndex === -1 ||
+    configIndex > authorizationIndex ||
+    serviceClientIndex > authorizationIndex
+  ) {
+    console.error(`::error::AI runtime and secure usage backend must be checked before quota reservation: ${routePath}`)
     failed = true
   }
 }
