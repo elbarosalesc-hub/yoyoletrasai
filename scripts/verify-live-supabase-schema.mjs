@@ -14,6 +14,10 @@ const requiredTables=[
   'billing_subscriptions',
   'billing_events',
   'inclusion_boards',
+  'student_guardians',
+  'reports',
+  'report_versions',
+  'family_communications',
 ]
 
 const headers={
