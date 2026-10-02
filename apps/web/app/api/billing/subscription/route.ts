@@ -21,7 +21,7 @@ async function context() {
   const memberships = await supabase.from('organization_memberships').select('role').eq('organization_id', organizationId).eq('user_id', userId).eq('is_active', true)
   if (memberships.error || !memberships.data?.length) return null
   const role = memberships.data.map((item) => item.role as AppRole).sort((a,b)=>rolePriority[b]-rolePriority[a])[0]
-  return { userId, email, organizationId, role, access: resolveProductAccess(email, role) }
+  return { userId, email, organizationId, role, access: resolveProductAccess(email, role, undefined, userId) }
 }
 
 function adminClient() {
