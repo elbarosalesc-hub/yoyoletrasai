@@ -167,12 +167,23 @@ using (
 create policy "staff read reports"
 on public.reports for select to authenticated
 using (
-  private.has_organization_role(
-    organization_id,
-    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  (
+    report_type = 'pie'
+    and private.has_organization_role(
+      organization_id,
+      array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    )
+  )
+  or (
+    report_type <> 'pie'
+    and private.has_organization_role(
+      organization_id,
+      array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    )
   )
   or (
     status = 'approved'
+    and report_type in ('familia','avance')
     and student_id is not null
     and exists (
       select 1
@@ -188,9 +199,16 @@ using (
 create policy "staff create reports"
 on public.reports for insert to authenticated
 with check (
-  private.has_organization_role(
-    organization_id,
-    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  (
+    (report_type = 'pie' and private.has_organization_role(
+      organization_id,
+      array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    ))
+    or
+    (report_type <> 'pie' and private.has_organization_role(
+      organization_id,
+      array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    ))
   )
   and created_by = (select auth.uid())
   and (course_id is null or exists (
@@ -215,15 +233,32 @@ with check (
 create policy "staff update reports"
 on public.reports for update to authenticated
 using (
-  private.has_organization_role(
-    organization_id,
-    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  (
+    report_type = 'pie'
+    and private.has_organization_role(
+      organization_id,
+      array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    )
+  )
+  or (
+    report_type <> 'pie'
+    and private.has_organization_role(
+      organization_id,
+      array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    )
   )
 )
 with check (
-  private.has_organization_role(
-    organization_id,
-    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  (
+    (report_type = 'pie' and private.has_organization_role(
+      organization_id,
+      array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    ))
+    or
+    (report_type <> 'pie' and private.has_organization_role(
+      organization_id,
+      array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+    ))
   )
   and (course_id is null or exists (
     select 1 from public.courses c
@@ -263,12 +298,20 @@ using (
     where r.id = report_versions.report_id
       and r.organization_id = report_versions.organization_id
       and (
-        private.has_organization_role(
-          r.organization_id,
-          array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+        (
+          (r.report_type = 'pie' and private.has_organization_role(
+            r.organization_id,
+            array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+          ))
+          or
+          (r.report_type <> 'pie' and private.has_organization_role(
+            r.organization_id,
+            array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+          ))
         )
         or (
           r.status = 'approved'
+          and r.report_type in ('familia','avance')
           and r.student_id is not null
           and exists (
             select 1
@@ -292,9 +335,16 @@ with check (
     from public.reports r
     where r.id = report_versions.report_id
       and r.organization_id = report_versions.organization_id
-      and private.has_organization_role(
-        r.organization_id,
-        array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+      and (
+        (r.report_type = 'pie' and private.has_organization_role(
+          r.organization_id,
+          array['pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+        ))
+        or
+        (r.report_type <> 'pie' and private.has_organization_role(
+          r.organization_id,
+          array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+        ))
       )
   )
 );
