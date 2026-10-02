@@ -98,4 +98,17 @@ using (
 revoke all on function public.is_platform_admin() from public, anon, authenticated;
 grant execute on function public.is_platform_admin() to service_role;
 
+revoke all on function public.set_ai_entitlement(
+  uuid,
+  text,
+  text,
+  timestamptz
+) from public, anon, authenticated;
+grant execute on function public.set_ai_entitlement(
+  uuid,
+  text,
+  text,
+  timestamptz
+) to service_role;
+
 notify pgrst, 'reload schema';
