@@ -62,6 +62,25 @@ export async function POST(request: NextRequest) {
     if (!supabaseUrl || !serviceRole) return NextResponse.json({ error: 'Backend de facturación no configurado.' }, { status: 503 })
     const admin = createServiceClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
 
+    let existingQuery = admin.from('billing_subscriptions')
+      .select('id,status,plan_key')
+      .eq('organization_id', organizationId)
+      .eq('plan_key', payload.planKey)
+      .in('status', ['pending','authorized','paused'])
+
+    if (payload.planKey === 'premium') existingQuery = existingQuery.eq('user_id', userId)
+
+    const existing = await existingQuery.order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (existing.error) return NextResponse.json({ error: 'No fue posible verificar suscripciones existentes.' }, { status: 503 })
+    if (existing.data) {
+      return NextResponse.json({
+        error: payload.planKey === 'institution'
+          ? 'La institución ya tiene una suscripción activa o pendiente.'
+          : 'Ya existe una suscripción Premium activa o pendiente para esta cuenta.',
+        code: 'SUBSCRIPTION_ALREADY_EXISTS',
+      }, { status: 409 })
+    }
+
     const externalReference = `yoyo:${organizationId}:${userId}:${payload.planKey}:${crypto.randomUUID()}`
     const checkout = await createMercadoPagoSubscription({
       planKey: payload.planKey,
