@@ -79,7 +79,8 @@ export default function PromptsPage(){
   ].join(' '),1950)
  }
 
- function usePrompt(prompt:PromptItem){
+ async function usePrompt(prompt:PromptItem){
+  setStatus('Preparando borrador institucional para YOYO IA...')
   try{
    const now=new Date().toISOString()
    const objective=buildObjective(prompt)
@@ -103,15 +104,17 @@ export default function PromptsPage(){
      {id:Date.now()+2,text:`Nivel cognitivo esperado: ${bloom}. Complejidad: ${complexity}. OA/habilidad: ${oa.trim()||'describir sin inventar código oficial'}.`},
     ],
     aiOutput:null,
+    origin:'prompts-chat',
     updatedAt:now,
    }
-   window.localStorage.setItem('yoyo-prompts-chat-selection',JSON.stringify({
-    title:prompt.title,content:prompt.content,type:prompt.type,source:'prompts.chat',selectedAt:now,
-    pedagogy:{level,subject,oa,bloom,adaptation,complexity,resourceType,deliveryMode},
-   }))
-   window.localStorage.setItem('yoyo-resource-draft',JSON.stringify(draft))
+   const current=await fetch('/api/resource-drafts',{cache:'no-store'})
+   const currentData=current.ok?await current.json() as {history?:Array<Record<string,unknown>>}:{history:[]}
+   const history=[{...draft,id:String(Date.now())},...(Array.isArray(currentData.history)?currentData.history:[])].slice(0,10)
+   const saved=await fetch('/api/resource-drafts',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({draft,history})})
+   const data=await saved.json() as {ok?:boolean;error?:string}
+   if(!saved.ok||!data.ok)throw new Error(data.error||'No fue posible preparar el borrador institucional.')
    router.push('/crear?from=prompts-chat&context=pedagogical-engine')
-  }catch{setStatus('No fue posible transferir este prompt al creador.')}
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible transferir este prompt al creador.')}
  }
 
  async function copyPrompt(content:string){
