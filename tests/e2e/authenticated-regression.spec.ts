@@ -107,10 +107,17 @@ test.describe('regresión autenticada', () => {
     const localReport = await page.evaluate(() => localStorage.getItem('yoyo-report-draft'))
     expect(localReport).toBeNull()
 
+    const contextResponse = await page.request.get(`${baseUrl}/api/profesor-virtual/context`)
+    expect(contextResponse.ok()).toBeTruthy()
+    const context = await contextResponse.json() as { courses?: Array<{ id?: string }> }
+    const courseId = context.courses?.find((item) => typeof item.id === 'string')?.id
+    expect(courseId).toBeTruthy()
+
     const stamp = Date.now()
     const draftResponse = await page.request.post(`${baseUrl}/api/reports`, {
       data: {
         reportType: 'curso',
+        courseId,
         title: `E2E informe ${stamp}`,
         period: 'Validación E2E',
         body: 'Contenido de prueba E2E sin datos personales reales.',
@@ -127,6 +134,7 @@ test.describe('regresión autenticada', () => {
       data: {
         id: draft.report?.id,
         reportType: 'curso',
+        courseId,
         title: `E2E informe ${stamp}`,
         period: 'Validación E2E',
         body: 'Contenido de prueba E2E revisado y aprobado.',
