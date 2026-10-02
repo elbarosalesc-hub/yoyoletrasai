@@ -26,18 +26,6 @@ function extractJson(text:string) {
   const normalized=text.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```$/i,'').trim()
   return JSON.parse(normalized) as TeacherResult
 }
-function fallback(mode:string, level:string, subject:string, prompt:string, support:string):TeacherResult {
-  const modeTitle:Record<string,string>={planificar:'Planificación pedagógica',adaptar:'Adaptación DUA/PIE',evaluar:'Evaluación diversificada',analizar:'Análisis pedagógico',comunicar:'Comunicación educativa'}
-  const sections:Record<string,Section[]>={
-    planificar:[{title:'Inicio',items:['Activa conocimientos previos con una pregunta breve y contextualizada.','Explicita el propósito en lenguaje comprensible.']},{title:'Desarrollo',items:['Modela un ejemplo antes del trabajo autónomo.','Incluye práctica guiada y aplicación con opciones de respuesta.']},{title:'Cierre',items:['Recoge una evidencia breve de aprendizaje.','Define el siguiente paso según el desempeño observado.']}],
-    adaptar:[{title:'Acceso',items:['Mantén el objetivo común y reduce barreras de acceso.','Entrega instrucciones breves, apoyos visuales y modelado.']},{title:'Participación',items:['Permite distintas formas de responder sin bajar la exigencia central.','Incorpora pausas, anticipación y apoyos graduados.']},{title:'Autonomía',items:['Retira apoyos progresivamente.','Registra qué ayuda fue necesaria y qué logró de manera independiente.']}],
-    evaluar:[{title:'Instrumento',items:['Combina ítems breves, aplicación y evidencia del razonamiento.','Explicita puntajes y criterios de logro.']},{title:'Diversificación',items:['Reduce carga lingüística cuando no sea parte del objetivo.','Permite respuesta oral, visual o escrita cuando corresponda.']},{title:'Retroalimentación',items:['Distingue logro, error y apoyo requerido.','Entrega una acción concreta para mejorar.']}],
-    analizar:[{title:'Lectura de evidencia',items:['Agrupa resultados por nivel de logro y tipo de error.','Distingue barreras de comprensión, procedimiento y acceso.']},{title:'Decisiones',items:['Prioriza reenseñanza del punto con mayor frecuencia de error.','Forma grupos flexibles por necesidad.']},{title:'Seguimiento',items:['Recoge nueva evidencia tras el apoyo.','Compara progreso y ajusta intensidad.']}],
-    comunicar:[{title:'Mensaje',items:['Comienza por avances observables.','Describe la necesidad de apoyo sin etiquetas ni juicios absolutos.']},{title:'Acuerdos',items:['Define una acción escolar y una acción posible en casa.','Asigna responsables y fecha de revisión.']},{title:'Cierre',items:['Verifica comprensión de los acuerdos.','Mantén lenguaje claro, respetuoso y profesional.']}],
-  }
-  return {title:`${modeTitle[mode]||'Profesor Virtual'} · ${level}`,summary:`Propuesta para ${subject}. Necesidad: ${prompt}. Apoyos considerados: ${support}.`,sections:sections[mode]||sections.planificar,pedagogicalChecks:['Objetivo común conservado','DUA/PIE sin estigmatizar','Instrucciones claras','Evidencia de aprendizaje incluida'],nextSteps:['Revisar y ajustar al curso real','Convertir la propuesta en recurso o evaluación','Registrar evidencia después de aplicar']}
-}
-
 async function loadInstitutionalContext(supabase:any, organizationId:string, courseId:string, studentId:string, objectiveId:string) {
   if (!courseId) return ''
   const courseResult = await supabase.from('courses').select('id,name,level,academic_year').eq('organization_id',organizationId).eq('id',courseId).eq('is_active',true).maybeSingle()
@@ -91,7 +79,7 @@ export async function POST(request:Request){
   const auth=authorization.data||{}
   if(!auth.allowed||!auth.eventId)return NextResponse.json({error:'Tu plan no autoriza esta solicitud.',code:auth.code||'NOT_ALLOWED'},{status:403})
   const model=modelByTier[auth.modelTier||'essential']||modelByTier.essential
-  if(!getCloudflareAIConfig().configured){const result=fallback(mode,level,subject,prompt,support);await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:'teacher-fallback',p_error_code:null});return NextResponse.json({result,model:'teacher-fallback',fallback:true,contextUsed:Boolean(institutionalContext)})}
+  if(!getCloudflareAIConfig().configured){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'CLOUDFLARE_AI_NOT_CONFIGURED'});return NextResponse.json({error:'Profesor Virtual requiere la configuración de IA real en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})}
   const system=`Eres Profesor Virtual YOYO, copiloto pedagógico profesional de YoYoLetrasAI. Trabajas con currículum chileno, DUA, PIE y evaluación formativa. No inventes códigos OA oficiales. Mantén el objetivo común y diversifica acceso, participación y respuesta. Entrega acciones concretas, no teoría genérica. Si recibes contexto individual, trátalo como "estudiante seleccionado" y no intentes identificarlo ni inferir diagnósticos. No reproduzcas información personal innecesaria. Tono: ${tone}. Profundidad: ${depth}. Devuelve exclusivamente JSON válido.`
   const user=`MODO: ${mode}\nNIVEL: ${level}\nASIGNATURA: ${subject}\nDURACIÓN: ${duration}\nOBJETIVO/OA/HABILIDAD: ${objective||'No especificado; no inventar código OA'}\nNECESIDADES Y APOYOS DEL BRIEF DOCENTE: ${support}\nSOLICITUD DOCENTE: ${prompt}\n${institutionalContext?`\n${institutionalContext}\n`:''}\nDevuelve exactamente esta estructura: {"title":"...","summary":"...","sections":[{"title":"...","items":["..."]}],"pedagogicalChecks":["..."],"nextSteps":["..."]}`
   try{
@@ -100,8 +88,8 @@ export async function POST(request:Request){
     await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_error_code:null})
     return NextResponse.json({result,model,fallback:false,contextUsed:Boolean(institutionalContext),provider:response.provider})
   }catch(error){
-    const result=fallback(mode,level,subject,prompt,support)
-    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:'teacher-fallback',p_error_code:error instanceof Error?error.message.slice(0,120):'TEACHER_FALLBACK'})
-    return NextResponse.json({result,model:'teacher-fallback',fallback:true,contextUsed:Boolean(institutionalContext)})
+    const code=error instanceof Error?error.message.slice(0,120):'TEACHER_GENERATION_FAILED'
+    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:code})
+    return NextResponse.json({error:'Profesor Virtual no pudo completar esta generación. Conserva tu borrador y vuelve a intentarlo.',code:'TEACHER_GENERATION_FAILED'},{status:502})
   }
 }
