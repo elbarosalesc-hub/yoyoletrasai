@@ -71,7 +71,19 @@ const checks = [
   },
 ]
 
+const deprecatedFiles = [
+  'apps/web/app/profesor-virtual/ProfesorVirtualClient.tsx',
+  'apps/web/app/profesor-virtual/actions.ts',
+]
+
 let failed = false
+
+for (const deprecatedFile of deprecatedFiles) {
+  if (fs.existsSync(deprecatedFile)) {
+    console.error(`::error::Deprecated unsafe implementation must remain removed: ${deprecatedFile}`)
+    failed = true
+  }
+}
 
 for (const check of checks) {
   if (!fs.existsSync(check.path)) {
