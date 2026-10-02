@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 
 const checks = [
   {
@@ -129,6 +130,34 @@ for (const [routePath, guardPattern] of guardedRoutes) {
   const source = fs.readFileSync(routePath, 'utf8')
   if (!guardPattern.test(source)) {
     console.error(`::error::Sensitive route lost its required guard: ${routePath}`)
+    failed = true
+  }
+}
+
+function collectApiRoutes(dir) {
+  const routes = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) routes.push(...collectApiRoutes(full))
+    else if (entry.isFile() && entry.name === 'route.ts') routes.push(full.replaceAll('\\', '/'))
+  }
+  return routes
+}
+
+const publicApiRoutes = new Set([
+  'apps/web/app/api/health/route.ts',
+])
+
+for (const routePath of collectApiRoutes('apps/web/app/api')) {
+  if (publicApiRoutes.has(routePath)) continue
+  const source = fs.readFileSync(routePath, 'utf8')
+  const guarded =
+    /auth\.getClaims\(/.test(source) ||
+    /auth\.getUser\(/.test(source) ||
+    /verifyMercadoPagoWebhookSignature/.test(source) ||
+    /CRON_SECRET/.test(source)
+  if (!guarded) {
+    console.error(`::error::API route has no recognized authentication/signature/secret guard: ${routePath}`)
     failed = true
   }
 }
