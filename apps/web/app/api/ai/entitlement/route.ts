@@ -23,14 +23,28 @@ export async function GET() {
     const db = supabase as unknown as LooseClient
     const entitlementResult = await db
       .from('ai_entitlements')
-      .select('plan_id,status,credential_id')
+      .select('plan_id,status,credential_id,period_start,period_end')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
-      .eq('status', 'active')
       .maybeSingle()
 
     if (entitlementResult.error || !entitlementResult.data) {
       return NextResponse.json({ error: 'No existe un plan de YOYO IA activo' }, { status: 404 })
+    }
+
+    const entitlementStatus = String(entitlementResult.data.status ?? '')
+    const periodStart = Date.parse(String(entitlementResult.data.period_start ?? ''))
+    const periodEnd = Date.parse(String(entitlementResult.data.period_end ?? ''))
+    const now = Date.now()
+    const entitlementActive =
+      ['active', 'trialing'].includes(entitlementStatus) &&
+      Number.isFinite(periodStart) &&
+      Number.isFinite(periodEnd) &&
+      now >= periodStart &&
+      now < periodEnd
+
+    if (!entitlementActive) {
+      return NextResponse.json({ error: 'El plan de YOYO IA no está vigente' }, { status: 403 })
     }
 
     const planId = String(entitlementResult.data.plan_id ?? '')
