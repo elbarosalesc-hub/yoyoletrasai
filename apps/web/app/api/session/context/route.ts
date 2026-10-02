@@ -104,6 +104,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Contexto institucional no autorizado' }, { status: 403 })
     }
 
+    if (subscriptionResult.error || entitlementResult.error || institutionPlanResult.error) {
+      return NextResponse.json({ error: 'No fue posible verificar el estado del plan.' }, { status: 503 })
+    }
+
     const profile = profileResult.data
     const email = typeof claims?.email === 'string' ? claims.email : ''
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
