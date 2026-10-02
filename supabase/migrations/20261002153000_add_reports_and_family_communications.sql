@@ -340,4 +340,151 @@ create trigger family_communications_set_updated_at
 before update on public.family_communications
 for each row execute function private.set_updated_at();
 
+create or replace function public.save_report(
+  p_report_id uuid,
+  p_report_type text,
+  p_title text,
+  p_period text,
+  p_body text,
+  p_status text,
+  p_course_id uuid default null,
+  p_student_id uuid default null,
+  p_objective_id uuid default null
+)
+returns jsonb
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+declare
+  v_user_id uuid := auth.uid();
+  v_organization_id uuid;
+  v_report public.reports%rowtype;
+  v_version integer;
+begin
+  if v_user_id is null then
+    raise exception 'AUTH_REQUIRED';
+  end if;
+
+  v_organization_id := nullif(current_setting('request.cookies', true)::json->>'yoyo-organization-id','')::uuid;
+  if v_organization_id is null or not private.is_organization_member(v_organization_id) then
+    raise exception 'ORGANIZATION_FORBIDDEN';
+  end if;
+
+  if p_report_type not in ('familia','avance','pie','curso') then
+    raise exception 'INVALID_REPORT_TYPE';
+  end if;
+
+  if p_status not in ('draft','approved','archived') then
+    raise exception 'INVALID_REPORT_STATUS';
+  end if;
+
+  if nullif(trim(p_title),'') is null or nullif(trim(p_body),'') is null then
+    raise exception 'REPORT_CONTENT_REQUIRED';
+  end if;
+
+  if p_report_id is null then
+    insert into public.reports (
+      organization_id,
+      course_id,
+      student_id,
+      objective_id,
+      report_type,
+      title,
+      period,
+      body,
+      status,
+      version,
+      created_by,
+      approved_by,
+      approved_at,
+      archived_at
+    )
+    values (
+      v_organization_id,
+      p_course_id,
+      p_student_id,
+      p_objective_id,
+      p_report_type,
+      trim(p_title),
+      nullif(trim(p_period),''),
+      p_body,
+      p_status,
+      1,
+      v_user_id,
+      case when p_status='approved' then v_user_id else null end,
+      case when p_status='approved' then now() else null end,
+      case when p_status='archived' then now() else null end
+    )
+    returning * into v_report;
+
+    v_version := 1;
+  else
+    select *
+    into v_report
+    from public.reports
+    where id = p_report_id
+      and organization_id = v_organization_id
+    for update;
+
+    if not found then
+      raise exception 'REPORT_NOT_FOUND';
+    end if;
+
+    if v_report.status = 'archived' then
+      raise exception 'ARCHIVED_REPORT_IS_IMMUTABLE';
+    end if;
+
+    v_version := v_report.version + 1;
+
+    update public.reports
+    set course_id = p_course_id,
+        student_id = p_student_id,
+        objective_id = p_objective_id,
+        report_type = p_report_type,
+        title = trim(p_title),
+        period = nullif(trim(p_period),''),
+        body = p_body,
+        status = p_status,
+        version = v_version,
+        approved_by = case when p_status='approved' then v_user_id else approved_by end,
+        approved_at = case when p_status='approved' then coalesce(approved_at,now()) else approved_at end,
+        archived_at = case when p_status='archived' then now() else null end
+    where id = p_report_id
+    returning * into v_report;
+  end if;
+
+  insert into public.report_versions (
+    report_id,
+    organization_id,
+    version,
+    body,
+    status_snapshot,
+    created_by
+  )
+  values (
+    v_report.id,
+    v_organization_id,
+    v_version,
+    p_body,
+    p_status,
+    v_user_id
+  );
+
+  return jsonb_build_object(
+    'id', v_report.id,
+    'version', v_version,
+    'status', p_status,
+    'updatedAt', v_report.updated_at
+  );
+end;
+$function$;
+
+revoke all on function public.save_report(
+  uuid,text,text,text,text,text,uuid,uuid,uuid
+) from public, anon;
+grant execute on function public.save_report(
+  uuid,text,text,text,text,text,uuid,uuid,uuid
+) to authenticated, service_role;
+
 notify pgrst, 'reload schema';
