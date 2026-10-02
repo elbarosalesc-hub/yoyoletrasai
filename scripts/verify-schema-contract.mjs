@@ -21,11 +21,16 @@ const requiredTables = [
   'billing_subscriptions',
   'billing_events',
   'inclusion_boards',
+  'student_guardians',
+  'reports',
+  'report_versions',
+  'family_communications',
 ]
 
 const requiredFunctions = [
   'authorize_ai_request_for_org',
   'set_ai_entitlement_for_org',
+  'save_report',
 ]
 
 let failed = false
