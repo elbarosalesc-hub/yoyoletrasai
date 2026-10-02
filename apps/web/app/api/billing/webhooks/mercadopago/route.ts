@@ -60,11 +60,43 @@ export async function POST(request: NextRequest) {
         provider_updated_at: remote.last_modified || new Date().toISOString(),
         metadata: { reconciledBy: 'mercadopago-webhook', providerStatus: remote.status || null },
       }
-      const query = admin.from('billing_subscriptions').update(update)
-      const reconciled = externalReference
-        ? await query.eq('provider', 'mercadopago').eq('external_reference', externalReference)
-        : await query.eq('provider', 'mercadopago').eq('external_subscription_id', dataId)
+      const lookup = externalReference
+        ? await admin.from('billing_subscriptions')
+            .select('id,organization_id,user_id,plan_key')
+            .eq('provider', 'mercadopago')
+            .eq('external_reference', externalReference)
+            .maybeSingle()
+        : await admin.from('billing_subscriptions')
+            .select('id,organization_id,user_id,plan_key')
+            .eq('provider', 'mercadopago')
+            .eq('external_subscription_id', dataId)
+            .maybeSingle()
+
+      if (lookup.error || !lookup.data) throw new Error(lookup.error?.message || 'BILLING_SUBSCRIPTION_NOT_FOUND')
+
+      const reconciled = await admin.from('billing_subscriptions')
+        .update(update)
+        .eq('id', lookup.data.id)
       if (reconciled.error) throw new Error(reconciled.error.message)
+
+      const normalizedStatus = normalizeMercadoPagoStatus(remote.status)
+      if (lookup.data.plan_key === 'premium') {
+        const entitlementStatus = normalizedStatus === 'authorized'
+          ? 'active'
+          : normalizedStatus === 'paused'
+            ? 'suspended'
+            : 'cancelled'
+        const periodEnd = remote.next_payment_date || new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString()
+        const entitlement = await admin.rpc('set_ai_entitlement_for_org', {
+          p_user_id: lookup.data.user_id,
+          p_organization_id: lookup.data.organization_id,
+          p_plan_id: 'premium',
+          p_status: entitlementStatus,
+          p_period_end: periodEnd,
+          p_assigned_by: null,
+        })
+        if (entitlement.error) throw new Error(entitlement.error.message)
+      }
     }
 
     await admin.from('billing_events').update({ processed_at: new Date().toISOString(), processing_error: null }).eq('id', eventId)
