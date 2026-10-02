@@ -3,7 +3,42 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from './database.types'
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config'
 
-const protectedPrefixes = ['/app', '/cursos', '/seleccionar-institucion']
+const protectedPrefixes = [
+  '/app',
+  '/biblioteca',
+  '/caligrafia',
+  '/centros',
+  '/centros-aprendizaje',
+  '/centros-pedagogicos',
+  '/centros-premium',
+  '/configuracion',
+  '/crear',
+  '/cursos',
+  '/estado',
+  '/estado-sistema',
+  '/evaluaciones',
+  '/evolucion',
+  '/familias',
+  '/herramientas',
+  '/inclusion',
+  '/informes',
+  '/integraciones',
+  '/juegos',
+  '/manipulativos',
+  '/misiones',
+  '/multimedia',
+  '/plan-lector',
+  '/planes',
+  '/planificador',
+  '/profesor-virtual',
+  '/progreso',
+  '/prompts',
+  '/qa',
+  '/qa-publicacion',
+  '/seguimiento',
+  '/seleccionar-institucion',
+  '/simuladores',
+]
 const authenticatedPublicPaths = ['/restablecer-contrasena']
 
 function createLoginRedirect(request: NextRequest) {
