@@ -119,7 +119,7 @@ export async function GET() {
         managePlans: access.canManagePlans,
         manageModules: access.canManageModules,
         manageThemes: access.canManageThemes,
-        managePayments: access.canManagePayments,
+        managePayments: access.canManagePayments || ['institution_admin','platform_admin'].includes(role),
       },
     }, {
       headers: {
