@@ -18,6 +18,7 @@ const requiredTables=[
   'reports',
   'report_versions',
   'family_communications',
+  'resource_drafts',
 ]
 
 const headers={
