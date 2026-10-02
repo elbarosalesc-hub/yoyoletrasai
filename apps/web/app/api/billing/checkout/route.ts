@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     if (memberships.error || !memberships.data?.length) return NextResponse.json({ error: 'Contexto institucional no autorizado.' }, { status: 403 })
 
     const role = memberships.data.map((item) => item.role as AppRole).sort((a, b) => rolePriority[b] - rolePriority[a])[0]
-    const access = resolveProductAccess(email, role)
+    const access = resolveProductAccess(email, role, undefined, userId)
     if (!access.canManagePayments && !['institution_admin', 'platform_admin'].includes(role)) {
       return NextResponse.json({ error: 'Tu rol no puede iniciar suscripciones institucionales.' }, { status: 403 })
     }
