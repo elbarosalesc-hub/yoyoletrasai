@@ -33,8 +33,11 @@ const checks = [
   },
   {
     path: 'apps/web/app/api/billing/checkout/route.ts',
-    forbidden: [/resolveProductAccess\(email,\s*role\)/],
-    reason: 'Billing checkout must bind owner access to the authenticated user id.',
+    forbidden: [
+      /resolveProductAccess\(email,\s*role\)/,
+      /subscriptionId\s*:\s*checkout\.id/,
+    ],
+    reason: 'Billing checkout must bind owner access to the authenticated user id and keep provider identifiers server-side.',
   },
   {
     path: 'apps/web/app/api/evolution/audit/route.ts',
