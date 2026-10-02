@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
       provider: 'mercadopago',
       planKey: payload.planKey,
       checkoutUrl: checkout.checkoutUrl,
-      subscriptionId: checkout.id,
       status: checkout.status,
     }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
