@@ -39,7 +39,10 @@ export default function Informes(){
  const[body,setBody]=useState('')
  const[status,setStatus]=useState('Selecciona un curso para construir un informe desde evidencia autorizada.')
  const[approved,setApproved]=useState(false)
+ const[reportId,setReportId]=useState('')
+ const[reportVersion,setReportVersion]=useState(0)
  const[loading,setLoading]=useState(false)
+ const[saving,setSaving]=useState(false)
  const current=useMemo(()=>templates.find(item=>item.id===type)||templates[0],[type])
  const course=useMemo(()=>courses.find(item=>item.id===courseId)||null,[courses,courseId])
  const student=useMemo(()=>students.find(item=>item.id===studentId)||null,[students,studentId])
@@ -58,7 +61,7 @@ export default function Informes(){
   fetch(`/api/profesor-virtual/context?courseId=${encodeURIComponent(courseId)}`,{cache:'no-store'}).then(async response=>response.json()).then((data:ContextResponse)=>{
    if(data.error)throw new Error(data.error)
    setStudents(data.students||[]);setObjectives(data.objectives||[]);setMetrics(data.metrics||null)
-   setStudentId('');setObjectiveId('');setBody('');setApproved(false)
+   setStudentId('');setObjectiveId('');setBody('');setApproved(false);setReportId('');setReportVersion(0)
    setStatus('Contexto institucional disponible. Genera un borrador y revísalo profesionalmente.')
   }).catch(error=>setStatus(error instanceof Error?error.message:'No fue posible cargar el contexto institucional.'))
  },[courseId])
@@ -103,11 +106,25 @@ export default function Informes(){
   finally{setLoading(false)}
  }
 
- function saveLocal(){
-  if(!body.trim()){setStatus('Primero genera o redacta contenido para guardar.');return}
-  const draft={type,courseId,studentId,objectiveId,period,responsible,body,updatedAt:new Date().toISOString()}
-  try{localStorage.setItem('yoyo-report-draft',JSON.stringify(draft));setStatus('Borrador guardado únicamente en este dispositivo. No se registró como informe institucional.')}
-  catch{setStatus('No fue posible guardar el borrador en este dispositivo.')}
+ async function saveInstitutional(nextStatus:'draft'|'approved'='draft'){
+  if(!body.trim()||!courseId||saving){setStatus('Completa el informe y selecciona un curso antes de guardar.');return false}
+  if(!isCourseReport&&!studentId){setStatus('Selecciona un estudiante para guardar este tipo de informe.');return false}
+  setSaving(true)
+  try{
+   const title=`${current.title} · ${isCourseReport?course?.name||'Curso':student?.displayName||'Estudiante'}`
+   const response=await fetch('/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    id:reportId||null,reportType:type,title,period,body,status:nextStatus,courseId,studentId:isCourseReport?null:studentId,objectiveId:objectiveId||null
+   })})
+   const data=await response.json() as {report?:{id?:string;version?:number;status?:string};error?:string}
+   if(!response.ok||!data.report)throw new Error(data.error||'No fue posible guardar el informe.')
+   if(data.report.id)setReportId(data.report.id)
+   if(typeof data.report.version==='number')setReportVersion(data.report.version)
+   const isApproved=data.report.status==='approved'
+   setApproved(isApproved)
+   setStatus(isApproved?`Informe aprobado y persistido institucionalmente · versión ${data.report.version||''}`:`Borrador institucional guardado · versión ${data.report.version||''}`)
+   return true
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar el informe institucional.');return false}
+  finally{setSaving(false)}
  }
 
  async function copy(){
@@ -122,7 +139,7 @@ export default function Informes(){
  }
 
  return <AppShell active="Informes">
-  <section className="premium-hero report-hero"><span className="eyebrow">Editor profesional · evidencia institucional</span><h1>Informes construidos desde datos autorizados</h1><p>YOYO prepara el borrador utilizando contexto disponible; la profesional revisa, modifica y aprueba antes de copiar, imprimir o guardar como PDF.</p><div className="hero-cta"><button className="btn btn-coral" onClick={generate} disabled={!courseId||loading}><Sparkles size={18}/>{loading?'Analizando...':'Generar desde evidencia'}</button><button className="btn btn-soft" onClick={saveLocal}><Save size={17}/>Guardar borrador local</button></div></section>
+  <section className="premium-hero report-hero"><span className="eyebrow">Editor profesional · evidencia institucional</span><h1>Informes construidos desde datos autorizados</h1><p>YOYO prepara el borrador utilizando contexto disponible; la profesional revisa, modifica y aprueba antes de copiar, imprimir o guardar como PDF.</p><div className="hero-cta"><button className="btn btn-coral" onClick={generate} disabled={!courseId||loading}><Sparkles size={18}/>{loading?'Analizando...':'Generar desde evidencia'}</button><button className="btn btn-soft" onClick={()=>saveInstitutional('draft')} disabled={saving}><Save size={17}/>{saving?'Guardando...':'Guardar borrador institucional'}</button></div></section>
 
   <div className="report-workspace">
    <aside className="report-library premium-card"><h2>Tipo de informe</h2>{templates.map(({id,title,icon:Icon})=><button key={id} className={type===id?'active':''} onClick={()=>{setType(id);setApproved(false);setBody('')}}><Icon size={20}/><span>{title}</span></button>)}
@@ -132,10 +149,10 @@ export default function Informes(){
     <div className="report-sources"><b>Fuentes verificadas disponibles</b><span>✓ {metrics?.evidenceCount??0} evidencias recientes</span><span>✓ {objectives.length} OA/habilidades registradas</span><span>✓ {metrics?.studentCount??0} matrícula activa</span><span>✓ apoyos individuales sólo si están autorizados</span></div>
    </aside>
 
-   <section className="report-editor premium-card"><div className="report-editor-head"><div><span>{current.title}</span><h2>{isCourseReport?course?.name||'Curso no seleccionado':student?.displayName||'Estudiante no seleccionado'}</h2></div><div className={approved?'report-state approved':'report-state'}>{approved?'Revisado y aprobado':'Borrador en revisión'}</div></div>
+   <section className="report-editor premium-card"><div className="report-editor-head"><div><span>{current.title}</span><h2>{isCourseReport?course?.name||'Curso no seleccionado':student?.displayName||'Estudiante no seleccionado'}</h2></div><div className={approved?'report-state approved':'report-state'}>{approved?`Aprobado · v${reportVersion||1}`:reportVersion?`Borrador · v${reportVersion}`:'Borrador en revisión'}</div></div>
     <div className="report-metadata"><label>Periodo<input value={period} onChange={event=>{setPeriod(event.target.value);setApproved(false)}}/></label><label>Responsable<input value={responsible} onChange={event=>setResponsible(event.target.value)}/></label><label>Fecha<input type="date" value={new Date().toISOString().slice(0,10)} readOnly/></label></div>
     <textarea className="report-body" rows={20} value={body} onChange={event=>{setBody(event.target.value);setApproved(false)}} placeholder="Genera un borrador desde evidencia o escribe aquí. YOYO no inventará datos que no estén disponibles."/>
-    <div className="report-editor-actions"><button className="btn btn-primary" disabled={!body.trim()} onClick={()=>{setApproved(true);setStatus('Informe marcado como revisado y aprobado por la profesional en esta sesión.')}}><CheckCircle2 size={18}/>Revisar y aprobar</button><button className="btn btn-soft" onClick={copy} disabled={!approved}><ClipboardCopy size={18}/>Copiar</button><button className="btn btn-soft" onClick={printReport} disabled={!approved}><Printer size={18}/>Imprimir / Guardar PDF</button></div><p className="save-status" role="status" aria-live="polite">{status}</p>
+    <div className="report-editor-actions"><button className="btn btn-primary" disabled={!body.trim()||saving} onClick={()=>saveInstitutional('approved')}><CheckCircle2 size={18}/>Revisar, aprobar y guardar</button><button className="btn btn-soft" onClick={copy} disabled={!approved}><ClipboardCopy size={18}/>Copiar</button><button className="btn btn-soft" onClick={printReport} disabled={!approved}><Printer size={18}/>Imprimir / Guardar PDF</button></div><p className="save-status" role="status" aria-live="polite">{status}</p>
    </section>
 
    <aside className="report-assistant premium-card"><h2>Control de calidad</h2>{['Afirmaciones ligadas a evidencia disponible','Lenguaje profesional y no estigmatizante','Fortalezas y necesidades observables','Apoyos específicos y autonomía','Próximos pasos medibles','Sin diagnósticos inferidos'].map(item=><div className="quality-check-row" key={item}><CheckCircle2 size={17}/><span>{item}</span></div>)}<div className="insight"><ShieldCheck size={19}/><div><b>Privacidad</b><p>Los datos individuales se procesan con el mismo contexto protegido del Profesor Virtual. No se envían notas sensibles.</p></div></div>{objective&&<div className="insight"><BookOpen size={19}/><div><b>{objective.code} · {objective.title}</b><p>{objective.description||'Habilidad registrada.'}</p></div></div>}</aside>

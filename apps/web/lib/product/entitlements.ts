@@ -1,6 +1,7 @@
 export {
   getEntitlements,
   getOwnerEmail,
+  getOwnerUserId,
   isOwnerAccount,
   planEntitlements,
   resolvePlan,

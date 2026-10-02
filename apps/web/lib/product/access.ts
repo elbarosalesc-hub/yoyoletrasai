@@ -19,14 +19,30 @@ export type ProductAccess = {
   exportFormats: readonly string[]
 }
 
-const FALLBACK_OWNER_EMAIL = 'elba.rosalesc@gmail.com'
-
-export function getOwnerEmail() {
-  return (process.env.YOYO_OWNER_EMAIL || FALLBACK_OWNER_EMAIL).trim().toLowerCase()
+export function getOwnerUserId() {
+  return (process.env.YOYO_OWNER_USER_ID || '').trim()
 }
 
-export function isOwnerAccount(email?: string | null) {
-  return Boolean(email && email.trim().toLowerCase() === getOwnerEmail())
+export function getOwnerEmail() {
+  return (process.env.YOYO_OWNER_EMAIL || '').trim().toLowerCase()
+}
+
+export function isOwnerAccount(input: {
+  userId?: string | null
+  email?: string | null
+  role?: AppRole | null
+}) {
+  const configuredUserId = getOwnerUserId()
+  const userId = input.userId?.trim() || ''
+
+  if (input.role !== 'platform_admin' || !configuredUserId || !userId || userId !== configuredUserId) {
+    return false
+  }
+
+  const configuredEmail = getOwnerEmail()
+  if (!configuredEmail) return true
+
+  return Boolean(input.email && input.email.trim().toLowerCase() === configuredEmail)
 }
 
 export const planEntitlements: Record<ProductPlan, Omit<ProductAccess, 'plan' | 'isOwner'>> = {
@@ -78,17 +94,26 @@ export function getEntitlements(plan: ProductPlan) {
   return planEntitlements[plan]
 }
 
-export function resolvePlan(input: { email?: string | null; role?: AppRole | null; subscriptionPlan?: string | null }): ProductPlan {
-  if (isOwnerAccount(input.email)) return 'owner'
+export function resolvePlan(input: {
+  userId?: string | null
+  email?: string | null
+  role?: AppRole | null
+  subscriptionPlan?: string | null
+}): ProductPlan {
+  if (isOwnerAccount(input)) return 'owner'
   if (input.subscriptionPlan === 'premium') return 'premium'
   if (input.subscriptionPlan === 'basic') return 'basic'
 
-  const premiumRole = input.role && ['pie', 'utp', 'principal', 'institution_admin', 'platform_admin'].includes(input.role)
-  return premiumRole ? 'premium' : 'basic'
+  return 'basic'
 }
 
-export function resolveProductAccess(email: string, role: AppRole, subscriptionPlan?: string | null): ProductAccess {
-  const plan = resolvePlan({ email, role, subscriptionPlan })
+export function resolveProductAccess(
+  email: string,
+  role: AppRole,
+  subscriptionPlan?: string | null,
+  userId?: string | null,
+): ProductAccess {
+  const plan = resolvePlan({ userId, email, role, subscriptionPlan })
   return {
     plan,
     isOwner: plan === 'owner',

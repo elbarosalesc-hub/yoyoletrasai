@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isAllowedSourceFile, sanitizeSourceFileName, YOYO_SOURCE_BUCKET } from '@/lib/ai/source-files'
@@ -19,16 +20,18 @@ export async function POST(request: Request) {
   const userId = typeof claims?.sub === 'string' ? claims.sub : null
   if (!userId) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
 
+  const organizationId = (await cookies()).get('yoyo-organization-id')?.value || ''
+  if (!organizationId) return NextResponse.json({ error: 'No hay institución activa.' }, { status: 409 })
+
   const body = await request.json().catch(() => ({})) as { files?: InputFile[] }
   const files = Array.isArray(body.files) ? body.files.slice(0, 200) : []
   if (!files.length) return NextResponse.json({ error: 'No se recibieron archivos.' }, { status: 400 })
 
   const db = supabase as unknown as LooseClient
-  const entitlement = await db.from('ai_entitlements').select('organization_id,plan_id,status').eq('user_id', userId).in('status', ['active','trialing']).maybeSingle()
+  const entitlement = await db.from('ai_entitlements').select('organization_id,plan_id,status').eq('user_id', userId).eq('organization_id', organizationId).in('status', ['active','trialing']).maybeSingle()
   if (entitlement.error || !entitlement.data) return NextResponse.json({ error: 'No existe un plan activo.' }, { status: 403 })
 
   const planId = String(entitlement.data.plan_id || '')
-  const organizationId = String(entitlement.data.organization_id || '')
   const plan = await db.from('ai_plans').select('max_files_per_request,max_file_bytes,max_total_file_bytes').eq('id', planId).maybeSingle()
   if (plan.error || !plan.data) return NextResponse.json({ error: 'No fue posible verificar los límites del plan.' }, { status: 503 })
 
@@ -44,7 +47,7 @@ export async function POST(request: Request) {
 
   const batchId = crypto.randomUUID()
   const rows = normalized.map((file,index) => {
-    const objectPath = `${userId}/${batchId}/${String(index+1).padStart(3,'0')}-${sanitizeSourceFileName(file.name)}`
+    const objectPath = `${userId}/${organizationId}/${batchId}/${String(index+1).padStart(3,'0')}-${sanitizeSourceFileName(file.name)}`
     return { organization_id: organizationId, user_id: userId, plan_id: planId, storage_provider: 'google_cloud_storage', object_path: objectPath, file_name: file.name, media_type: file.type, expected_bytes: file.size, status: 'uploading' }
   })
 

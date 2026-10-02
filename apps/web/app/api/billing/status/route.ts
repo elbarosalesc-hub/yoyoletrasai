@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { getMercadoPagoConfig } from '@/lib/billing/mercadopago'
 
@@ -19,23 +20,48 @@ export async function GET() {
   const useMercadoPago = requestedProvider === 'mercadopago' || mercadoPago.apiConfigured || mercadoPago.webhookConfigured
 
   if (useMercadoPago) {
-    const planConfigured = {
-      premium: Boolean(mercadoPago.plans.premium),
-      institution: Boolean(mercadoPago.plans.institution),
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || ''
+    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
+    const backendReady = Boolean(supabaseUrl && serviceRole)
+
+    const activePlanIds = new Set<string>()
+    if (backendReady) {
+      const admin = createServiceClient(supabaseUrl, serviceRole, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+      const plansResult = await admin
+        .from('ai_plans')
+        .select('id')
+        .in('id', ['premium', 'institucion'])
+        .eq('active', true)
+
+      for (const row of plansResult.data || []) activePlanIds.add(String(row.id))
     }
+
+    const planConfigured = {
+      premium: Boolean(mercadoPago.plans.premium) && activePlanIds.has('premium'),
+      institution: Boolean(mercadoPago.plans.institution) && activePlanIds.has('institucion'),
+    }
+    const checkoutAvailable = Boolean(
+      backendReady &&
+      mercadoPago.apiConfigured &&
+      mercadoPago.productionUrl &&
+      (planConfigured.premium || planConfigured.institution)
+    )
+
     return NextResponse.json({
       configured: mercadoPago.apiConfigured,
       provider: 'mercadopago',
-      checkoutAvailable: mercadoPago.checkoutConfigured,
+      checkoutAvailable,
       checkoutUrl: null,
       checkoutMode: 'dynamic',
       planConfigured,
-      recurringBillingConfigured: mercadoPago.apiConfigured && (planConfigured.premium || planConfigured.institution),
+      recurringBillingConfigured: checkoutAvailable,
       recurringBillingVerified: false,
       webhookConfigured: mercadoPago.webhookConfigured,
       webhookVerified: false,
       productionUrlConfigured: Boolean(mercadoPago.productionUrl),
-      status: mercadoPago.checkoutConfigured && mercadoPago.webhookConfigured
+      status: checkoutAvailable && mercadoPago.webhookConfigured
         ? 'mercadopago_configured_pending_live_verification'
         : 'mercadopago_partial_configuration',
     }, { headers: { 'Cache-Control': 'private, no-store' } })

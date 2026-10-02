@@ -109,6 +109,22 @@ export async function POST(request: NextRequest) {
   const courseResult = await (supabase as any).from('courses').select('id').eq('id', courseId).eq('organization_id', organizationId).eq('is_active', true).maybeSingle()
   if (courseResult.error || !courseResult.data) return NextResponse.json({ error: 'Curso no autorizado.' }, { status: 403 })
 
+  if (objectiveId) {
+    const objectiveResult = await (supabase as any)
+      .from('learning_objectives')
+      .select('id,course_id')
+      .eq('id', objectiveId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .maybeSingle()
+    if (objectiveResult.error || !objectiveResult.data) {
+      return NextResponse.json({ error: 'El OA seleccionado no está disponible.' }, { status: 409 })
+    }
+    if (objectiveResult.data.course_id && objectiveResult.data.course_id !== courseId) {
+      return NextResponse.json({ error: 'El OA seleccionado pertenece a otro curso.' }, { status: 409 })
+    }
+  }
+
   const insertResult = await (supabase as any).from('learning_missions').insert({
     organization_id: organizationId,
     course_id: courseId,

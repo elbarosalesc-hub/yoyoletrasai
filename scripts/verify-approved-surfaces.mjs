@@ -30,8 +30,13 @@ function fail(message) {
 try {
   git(['cat-file', '-e', `${approvedBaseline}^{commit}`])
 } catch {
-  console.error(`::error::No fue posible leer la línea base visual aprobada ${approvedBaseline}. El checkout debe incluir historial completo.`)
-  process.exit(1)
+  try {
+    git(['fetch', '--no-tags', '--depth=1', 'origin', approvedBaseline])
+    git(['cat-file', '-e', `${approvedBaseline}^{commit}`])
+  } catch {
+    console.error(`::error::No fue posible recuperar la línea base visual aprobada ${approvedBaseline}.`)
+    process.exit(1)
+  }
 }
 
 console.log(`Verificando superficies aprobadas contra ${approvedBaseline}...`)

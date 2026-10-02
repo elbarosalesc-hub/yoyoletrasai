@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
   if (!signatureValid) return NextResponse.json({ error: 'Firma de webhook inválida.' }, { status: 401 })
 
   const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
-  const eventKey = `${xRequestId}:${topic}:${dataId}`
+  const notificationId = body.id === undefined || body.id === null ? '' : String(body.id).slice(0, 180)
+  const eventKey = notificationId
+    ? `mercadopago:${notificationId}`
+    : `${xRequestId}:${topic}:${dataId}`
   const inserted = await admin.from('billing_events').insert({
     provider: 'mercadopago',
     provider_event_key: eventKey,
@@ -41,12 +44,43 @@ export async function POST(request: NextRequest) {
     payload: body,
   }).select('id').single()
 
+  let eventId = ''
   if (inserted.error) {
-    if (inserted.error.code === '23505') return NextResponse.json({ received: true, duplicate: true })
-    return NextResponse.json({ error: 'No fue posible registrar el evento.' }, { status: 503 })
+    if (inserted.error.code !== '23505') {
+      return NextResponse.json({ error: 'No fue posible registrar el evento.' }, { status: 503 })
+    }
+
+    const existing = await admin.from('billing_events')
+      .select('id,processed_at,processing_error')
+      .eq('provider', 'mercadopago')
+      .eq('provider_event_key', eventKey)
+      .maybeSingle()
+
+    if (existing.error || !existing.data) {
+      return NextResponse.json({ error: 'No fue posible recuperar el evento para reintento.' }, { status: 503 })
+    }
+
+    if (existing.data.processed_at && !existing.data.processing_error) {
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+
+    eventId = String(existing.data.id)
+    const reset = await admin.from('billing_events').update({
+      topic,
+      external_resource_id: dataId || null,
+      signature_valid: true,
+      payload: body,
+      processed_at: null,
+      processing_error: null,
+    }).eq('id', eventId)
+
+    if (reset.error) {
+      return NextResponse.json({ error: 'No fue posible preparar el evento para reintento.' }, { status: 503 })
+    }
+  } else {
+    eventId = String(inserted.data.id)
   }
 
-  const eventId = String(inserted.data.id)
   try {
     if (topic === 'subscription_preapproval' || String(body.action || '').includes('preapproval')) {
       const remote = await getMercadoPagoSubscription(dataId)
@@ -60,20 +94,55 @@ export async function POST(request: NextRequest) {
         provider_updated_at: remote.last_modified || new Date().toISOString(),
         metadata: { reconciledBy: 'mercadopago-webhook', providerStatus: remote.status || null },
       }
-      const query = admin.from('billing_subscriptions').update(update)
-      const reconciled = externalReference
-        ? await query.eq('provider', 'mercadopago').eq('external_reference', externalReference)
-        : await query.eq('provider', 'mercadopago').eq('external_subscription_id', dataId)
+      const lookup = externalReference
+        ? await admin.from('billing_subscriptions')
+            .select('id,organization_id,user_id,plan_key')
+            .eq('provider', 'mercadopago')
+            .eq('external_reference', externalReference)
+            .maybeSingle()
+        : await admin.from('billing_subscriptions')
+            .select('id,organization_id,user_id,plan_key')
+            .eq('provider', 'mercadopago')
+            .eq('external_subscription_id', dataId)
+            .maybeSingle()
+
+      if (lookup.error || !lookup.data) throw new Error(lookup.error?.message || 'BILLING_SUBSCRIPTION_NOT_FOUND')
+
+      const reconciled = await admin.from('billing_subscriptions')
+        .update(update)
+        .eq('id', lookup.data.id)
       if (reconciled.error) throw new Error(reconciled.error.message)
+
+      const normalizedStatus = normalizeMercadoPagoStatus(remote.status)
+      if (lookup.data.plan_key === 'premium' && normalizedStatus !== 'pending') {
+        const entitlementStatus = normalizedStatus === 'authorized'
+          ? 'active'
+          : normalizedStatus === 'paused'
+            ? 'suspended'
+            : 'cancelled'
+        const candidatePeriodEnd = Date.parse(String(remote.next_payment_date || ''))
+        const periodEnd = Number.isFinite(candidatePeriodEnd) && candidatePeriodEnd > Date.now()
+          ? new Date(candidatePeriodEnd).toISOString()
+          : new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString()
+        const entitlement = await admin.rpc('set_ai_entitlement_for_org', {
+          p_user_id: lookup.data.user_id,
+          p_organization_id: lookup.data.organization_id,
+          p_plan_id: 'premium',
+          p_status: entitlementStatus,
+          p_period_end: periodEnd,
+          p_assigned_by: null,
+        })
+        if (entitlement.error) throw new Error(entitlement.error.message)
+      }
     }
 
     await admin.from('billing_events').update({ processed_at: new Date().toISOString(), processing_error: null }).eq('id', eventId)
     return NextResponse.json({ received: true })
   } catch (error) {
     await admin.from('billing_events').update({
-      processed_at: new Date().toISOString(),
+      processed_at: null,
       processing_error: error instanceof Error ? error.message.slice(0, 500) : 'BILLING_EVENT_PROCESSING_FAILED',
     }).eq('id', eventId)
-    return NextResponse.json({ received: true, processing: 'deferred' }, { status: 202 })
+    return NextResponse.json({ received: false, retry: true }, { status: 503 })
   }
 }

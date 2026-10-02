@@ -129,7 +129,8 @@ export async function verifyMercadoPagoWebhookSignature(input: {
     false,
     ['verify'],
   )
-  const template = `id:${input.dataId};request-id:${input.xRequestId};ts:${ts};`
+  const normalizedDataId = input.dataId.toLowerCase()
+  const template = `id:${normalizedDataId};request-id:${input.xRequestId};ts:${ts};`
   return crypto.subtle.verify('HMAC', key, signatureBytes, new TextEncoder().encode(template))
 }
 
