@@ -507,6 +507,7 @@ begin
          and b.user_id = v_user_id
          and b.plan_key = 'premium'
          and b.status = 'authorized'
+         and (b.next_payment_at is null or b.next_payment_at > now())
      ) then
     return jsonb_build_object('allowed', false, 'code', 'PAYMENT_REQUIRED');
   end if;
@@ -519,6 +520,7 @@ begin
        where b.organization_id = p_organization_id
          and b.plan_key = 'institution'
          and b.status = 'authorized'
+         and (b.next_payment_at is null or b.next_payment_at > now())
      ) then
     return jsonb_build_object('allowed', false, 'code', 'PAYMENT_REQUIRED');
   end if;
