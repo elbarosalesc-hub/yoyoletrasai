@@ -4,9 +4,6 @@
 alter function public.enforce_premium_resource_quality_gate()
   set search_path = '';
 
-revoke all on function public.enforce_premium_resource_quality_gate() from public, anon, authenticated;
-grant execute on function public.enforce_premium_resource_quality_gate() to service_role;
-
 drop policy if exists "public read active ai plans" on public.ai_plans;
 drop policy if exists "users read entitled ai plan" on public.ai_plans;
 
