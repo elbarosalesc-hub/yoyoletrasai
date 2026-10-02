@@ -178,6 +178,35 @@ test.describe('regresión autenticada', () => {
     expect(familyApproved.communication?.status).toBe('approved')
   })
 
+  test('Planificador persiste la semana institucionalmente sin localStorage', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/planificador`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(planificador|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/planificador`, { waitUntil: 'networkidle' })
+    }
+
+    const stamp=String(Date.now())
+    const blocks=[{id:stamp,day:'Lunes',period:'08:00',subject:'E2E',objective:'Validar persistencia institucional',activity:'Prueba E2E',support:'Acceso universal DUA',done:false}]
+    const saved=await page.request.put(`${baseUrl}/api/planner`,{data:{blocks}})
+    expect(saved.ok()).toBeTruthy()
+
+    const loaded=await page.request.get(`${baseUrl}/api/planner`)
+    expect(loaded.ok()).toBeTruthy()
+    const data=await loaded.json() as {blocks?:Array<{id?:string;subject?:string}>}
+    expect(data.blocks?.[0]?.id).toBe(stamp)
+    expect(data.blocks?.[0]?.subject).toBe('E2E')
+
+    const localCopy=await page.evaluate(()=>localStorage.getItem('yoyo-weekly-planner'))
+    expect(localCopy).toBeNull()
+  })
+
   test('Crear persiste borrador e historial institucional sin localStorage', async ({ page }) => {
     await page.goto(`${baseUrl}/acceso?next=/crear`, { waitUntil: 'networkidle' })
     await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
