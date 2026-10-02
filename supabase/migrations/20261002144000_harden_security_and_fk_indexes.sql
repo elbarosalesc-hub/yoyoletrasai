@@ -725,6 +725,28 @@ revoke execute on function public.authorize_ai_request(
   bigint
 ) from public, anon, authenticated;
 
+revoke all on function public.complete_ai_request(
+  uuid,
+  text,
+  text,
+  jsonb,
+  text,
+  bigint,
+  bigint,
+  bigint
+) from public, anon, authenticated;
+
+grant execute on function public.complete_ai_request(
+  uuid,
+  text,
+  text,
+  jsonb,
+  text,
+  bigint,
+  bigint,
+  bigint
+) to service_role;
+
 alter table public.ai_entitlements
   drop constraint if exists ai_entitlements_pkey;
 
