@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -60,8 +60,8 @@ jobs:
 
       - name: Start application
         env:
-          CI_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          CI_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL }}
+          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -96,8 +96,8 @@ jobs:
         env:
           E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
           E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
-          CI_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          CI_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL }}
+          CI_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
         shell: bash
         run: |
           set -euo pipefail
