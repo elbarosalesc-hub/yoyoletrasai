@@ -273,4 +273,114 @@ using (
   and private.is_organization_member(organization_id)
 );
 
+
+-- Prevent role escalation through organization membership management.
+drop policy if exists "authorized staff can manage memberships" on public.organization_memberships;
+drop policy if exists "authorized staff can create memberships" on public.organization_memberships;
+drop policy if exists "authorized staff can update memberships" on public.organization_memberships;
+drop policy if exists "authorized staff can delete memberships" on public.organization_memberships;
+
+create policy "authorized staff can create memberships"
+on public.organization_memberships
+for insert
+to authenticated
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+  or (
+    role <> 'platform_admin'::public.app_role
+    and private.has_organization_role(
+      organization_id,
+      array['institution_admin']::public.app_role[]
+    )
+  )
+  or (
+    role = any(array[
+      'student','guardian','teacher','pie','utp'
+    ]::public.app_role[])
+    and private.has_organization_role(
+      organization_id,
+      array['principal']::public.app_role[]
+    )
+  )
+);
+
+create policy "authorized staff can update memberships"
+on public.organization_memberships
+for update
+to authenticated
+using (
+  private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+  or (
+    role <> 'platform_admin'::public.app_role
+    and private.has_organization_role(
+      organization_id,
+      array['institution_admin']::public.app_role[]
+    )
+  )
+  or (
+    role = any(array[
+      'student','guardian','teacher','pie','utp'
+    ]::public.app_role[])
+    and private.has_organization_role(
+      organization_id,
+      array['principal']::public.app_role[]
+    )
+  )
+)
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+  or (
+    role <> 'platform_admin'::public.app_role
+    and private.has_organization_role(
+      organization_id,
+      array['institution_admin']::public.app_role[]
+    )
+  )
+  or (
+    role = any(array[
+      'student','guardian','teacher','pie','utp'
+    ]::public.app_role[])
+    and private.has_organization_role(
+      organization_id,
+      array['principal']::public.app_role[]
+    )
+  )
+);
+
+create policy "authorized staff can delete memberships"
+on public.organization_memberships
+for delete
+to authenticated
+using (
+  private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+  or (
+    role <> 'platform_admin'::public.app_role
+    and private.has_organization_role(
+      organization_id,
+      array['institution_admin']::public.app_role[]
+    )
+  )
+  or (
+    role = any(array[
+      'student','guardian','teacher','pie','utp'
+    ]::public.app_role[])
+    and private.has_organization_role(
+      organization_id,
+      array['principal']::public.app_role[]
+    )
+  )
+);
+
 notify pgrst, 'reload schema';
