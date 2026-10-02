@@ -799,4 +799,89 @@ with check (
   )
 );
 
+
+-- Keep learning evidence objective/course relationships internally consistent.
+drop policy if exists "staff can create learning evidence" on public.learning_evidence;
+create policy "staff can create learning evidence"
+on public.learning_evidence
+for insert
+to authenticated
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+  and created_by = (select auth.uid())
+  and exists (
+    select 1
+    from public.students s
+    where s.id = student_id
+      and s.organization_id = organization_id
+  )
+  and exists (
+    select 1
+    from public.learning_objectives o
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (
+        course_id is null
+        or o.course_id is null
+        or o.course_id = course_id
+      )
+  )
+  and (
+    course_id is null
+    or exists (
+      select 1
+      from public.courses c
+      where c.id = course_id
+        and c.organization_id = organization_id
+    )
+  )
+);
+
+drop policy if exists "staff can update learning evidence" on public.learning_evidence;
+create policy "staff can update learning evidence"
+on public.learning_evidence
+for update
+to authenticated
+using (
+  private.has_organization_role(
+    organization_id,
+    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+)
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['teacher','pie','utp','principal','institution_admin','platform_admin']::public.app_role[]
+  )
+  and exists (
+    select 1
+    from public.students s
+    where s.id = student_id
+      and s.organization_id = organization_id
+  )
+  and exists (
+    select 1
+    from public.learning_objectives o
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (
+        course_id is null
+        or o.course_id is null
+        or o.course_id = course_id
+      )
+  )
+  and (
+    course_id is null
+    or exists (
+      select 1
+      from public.courses c
+      where c.id = course_id
+        and c.organization_id = organization_id
+    )
+  )
+);
+
 notify pgrst, 'reload schema';
