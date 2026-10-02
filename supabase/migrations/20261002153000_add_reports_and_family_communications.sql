@@ -117,6 +117,14 @@ with check (
     where s.id = student_id
       and s.organization_id = organization_id
   )
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.organization_id = organization_id
+      and m.user_id = guardian_user_id
+      and m.role = 'guardian'::public.app_role
+      and m.is_active = true
+  )
 );
 
 create policy "authorized staff update guardian links"
@@ -136,6 +144,14 @@ with check (
     select 1 from public.students s
     where s.id = student_id
       and s.organization_id = organization_id
+  )
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.organization_id = organization_id
+      and m.user_id = guardian_user_id
+      and m.role = 'guardian'::public.app_role
+      and m.is_active = true
   )
 );
 
