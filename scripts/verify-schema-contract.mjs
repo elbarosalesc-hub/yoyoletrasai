@@ -31,12 +31,28 @@ const requiredFunctions = [
 let failed = false
 
 for (const table of requiredTables) {
-  const pattern = new RegExp(
+  const createPattern = new RegExp(
     `create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?(?:public\\.)?${table}\\b`,
     'i',
   )
-  if (!pattern.test(sql)) {
+  const rlsPattern = new RegExp(
+    `alter\\s+table\\s+(?:public\\.)?${table}\\s+enable\\s+row\\s+level\\s+security`,
+    'i',
+  )
+  const authenticatedGrantPattern = new RegExp(
+    `grant[\\s\\S]{0,300}on\\s+(?:table\\s+)?(?:public\\.)?${table}\\s+to\\s+authenticated`,
+    'i',
+  )
+  if (!createPattern.test(sql)) {
     console.error(`::error::Missing migration definition for required table: ${table}`)
+    failed = true
+  }
+  if (!rlsPattern.test(sql)) {
+    console.error(`::error::Missing RLS enablement for required table: ${table}`)
+    failed = true
+  }
+  if (!authenticatedGrantPattern.test(sql) && table !== 'billing_events') {
+    console.error(`::error::Missing explicit authenticated grant contract for required table: ${table}`)
     failed = true
   }
 }
