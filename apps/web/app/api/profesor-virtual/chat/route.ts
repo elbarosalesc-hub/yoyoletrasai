@@ -72,6 +72,7 @@ export async function POST(request:Request){
   const prompt=clean(body.prompt,3000),level=clean(body.level,100)||'3.º básico',subject=clean(body.subject,160)||'Lenguaje y Comunicación',support=clean(body.supportProfile,800)||'Acceso universal DUA',duration=clean(body.duration,100)||'45 minutos',objective=clean(body.objective,1200),tone=clean(body.tone,80)||'profesional_claro',depth=clean(body.depth,80)||'completo'
   const courseId=safeId(body.courseId),studentId=safeId(body.studentId),objectiveId=safeId(body.objectiveId)
   if(!prompt)return NextResponse.json({error:'Describe la necesidad pedagógica.'},{status:400})
+  if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'Profesor Virtual requiere la configuración de IA real en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
   const institutionalContext=await loadInstitutionalContext(supabase as any,organizationId,courseId,studentId,objectiveId)
   const db=supabase as unknown as LooseDb
   const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:mode==='evaluar'?'assessment':'activity',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:Math.min(9000,4500+institutionalContext.length)})
@@ -79,7 +80,6 @@ export async function POST(request:Request){
   const auth=authorization.data||{}
   if(!auth.allowed||!auth.eventId)return NextResponse.json({error:'Tu plan no autoriza esta solicitud.',code:auth.code||'NOT_ALLOWED'},{status:403})
   const model=modelByTier[auth.modelTier||'essential']||modelByTier.essential
-  if(!getCloudflareAIConfig().configured){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'CLOUDFLARE_AI_NOT_CONFIGURED'});return NextResponse.json({error:'Profesor Virtual requiere la configuración de IA real en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})}
   const system=`Eres Profesor Virtual YOYO, copiloto pedagógico profesional de YoYoLetrasAI. Trabajas con currículum chileno, DUA, PIE y evaluación formativa. No inventes códigos OA oficiales. Mantén el objetivo común y diversifica acceso, participación y respuesta. Entrega acciones concretas, no teoría genérica. Si recibes contexto individual, trátalo como "estudiante seleccionado" y no intentes identificarlo ni inferir diagnósticos. No reproduzcas información personal innecesaria. Tono: ${tone}. Profundidad: ${depth}. Devuelve exclusivamente JSON válido.`
   const user=`MODO: ${mode}\nNIVEL: ${level}\nASIGNATURA: ${subject}\nDURACIÓN: ${duration}\nOBJETIVO/OA/HABILIDAD: ${objective||'No especificado; no inventar código OA'}\nNECESIDADES Y APOYOS DEL BRIEF DOCENTE: ${support}\nSOLICITUD DOCENTE: ${prompt}\n${institutionalContext?`\n${institutionalContext}\n`:''}\nDevuelve exactamente esta estructura: {"title":"...","summary":"...","sections":[{"title":"...","items":["..."]}],"pedagogicalChecks":["..."],"nextSteps":["..."]}`
   try{
