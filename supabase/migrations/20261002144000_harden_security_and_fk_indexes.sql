@@ -133,4 +133,119 @@ $;
 
 drop function if exists private.invoke_yoyo_automation(text);
 
+
+-- Strengthen AI source isolation by active organization membership.
+drop policy if exists "users read own ai source files" on public.ai_source_files;
+create policy "users read own ai source files"
+on public.ai_source_files
+for select
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+drop policy if exists "users update own ai source files" on public.ai_source_files;
+create policy "users update own ai source files"
+on public.ai_source_files
+for update
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+)
+with check (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+drop policy if exists "users delete own ai source files" on public.ai_source_files;
+create policy "users delete own ai source files"
+on public.ai_source_files
+for delete
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+drop policy if exists "users read own yoyo ai sources" on storage.objects;
+create policy "users read own yoyo ai sources"
+on storage.objects
+for select
+to authenticated
+using (
+  bucket_id = 'yoyo-ai-sources'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = (select auth.uid())
+      and m.organization_id::text = (storage.foldername(name))[2]
+      and m.is_active = true
+  )
+);
+
+drop policy if exists "users upload own yoyo ai sources" on storage.objects;
+create policy "users upload own yoyo ai sources"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'yoyo-ai-sources'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = (select auth.uid())
+      and m.organization_id::text = (storage.foldername(name))[2]
+      and m.is_active = true
+  )
+);
+
+drop policy if exists "users update own yoyo ai sources" on storage.objects;
+create policy "users update own yoyo ai sources"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'yoyo-ai-sources'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = (select auth.uid())
+      and m.organization_id::text = (storage.foldername(name))[2]
+      and m.is_active = true
+  )
+)
+with check (
+  bucket_id = 'yoyo-ai-sources'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = (select auth.uid())
+      and m.organization_id::text = (storage.foldername(name))[2]
+      and m.is_active = true
+  )
+);
+
+drop policy if exists "users delete own yoyo ai sources" on storage.objects;
+create policy "users delete own yoyo ai sources"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'yoyo-ai-sources'
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = (select auth.uid())
+      and m.organization_id::text = (storage.foldername(name))[2]
+      and m.is_active = true
+  )
+);
+
 notify pgrst, 'reload schema';
