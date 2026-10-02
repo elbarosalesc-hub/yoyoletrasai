@@ -104,8 +104,7 @@ export function resolvePlan(input: {
   if (input.subscriptionPlan === 'premium') return 'premium'
   if (input.subscriptionPlan === 'basic') return 'basic'
 
-  const premiumRole = input.role && ['pie', 'utp', 'principal', 'institution_admin', 'platform_admin'].includes(input.role)
-  return premiumRole ? 'premium' : 'basic'
+  return 'basic'
 }
 
 export function resolveProductAccess(
