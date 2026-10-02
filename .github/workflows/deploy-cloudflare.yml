@@ -7,11 +7,6 @@ on:
         description: "Escribe DEPLOY para confirmar publicación en producción"
         required: true
         type: string
-  workflow_run:
-    workflows:
-      - Production preflight
-    types:
-      - completed
 
 permissions:
   contents: read
@@ -22,11 +17,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: >-
-      ${{
-        (github.event_name == 'workflow_dispatch' && inputs.confirm_production == 'DEPLOY') ||
-        (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
-      }}
+    if: ${{ inputs.confirm_production == 'DEPLOY' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -54,12 +45,12 @@ jobs:
       RUNTIME_YOYO_PRODUCTION_URL: ${{ vars.YOYO_PRODUCTION_URL }}
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm

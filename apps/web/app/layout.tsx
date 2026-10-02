@@ -47,6 +47,7 @@ import './evolution-center.css'
 import './platform-preferences.css'
 import './public-accessibility-fixes.css'
 import './approved-responsive-fixes.css'
+import './approved-real-modules.css'
 
 export const metadata:Metadata={
  title:'YoYo Letras AI | Plataforma educativa inteligente',

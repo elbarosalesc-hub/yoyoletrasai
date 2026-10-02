@@ -1,0 +1,12 @@
+.approved-real-modules,.approved-experience-panel{overflow:hidden}
+.approved-real-module-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.approved-real-module-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:92px;padding:15px;border:1px solid #ebe8f3;border-radius:16px;background:linear-gradient(180deg,#fff,#fbfaff);box-shadow:0 8px 20px #352d5d0b;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.approved-real-module-card:hover{transform:translateY(-2px);border-color:#d8d1ee;box-shadow:0 14px 28px #352d5d14}
+.approved-real-module-card>span{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#eee8ff;color:#704fdc}
+.approved-real-module-card strong,.approved-real-module-card small{display:block}.approved-real-module-card strong{font-size:12px;color:#252d45}.approved-real-module-card small{margin-top:5px;color:#7f8596;font-size:9px;line-height:1.45}.approved-real-module-card>svg{width:15px;color:#9b9eaa}
+.approved-experience-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;margin-top:16px}
+.approved-experience-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;min-height:78px;padding:12px;border:1px solid #ece9f2;border-radius:15px;background:#fff}
+.approved-experience-card>span{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#e9f3ff;color:#357faf}.approved-experience-card strong,.approved-experience-card small{display:block}.approved-experience-card strong{font-size:11px;color:#252d45}.approved-experience-card small{margin-top:4px;color:#848999;font-size:9px;line-height:1.35}.approved-experience-card>svg{width:14px;color:#a0a3ad}
+@media(max-width:1200px){.approved-real-module-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.approved-experience-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.approved-real-module-grid,.approved-experience-grid{grid-template-columns:1fr 1fr}.approved-real-module-card,.approved-experience-card{min-height:74px;padding:11px}.approved-real-module-card>span,.approved-experience-card>span{width:36px;height:36px}.approved-real-module-card small,.approved-experience-card small{font-size:8px}}
+@media(max-width:460px){.approved-real-module-grid,.approved-experience-grid{grid-template-columns:1fr}}
