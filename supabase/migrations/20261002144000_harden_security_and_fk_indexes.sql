@@ -29,6 +29,19 @@ using (
       where e.user_id = (select auth.uid())
         and e.plan_id = ai_plans.id
         and e.status in ('active','trialing')
+        and now() >= e.period_start
+        and now() < e.period_end
+    )
+    or (
+      ai_plans.id = 'institucion'
+      and exists (
+        select 1
+        from public.billing_subscriptions b
+        where b.plan_key = 'institution'
+          and b.status = 'authorized'
+          and (b.next_payment_at is null or b.next_payment_at > now())
+          and private.is_organization_member(b.organization_id)
+      )
     )
   )
 );
