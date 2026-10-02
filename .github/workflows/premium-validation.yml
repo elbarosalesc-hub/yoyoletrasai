@@ -10,6 +10,7 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.E2E_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -30,6 +31,9 @@ jobs:
 
       - name: Verify migration schema contract
         run: npm run verify:schema-contract
+
+      - name: Verify E2E Supabase schema
+        run: npm run verify:live-schema
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund --loglevel=error
