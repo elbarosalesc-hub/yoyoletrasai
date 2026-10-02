@@ -50,18 +50,20 @@ export default function Crear(){
 
  useEffect(()=>{
   fetch('/api/ai/entitlement',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then(data=>setEntitlement(data)).catch(()=>setEntitlement(null))
-  try{
-   const historyStored=window.localStorage.getItem('yoyo-resource-history')
-   if(historyStored)setHistory(JSON.parse(historyStored) as SavedVersion[])
-   const stored=window.localStorage.getItem('yoyo-resource-draft')
-   if(!stored)return
-   const draft=JSON.parse(stored) as Draft
-   const fromVirtualTeacher=new URLSearchParams(window.location.search).get('from')==='profesor-virtual'
-   restoreDraft(draft)
+  const fromVirtualTeacher=new URLSearchParams(window.location.search).get('from')==='profesor-virtual'
+  fetch('/api/resource-drafts',{cache:'no-store'}).then(async response=>{
+   const data=await response.json() as {draft?:Draft|null;history?:SavedVersion[];updatedAt?:string|null;error?:string}
+   if(!response.ok)throw new Error(data.error||'No fue posible cargar el borrador institucional.')
+   if(Array.isArray(data.history))setHistory(data.history.slice(0,10))
+   if(!data.draft){
+    if(fromVirtualTeacher)setOrigin('profesor-virtual')
+    return
+   }
+   restoreDraft(data.draft)
    if(fromVirtualTeacher)setOrigin('profesor-virtual')
-   const recoveredOrigin=fromVirtualTeacher?'profesor-virtual':draft.origin
-   setStatus(`${recoveredOrigin==='profesor-virtual'?'Borrador recuperado desde Profesor Virtual':'Borrador recuperado'} · ${new Date(draft.updatedAt).toLocaleString('es-CL')}`)
-  }catch{setStatus('No fue posible recuperar el borrador anterior')}
+   const recoveredOrigin=fromVirtualTeacher?'profesor-virtual':data.draft.origin
+   setStatus(`${recoveredOrigin==='profesor-virtual'?'Borrador institucional abierto desde Profesor Virtual':'Borrador institucional recuperado'} · ${new Date(data.draft.updatedAt).toLocaleString('es-CL')}`)
+  }).catch(error=>setStatus(error instanceof Error?error.message:'No fue posible recuperar el borrador institucional.'))
  },[])
 
  const plan=entitlement?.plan
@@ -132,12 +134,30 @@ export default function Crear(){
   }catch(error){setStatus(error instanceof Error?error.message:'No fue posible regenerar esta sección.')}
  }
 
- function save(){
-  const draft=currentDraft();window.localStorage.setItem('yoyo-resource-draft',JSON.stringify(draft))
-  setHistory(current=>{const next=[{...draft,id:String(Date.now())},...current].slice(0,10);window.localStorage.setItem('yoyo-resource-history',JSON.stringify(next));return next})
-  setStatus(`Versión guardada · ${new Date(draft.updatedAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`)
+ async function persistDraft(draft:Draft,nextHistory:SavedVersion[]){
+  const response=await fetch('/api/resource-drafts',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({draft,history:nextHistory})})
+  const data=await response.json() as {ok?:boolean;error?:string}
+  if(!response.ok||!data.ok)throw new Error(data.error||'No fue posible guardar el borrador institucional.')
  }
- function restoreVersion(version:SavedVersion){restoreDraft(version);window.localStorage.setItem('yoyo-resource-draft',JSON.stringify(version));setStatus(`Versión restaurada · ${new Date(version.updatedAt).toLocaleString('es-CL')}`)}
+ async function save(){
+  const draft=currentDraft()
+  const next=[{...draft,id:String(Date.now())},...history].slice(0,10)
+  setStatus('Guardando versión institucional...')
+  try{
+   await persistDraft(draft,next)
+   setHistory(next)
+   setStatus(`Versión institucional guardada · ${new Date(draft.updatedAt).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`)
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar la versión institucional.')}
+ }
+ async function restoreVersion(version:SavedVersion){
+  const draft:Draft={...version,updatedAt:new Date().toISOString()}
+  setStatus('Restaurando versión institucional...')
+  try{
+   await persistDraft(draft,history)
+   restoreDraft(draft)
+   setStatus(`Versión institucional restaurada · ${new Date(version.updatedAt).toLocaleString('es-CL')}`)
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible restaurar la versión institucional.')}
+ }
  function addQuestion(){setQuestions(current=>[...current,{id:Date.now(),text:'Escribe aquí una nueva actividad, criterio o instrucción.'}])}
  function updateQuestion(id:number,text:string){setQuestions(current=>current.map(question=>question.id===id?{...question,text}:question))}
  function removeQuestion(id:number){setQuestions(current=>current.filter(question=>question.id!==id))}
@@ -185,7 +205,7 @@ export default function Crear(){
    <div className="yoyo-upload-zone"><FileUp size={24}/><div><strong>Fuentes para YOYO IA</strong><span>Se suben a Storage privado y se verifican antes de usarse.</span></div><label className={`btn btn-soft ${uploading?'is-disabled':''}`}>{uploading?'Subiendo...':'Seleccionar'}<input type="file" hidden multiple disabled={uploading} onChange={onFiles}/></label></div>
    {sourceFiles.length>0&&<div className="yoyo-source-list">{sourceFiles.map(file=>{const pending=pendingSources.find(item=>item.id===file.id);const analyzed=analyzedSourceIds.includes(file.id);return <div key={file.id}><span><b>{file.name}</b><small>{mb(file.size)} · {analyzed?'Analizado en esta generación':pending?pendingLabel(pending.reason):'Verificado · listo para analizar'}</small></span><span className={`yoyo-source-state ${analyzed?'is-analyzed':pending?'is-pending':'is-ready'}`}><FileCheck2 size={14}/>{analyzed?'Analizado':pending?'Pendiente':'Listo'}</span><button aria-label={`Quitar ${file.name}`} onClick={()=>removeSource(file.id)}><Trash2 size={15}/></button></div>})}</div>}
    <small className="yoyo-upload-note">{sourceFiles.length}{maxFiles===null?'':` / ${maxFiles}`} archivos verificados · {mb(totalBytes)} usados</small><button className="btn btn-coral yoyo-generate-button" disabled={generating||uploading} onClick={generate}>{generating?<RefreshCw size={17}/>:<Sparkles size={17}/>} {generating?'Trabajando con YOYO IA...':'Generar paquete premium'}</button>
-   {history.length>0&&<div className="insight"><b><History size={15}/> Historial local</b>{history.slice(0,4).map(version=><p key={version.id}><button className="btn btn-soft" onClick={()=>restoreVersion(version)}>Restaurar</button> {new Date(version.updatedAt).toLocaleString('es-CL')} · {version.resourceType}</p>)}</div>}
+   {history.length>0&&<div className="insight"><b><History size={15}/> Historial institucional</b>{history.slice(0,4).map(version=><p key={version.id}><button className="btn btn-soft" onClick={()=>restoreVersion(version)}>Restaurar</button> {new Date(version.updatedAt).toLocaleString('es-CL')} · {version.resourceType}</p>)}</div>}
   </section>
   <section className="preview-paper yoyo-premium-preview" aria-label="Vista previa editable"><div className="tool-row"><span className="tag">{level}</span><span className="tag">{subject}</span><span className="tag">{resourceType}</span><span className="tag">{visualStyle}</span></div><div className="yoyo-preview-head"><div><small>YOYO IA · {packageMode}</small><h2>{title||'Recurso sin título'}</h2><p><b>Objetivo:</b> {objective}</p>{aiOutput?.summary&&<p>{aiOutput.summary}</p>}</div><span className="yoyo-quality-badge">{qualityTotal?`Checklist ${qualityPassed}/${qualityTotal}`:'Meta premium ≥92/100'}</span></div>
    <div className="yoyo-package-grid"><div><strong>Docente</strong><span>{aiOutput?.teacherVersion?.purpose||'Objetivo, mediación, respuestas y evaluación.'}</span></div><div><strong>Estudiante</strong><span>{questions.length} elementos editables listos para usar.</span></div><div><strong>Adaptación</strong><span>{adaptation}</span></div><div><strong>Fuentes</strong><span>{sourceFiles.length?`${analyzedSourceIds.length}/${sourceFiles.length} analizadas en la última generación`:'Creación desde contexto pedagógico'}</span></div></div>
