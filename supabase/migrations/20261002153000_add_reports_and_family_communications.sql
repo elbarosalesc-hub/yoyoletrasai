@@ -342,6 +342,7 @@ using (
         )
         or (
           r.status = 'approved'
+          and report_versions.status_snapshot = 'approved'
           and r.report_type in ('familia','avance')
           and r.student_id is not null
           and exists (
