@@ -667,4 +667,118 @@ revoke execute on function public.authorize_ai_request(
   bigint
 ) from public, anon, authenticated;
 
+
+-- Make AI entitlements truly multi-tenant: one entitlement per user and organization.
+alter table public.ai_entitlements
+  drop constraint if exists ai_entitlements_pkey;
+
+alter table public.ai_entitlements
+  add primary key (user_id, organization_id);
+
+create index if not exists ai_entitlements_org_status_idx
+  on public.ai_entitlements(organization_id, status, period_end desc);
+
+create or replace function public.set_ai_entitlement_for_org(
+  p_user_id uuid,
+  p_organization_id uuid,
+  p_plan_id text,
+  p_status text default 'active',
+  p_period_end timestamptz default (date_trunc('month', now()) + interval '1 month'),
+  p_assigned_by uuid default null
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_credential text;
+begin
+  if p_user_id is null or p_organization_id is null then
+    raise exception 'user and organization are required';
+  end if;
+
+  if p_status not in ('active','trialing','past_due','suspended','cancelled') then
+    raise exception 'invalid status';
+  end if;
+
+  if p_period_end <= now() then
+    raise exception 'period end must be in the future';
+  end if;
+
+  if not exists (
+    select 1
+    from public.ai_plans
+    where id = p_plan_id
+      and active
+  ) then
+    raise exception 'invalid plan';
+  end if;
+
+  if not exists (
+    select 1
+    from public.organization_memberships m
+    where m.user_id = p_user_id
+      and m.organization_id = p_organization_id
+      and m.is_active = true
+  ) then
+    raise exception 'user has no active membership in organization';
+  end if;
+
+  insert into public.ai_entitlements (
+    user_id,
+    organization_id,
+    plan_id,
+    status,
+    period_start,
+    period_end,
+    assigned_by
+  )
+  values (
+    p_user_id,
+    p_organization_id,
+    p_plan_id,
+    p_status,
+    now(),
+    p_period_end,
+    p_assigned_by
+  )
+  on conflict (user_id, organization_id) do update
+  set plan_id = excluded.plan_id,
+      status = excluded.status,
+      period_start = excluded.period_start,
+      period_end = excluded.period_end,
+      assigned_by = excluded.assigned_by,
+      updated_at = now()
+  returning credential_id into v_credential;
+
+  return v_credential;
+end;
+$function$;
+
+revoke all on function public.set_ai_entitlement_for_org(
+  uuid,
+  uuid,
+  text,
+  text,
+  timestamptz,
+  uuid
+) from public, anon, authenticated;
+
+grant execute on function public.set_ai_entitlement_for_org(
+  uuid,
+  uuid,
+  text,
+  text,
+  timestamptz,
+  uuid
+) to service_role;
+
+revoke all on function public.set_ai_entitlement(
+  uuid,
+  text,
+  text,
+  timestamptz
+) from public, anon, authenticated, service_role;
+
 notify pgrst, 'reload schema';
