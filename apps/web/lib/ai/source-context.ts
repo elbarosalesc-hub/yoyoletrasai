@@ -12,6 +12,7 @@ const MAX_TOTAL_DIRECT_BINARY_BYTES = 24 * 1024 * 1024
 
 type SourceRow = {
   id: string
+  organization_id: string
   file_name: string
   media_type: string
   object_path: string
@@ -23,7 +24,9 @@ type SourceClient = {
   from: (table: string) => {
     select: (columns: string) => {
       in: (column: string, values: string[]) => {
-        eq: (column: string, value: string) => Promise<{ data: SourceRow[] | null; error: { message?: string } | null }>
+        eq: (column: string, value: string) => {
+          eq: (column: string, value: string) => Promise<{ data: SourceRow[] | null; error: { message?: string } | null }>
+        }
       }
     }
   }
@@ -71,18 +74,19 @@ function pushTextBlock(blocks: string[], sourceName: string, text: string, curre
   return { added: excerpt.length, ok: true }
 }
 
-export async function loadVerifiedSourceContext(client: unknown, userId: string, sourceIds: string[]): Promise<LoadedSourceContext> {
+export async function loadVerifiedSourceContext(client: unknown, userId: string, organizationId: string, sourceIds: string[]): Promise<LoadedSourceContext> {
   const uniqueIds = [...new Set(sourceIds.filter(Boolean))].slice(0, 200)
   if (!uniqueIds.length) return { verified: [], textContext: '', analyzedSourceIds: [], gatewayAttachments: [], pendingSources: [] }
 
   const supabase = client as SourceClient
   const result = await supabase.from('ai_source_files')
-    .select('id,file_name,media_type,object_path,actual_bytes,status')
+    .select('id,organization_id,file_name,media_type,object_path,actual_bytes,status')
     .in('id', uniqueIds)
     .eq('user_id', userId)
+    .eq('organization_id', organizationId)
 
   if (result.error) throw new Error('SOURCE_LOOKUP_FAILED')
-  const verified = (result.data || []).filter(source => source.status === 'ready' && source.object_path.startsWith(`${userId}/`))
+  const verified = (result.data || []).filter(source => source.status === 'ready' && source.organization_id === organizationId && source.object_path.startsWith(`${userId}/${organizationId}/`))
   if (verified.length !== uniqueIds.length) throw new Error('SOURCE_NOT_READY')
 
   let chars = 0
