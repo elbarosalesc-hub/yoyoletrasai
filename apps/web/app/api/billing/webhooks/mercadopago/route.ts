@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
   if (!signatureValid) return NextResponse.json({ error: 'Firma de webhook inválida.' }, { status: 401 })
 
   const admin = createClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
-  const eventKey = `${xRequestId}:${topic}:${dataId}`
+  const notificationId = body.id === undefined || body.id === null ? '' : String(body.id).slice(0, 180)
+  const eventKey = notificationId
+    ? `mercadopago:${notificationId}`
+    : `${xRequestId}:${topic}:${dataId}`
   const inserted = await admin.from('billing_events').insert({
     provider: 'mercadopago',
     provider_event_key: eventKey,
