@@ -383,4 +383,288 @@ using (
   )
 );
 
+
+-- Replace ambiguous per-user AI authorization with an organization-scoped RPC.
+create or replace function public.authorize_ai_request_for_org(
+  p_organization_id uuid,
+  p_mode text,
+  p_file_count integer default 0,
+  p_largest_file_bytes bigint default 0,
+  p_total_file_bytes bigint default 0,
+  p_estimated_tokens bigint default 0
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_user_id uuid := auth.uid();
+  v_ent record;
+  v_month_start timestamptz := date_trunc('month', now());
+  v_total_requests integer;
+  v_research_requests integer;
+  v_token_used bigint;
+  v_event_id uuid;
+  v_request_limit integer;
+  v_research_limit integer;
+  v_token_limit bigint;
+  v_reserved_tokens bigint := greatest(0, p_estimated_tokens);
+  v_owner_unlimited boolean := false;
+begin
+  if v_user_id is null then
+    return jsonb_build_object('allowed', false, 'code', 'AUTH_REQUIRED');
+  end if;
+
+  if p_organization_id is null or not private.is_organization_member(p_organization_id) then
+    return jsonb_build_object('allowed', false, 'code', 'ORGANIZATION_FORBIDDEN');
+  end if;
+
+  if p_file_count < 0 or p_largest_file_bytes < 0 or p_total_file_bytes < 0 or p_estimated_tokens < 0 then
+    return jsonb_build_object('allowed', false, 'code', 'INVALID_USAGE_ESTIMATE');
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(v_user_id::text || ':' || p_organization_id::text, 0)
+  );
+
+  select
+    e.user_id,
+    e.organization_id,
+    e.plan_id,
+    e.credential_id,
+    e.status,
+    e.period_start,
+    e.period_end,
+    e.quota_overrides,
+    p.name as plan_name,
+    p.monthly_ai_requests,
+    p.monthly_research_requests,
+    p.monthly_token_limit,
+    p.max_output_tokens,
+    p.max_files_per_request,
+    p.max_file_bytes,
+    p.max_total_file_bytes,
+    p.unlimited_file_analysis,
+    p.model_tier,
+    p.allowed_modes
+  into v_ent
+  from public.ai_entitlements e
+  join public.ai_plans p
+    on p.id = e.plan_id
+   and p.active
+  where e.user_id = v_user_id
+    and e.organization_id = p_organization_id
+    and e.status in ('active','trialing')
+    and now() >= e.period_start
+    and now() < e.period_end
+  order by
+    case e.status when 'active' then 0 else 1 end,
+    e.period_end desc
+  limit 1;
+
+  if not found then
+    return jsonb_build_object('allowed', false, 'code', 'PLAN_REQUIRED');
+  end if;
+
+  if not (p_mode = any(v_ent.allowed_modes)) then
+    return jsonb_build_object(
+      'allowed', false,
+      'code', 'FEATURE_NOT_INCLUDED',
+      'planId', v_ent.plan_id,
+      'planName', v_ent.plan_name
+    );
+  end if;
+
+  v_owner_unlimited := v_ent.plan_id = 'propietaria' and v_ent.model_tier = 'owner';
+
+  if p_mode = 'sources' and (
+    p_file_count < 1
+    or (v_ent.max_files_per_request <> -1 and p_file_count > v_ent.max_files_per_request)
+    or p_largest_file_bytes > v_ent.max_file_bytes
+    or p_total_file_bytes > v_ent.max_total_file_bytes
+  ) then
+    return jsonb_build_object(
+      'allowed', false,
+      'code', 'FILE_LIMIT_EXCEEDED',
+      'planId', v_ent.plan_id,
+      'maxFiles', v_ent.max_files_per_request,
+      'maxFileBytes', v_ent.max_file_bytes,
+      'maxTotalFileBytes', v_ent.max_total_file_bytes,
+      'unlimitedFiles', v_ent.unlimited_file_analysis
+    );
+  end if;
+
+  select count(*)::integer
+  into v_total_requests
+  from public.ai_usage_events
+  where user_id = v_user_id
+    and organization_id = p_organization_id
+    and created_at >= greatest(v_month_start, v_ent.period_start)
+    and status in ('reserved','complete','error','blocked')
+    and (status <> 'reserved' or created_at >= now() - interval '15 minutes');
+
+  select count(*)::integer
+  into v_research_requests
+  from public.ai_usage_events
+  where user_id = v_user_id
+    and organization_id = p_organization_id
+    and mode = 'research'
+    and created_at >= greatest(v_month_start, v_ent.period_start)
+    and status in ('reserved','complete','error','blocked')
+    and (status <> 'reserved' or created_at >= now() - interval '15 minutes');
+
+  select coalesce(
+    sum(case when status = 'reserved' then reserved_tokens else total_tokens end),
+    0
+  )::bigint
+  into v_token_used
+  from public.ai_usage_events
+  where user_id = v_user_id
+    and organization_id = p_organization_id
+    and created_at >= greatest(v_month_start, v_ent.period_start)
+    and status in ('reserved','complete','error','blocked')
+    and (status <> 'reserved' or created_at >= now() - interval '15 minutes');
+
+  if v_owner_unlimited then
+    v_request_limit := -1;
+    v_research_limit := -1;
+    v_token_limit := -1;
+  else
+    v_request_limit := case
+      when (v_ent.quota_overrides->>'monthlyAiRequests') ~ '^[0-9]+
+        then (v_ent.quota_overrides->>'monthlyAiRequests')::integer
+      else v_ent.monthly_ai_requests
+    end;
+
+    v_research_limit := case
+      when (v_ent.quota_overrides->>'monthlyResearchRequests') ~ '^[0-9]+
+        then (v_ent.quota_overrides->>'monthlyResearchRequests')::integer
+      else v_ent.monthly_research_requests
+    end;
+
+    v_token_limit := case
+      when (v_ent.quota_overrides->>'monthlyTokenLimit') ~ '^-?[0-9]+
+        then (v_ent.quota_overrides->>'monthlyTokenLimit')::bigint
+      else v_ent.monthly_token_limit
+    end;
+  end if;
+
+  if v_request_limit <> -1 and v_total_requests >= v_request_limit then
+    return jsonb_build_object(
+      'allowed', false,
+      'code', 'MONTHLY_QUOTA_EXCEEDED',
+      'planId', v_ent.plan_id,
+      'used', v_total_requests,
+      'limit', v_request_limit
+    );
+  end if;
+
+  if p_mode = 'research'
+     and v_research_limit <> -1
+     and v_research_requests >= v_research_limit then
+    return jsonb_build_object(
+      'allowed', false,
+      'code', 'RESEARCH_QUOTA_EXCEEDED',
+      'planId', v_ent.plan_id,
+      'used', v_research_requests,
+      'limit', v_research_limit
+    );
+  end if;
+
+  if v_token_limit <> -1
+     and v_token_used + v_reserved_tokens > v_token_limit then
+    return jsonb_build_object(
+      'allowed', false,
+      'code', 'TOKEN_QUOTA_EXCEEDED',
+      'planId', v_ent.plan_id,
+      'used', v_token_used,
+      'requested', v_reserved_tokens,
+      'limit', v_token_limit
+    );
+  end if;
+
+  insert into public.ai_usage_events (
+    user_id,
+    organization_id,
+    plan_id,
+    credential_id,
+    mode,
+    file_count,
+    file_bytes,
+    reserved_tokens
+  )
+  values (
+    v_user_id,
+    p_organization_id,
+    v_ent.plan_id,
+    v_ent.credential_id,
+    p_mode,
+    p_file_count,
+    p_total_file_bytes,
+    v_reserved_tokens
+  )
+  returning id into v_event_id;
+
+  return jsonb_build_object(
+    'allowed', true,
+    'eventId', v_event_id,
+    'userId', v_user_id,
+    'organizationId', p_organization_id,
+    'credentialId', v_ent.credential_id,
+    'planId', v_ent.plan_id,
+    'planName', v_ent.plan_name,
+    'modelTier', v_ent.model_tier,
+    'ownerUnlimited', v_owner_unlimited,
+    'usage', jsonb_build_object(
+      'monthlyUsed', v_total_requests + 1,
+      'monthlyLimit', v_request_limit,
+      'researchUsed', v_research_requests + case when p_mode='research' then 1 else 0 end,
+      'researchLimit', v_research_limit,
+      'monthlyTokenUsed', v_token_used + v_reserved_tokens,
+      'monthlyTokenLimit', v_token_limit,
+      'tokenRemaining',
+        case
+          when v_token_limit = -1 then null
+          else greatest(0, v_token_limit - v_token_used - v_reserved_tokens)
+        end
+    ),
+    'limits', jsonb_build_object(
+      'maxFiles', v_ent.max_files_per_request,
+      'maxFileBytes', v_ent.max_file_bytes,
+      'maxTotalFileBytes', v_ent.max_total_file_bytes,
+      'maxOutputTokens', v_ent.max_output_tokens,
+      'unlimitedFiles', v_ent.unlimited_file_analysis,
+      'unlimitedUsage', v_owner_unlimited
+    )
+  );
+end;
+$function$;
+
+revoke all on function public.authorize_ai_request_for_org(
+  uuid,
+  text,
+  integer,
+  bigint,
+  bigint,
+  bigint
+) from public, anon;
+
+grant execute on function public.authorize_ai_request_for_org(
+  uuid,
+  text,
+  integer,
+  bigint,
+  bigint,
+  bigint
+) to authenticated, service_role;
+
+revoke execute on function public.authorize_ai_request(
+  text,
+  integer,
+  bigint,
+  bigint,
+  bigint
+) from public, anon, authenticated;
+
 notify pgrst, 'reload schema';
