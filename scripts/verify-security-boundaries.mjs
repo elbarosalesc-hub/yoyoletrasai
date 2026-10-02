@@ -42,6 +42,16 @@ const checks = [
     reason: 'Evolution authorization must use active organization membership instead of the exposed admin RPC.',
   },
   {
+    path: 'apps/web/app/api/ai/generate/route.ts',
+    forbidden: [/rpc\(['"]authorize_ai_request['"]/],
+    reason: 'YOYO AI authorization must be scoped to the active organization.',
+  },
+  {
+    path: 'apps/web/app/api/profesor-virtual/chat/route.ts',
+    forbidden: [/rpc\(['"]authorize_ai_request['"]/],
+    reason: 'Virtual Teacher AI authorization must be scoped to the active organization.',
+  },
+  {
     path: 'supabase/config.toml',
     forbidden: [/vercel\.app/i],
     reason: 'Supabase auth config must not contain legacy Vercel redirects.',
