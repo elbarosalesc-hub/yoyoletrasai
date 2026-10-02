@@ -6,6 +6,8 @@ type Row = Record<string, unknown>
 type LooseQuery = {
   select: (columns: string) => LooseQuery
   eq: (column: string, value: string | boolean) => LooseQuery
+  order: (column: string, options?: { ascending?: boolean }) => LooseQuery
+  limit: (count: number) => LooseQuery
   maybeSingle: () => Promise<{ data: Row | null; error: { message?: string } | null }>
 }
 type LooseClient = { from: (table: string) => LooseQuery }
@@ -28,40 +30,72 @@ export async function GET() {
       .eq('organization_id', organizationId)
       .maybeSingle()
 
-    if (entitlementResult.error || !entitlementResult.data) {
-      return NextResponse.json({ error: 'No existe un plan de YOYO IA activo' }, { status: 404 })
-    }
-
-    const entitlementStatus = String(entitlementResult.data.status ?? '')
-    const periodStart = Date.parse(String(entitlementResult.data.period_start ?? ''))
-    const periodEnd = Date.parse(String(entitlementResult.data.period_end ?? ''))
     const now = Date.now()
+    const entitlementStatus = String(entitlementResult.data?.status ?? '')
+    const periodStart = Date.parse(String(entitlementResult.data?.period_start ?? ''))
+    const periodEnd = Date.parse(String(entitlementResult.data?.period_end ?? ''))
     const entitlementActive =
+      Boolean(entitlementResult.data) &&
       ['active', 'trialing'].includes(entitlementStatus) &&
       Number.isFinite(periodStart) &&
       Number.isFinite(periodEnd) &&
       now >= periodStart &&
       now < periodEnd
 
-    if (!entitlementActive) {
-      return NextResponse.json({ error: 'El plan de YOYO IA no está vigente' }, { status: 403 })
+    if (entitlementActive) {
+      const planId = String(entitlementResult.data?.plan_id ?? '')
+      const planResult = await db
+        .from('ai_plans')
+        .select('id,name,description,max_files_per_request,max_file_bytes,max_total_file_bytes,max_output_tokens,unlimited_file_analysis,model_tier,allowed_modes,monthly_ai_requests,monthly_research_requests,monthly_token_limit')
+        .eq('id', planId)
+        .eq('active', true)
+        .maybeSingle()
+
+      if (planResult.error || !planResult.data) {
+        return NextResponse.json({ error: 'El plan de YOYO IA no está disponible' }, { status: 404 })
+      }
+
+      return NextResponse.json({
+        credentialId: entitlementResult.data?.credential_id,
+        plan: planResult.data,
+      }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
 
-    const planId = String(entitlementResult.data.plan_id ?? '')
-    const planResult = await db
+    const institutionSubscription = await db
+      .from('billing_subscriptions')
+      .select('plan_key,status,next_payment_at,updated_at')
+      .eq('organization_id', organizationId)
+      .eq('plan_key', 'institution')
+      .eq('status', 'authorized')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const nextPaymentAt = Date.parse(String(institutionSubscription.data?.next_payment_at ?? ''))
+    const institutionSubscriptionActive =
+      Boolean(institutionSubscription.data) &&
+      (!Number.isFinite(nextPaymentAt) || nextPaymentAt > now)
+
+    if (!institutionSubscriptionActive) {
+      return NextResponse.json({
+        error: entitlementResult.data ? 'El plan de YOYO IA no está vigente' : 'No existe un plan de YOYO IA activo',
+      }, { status: entitlementResult.data ? 403 : 404 })
+    }
+
+    const institutionPlan = await db
       .from('ai_plans')
       .select('id,name,description,max_files_per_request,max_file_bytes,max_total_file_bytes,max_output_tokens,unlimited_file_analysis,model_tier,allowed_modes,monthly_ai_requests,monthly_research_requests,monthly_token_limit')
-      .eq('id', planId)
+      .eq('id', 'institucion')
       .eq('active', true)
       .maybeSingle()
 
-    if (planResult.error || !planResult.data) {
-      return NextResponse.json({ error: 'El plan de YOYO IA no está disponible' }, { status: 404 })
+    if (institutionPlan.error || !institutionPlan.data) {
+      return NextResponse.json({ error: 'El plan Institución todavía no está disponible' }, { status: 404 })
     }
 
     return NextResponse.json({
-      credentialId: entitlementResult.data.credential_id,
-      plan: planResult.data,
+      credentialId: `institution:${organizationId}`,
+      plan: institutionPlan.data,
     }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch {
     return NextResponse.json({ error: 'YOYO IA no pudo verificar el plan activo' }, { status: 503 })
