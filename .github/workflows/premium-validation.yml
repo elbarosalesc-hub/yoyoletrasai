@@ -1,14 +1,7 @@
 name: Premium validation
 
 on:
-  push:
-    branches:
-      - main
-      - agent/full-premium-rebuild-v2
-      - agent/corregir-mejorar-plataforma
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   validate-web:
