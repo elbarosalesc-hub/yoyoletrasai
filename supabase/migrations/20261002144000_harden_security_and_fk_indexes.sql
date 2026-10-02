@@ -111,4 +111,26 @@ grant execute on function public.set_ai_entitlement(
   timestamptz
 ) to service_role;
 
+
+-- Retire legacy Supabase Cron jobs that still target the discontinued Vercel runtime.
+do $
+declare
+  v_jobname text;
+begin
+  if to_regclass('cron.job') is not null then
+    foreach v_jobname in array array[
+      'yoyo-innovation-scan-monthly',
+      'yoyo-resource-factory-weekly'
+    ]
+    loop
+      if exists (select 1 from cron.job where jobname = v_jobname) then
+        execute format('select cron.unschedule(%L)', v_jobname);
+      end if;
+    end loop;
+  end if;
+end
+$;
+
+drop function if exists private.invoke_yoyo_automation(text);
+
 notify pgrst, 'reload schema';
