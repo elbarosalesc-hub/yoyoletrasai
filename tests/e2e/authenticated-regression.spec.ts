@@ -90,6 +90,86 @@ test.describe('regresión autenticada', () => {
     await expect(page.getByRole('checkbox', { name: /Marcar paso completado/i })).toBeChecked()
   })
 
+  test('Informes y Familias persisten borradores y aprobaciones en el backend E2E', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/informes`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(informes|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/informes`, { waitUntil: 'networkidle' })
+    }
+
+    const localReport = await page.evaluate(() => localStorage.getItem('yoyo-report-draft'))
+    expect(localReport).toBeNull()
+
+    const stamp = Date.now()
+    const draftResponse = await page.request.post(`${baseUrl}/api/reports`, {
+      data: {
+        reportType: 'curso',
+        title: `E2E informe ${stamp}`,
+        period: 'Validación E2E',
+        body: 'Contenido de prueba E2E sin datos personales reales.',
+        status: 'draft',
+      },
+    })
+    expect(draftResponse.ok()).toBeTruthy()
+    const draft = await draftResponse.json() as { report?: { id?: string; version?: number; status?: string } }
+    expect(draft.report?.id).toBeTruthy()
+    expect(draft.report?.version).toBe(1)
+    expect(draft.report?.status).toBe('draft')
+
+    const approvedResponse = await page.request.post(`${baseUrl}/api/reports`, {
+      data: {
+        id: draft.report?.id,
+        reportType: 'curso',
+        title: `E2E informe ${stamp}`,
+        period: 'Validación E2E',
+        body: 'Contenido de prueba E2E revisado y aprobado.',
+        status: 'approved',
+      },
+    })
+    expect(approvedResponse.ok()).toBeTruthy()
+    const approved = await approvedResponse.json() as { report?: { version?: number; status?: string } }
+    expect(approved.report?.version).toBe(2)
+    expect(approved.report?.status).toBe('approved')
+
+    const historyResponse = await page.request.get(`${baseUrl}/api/reports?id=${draft.report?.id}`)
+    expect(historyResponse.ok()).toBeTruthy()
+    const history = await historyResponse.json() as { report?: { status?: string; version?: number }; versions?: Array<{ version?: number }> }
+    expect(history.report?.status).toBe('approved')
+    expect(history.report?.version).toBe(2)
+    expect(history.versions?.map((item) => item.version)).toEqual(expect.arrayContaining([1, 2]))
+
+    const familyDraftResponse = await page.request.post(`${baseUrl}/api/family-communications`, {
+      data: {
+        title: `E2E comunicación ${stamp}`,
+        body: 'Borrador E2E sin datos personales reales.',
+        status: 'draft',
+      },
+    })
+    expect(familyDraftResponse.ok()).toBeTruthy()
+    const familyDraft = await familyDraftResponse.json() as { communication?: { id?: string; status?: string } }
+    expect(familyDraft.communication?.id).toBeTruthy()
+    expect(familyDraft.communication?.status).toBe('draft')
+
+    const familyApprovedResponse = await page.request.post(`${baseUrl}/api/family-communications`, {
+      data: {
+        id: familyDraft.communication?.id,
+        title: `E2E comunicación ${stamp}`,
+        body: 'Comunicación E2E revisada y aprobada.',
+        status: 'approved',
+      },
+    })
+    expect(familyApprovedResponse.ok()).toBeTruthy()
+    const familyApproved = await familyApprovedResponse.json() as { communication?: { status?: string } }
+    expect(familyApproved.communication?.status).toBe('approved')
+  })
+
   test('Inclusión y PIE transfiere su contexto al Profesor Virtual sin rediseñar el flujo', async ({ page }) => {
     await page.goto(`${baseUrl}/acceso?next=/inclusion`, { waitUntil: 'networkidle' })
     await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
