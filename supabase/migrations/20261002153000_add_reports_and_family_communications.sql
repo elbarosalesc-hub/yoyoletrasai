@@ -341,6 +341,7 @@ before update on public.family_communications
 for each row execute function private.set_updated_at();
 
 create or replace function public.save_report(
+  p_organization_id uuid,
   p_report_id uuid,
   p_report_type text,
   p_title text,
@@ -358,7 +359,7 @@ set search_path = ''
 as $function$
 declare
   v_user_id uuid := auth.uid();
-  v_organization_id uuid;
+  v_organization_id uuid := p_organization_id;
   v_report public.reports%rowtype;
   v_version integer;
 begin
@@ -366,7 +367,6 @@ begin
     raise exception 'AUTH_REQUIRED';
   end if;
 
-  v_organization_id := nullif(current_setting('request.cookies', true)::json->>'yoyo-organization-id','')::uuid;
   if v_organization_id is null or not private.is_organization_member(v_organization_id) then
     raise exception 'ORGANIZATION_FORBIDDEN';
   end if;
@@ -481,10 +481,10 @@ end;
 $function$;
 
 revoke all on function public.save_report(
-  uuid,text,text,text,text,text,uuid,uuid,uuid
+  uuid,uuid,text,text,text,text,text,uuid,uuid,uuid
 ) from public, anon;
 grant execute on function public.save_report(
-  uuid,text,text,text,text,text,uuid,uuid,uuid
+  uuid,uuid,text,text,text,text,text,uuid,uuid,uuid
 ) to authenticated, service_role;
 
 notify pgrst, 'reload schema';
