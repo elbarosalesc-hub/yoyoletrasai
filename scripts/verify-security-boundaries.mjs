@@ -33,6 +33,11 @@ const checks = [
     reason: 'Resource drafts and history must persist institutionally, not in localStorage.',
   },
   {
+    path: 'apps/web/app/prompts/page.tsx',
+    forbidden: [/localStorage/i, /yoyo-resource-draft/i, /yoyo-prompts-chat-selection/i],
+    reason: 'Prompt transfers must persist through the institutional resource draft API.',
+  },
+  {
     path: 'apps/web/app/profesor-virtual/VirtualTeacherClient.tsx',
     forbidden: [/localStorage/i, /yoyo-virtual-teacher-history/i, /yoyo-profesor-virtual-transfer/i],
     reason: 'Virtual Teacher institutional content must not persist in localStorage.',
