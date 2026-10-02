@@ -93,13 +93,13 @@ export async function POST(request:Request){
  const rubric=Array.isArray(body.rubric)?body.rubric.slice(0,12):[]
  if(!title||!level||!subject||!objective)return NextResponse.json({error:'Completa título, nivel, asignatura y objetivo antes de usar YOYO IA.'},{status:400})
  if(operation==='adapt'&&!questions.length)return NextResponse.json({error:'La variante necesita un instrumento base con preguntas.'},{status:400})
+ if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI para generar una adaptación real.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
 
  const authorization=await db.rpc('authorize_ai_request_for_org',{p_organization_id:organizationId,p_mode:'assessment',p_file_count:0,p_largest_file_bytes:0,p_total_file_bytes:0,p_estimated_tokens:6500})
  if(authorization.error)return NextResponse.json({error:'No fue posible verificar el plan de YOYO IA.'},{status:503})
  const auth=(authorization.data||{}) as AuthResult
  if(!auth.allowed||!auth.eventId)return NextResponse.json({error:'Solicitud no autorizada por el plan.',code:auth.code||'NOT_ALLOWED'},{status:403})
  const model=modelByTier[auth.modelTier||'essential']||modelByTier.essential
- if(!getCloudflareAIConfig().configured){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'CLOUDFLARE_AI_NOT_CONFIGURED'});return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI para generar una adaptación real.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})}
  try{
   const response=await cloudflareChatCompletion({model,messages:[{role:'system',content:'Devuelve únicamente JSON válido. No incluyas markdown.'},{role:'user',content:buildPrompt({operation,title,level,subject,objective,variant,targetVariant,questions,rubric})}],maxTokens:Math.min(Number(auth.limits?.maxOutputTokens)||8000,16000),temperature:0.25,timeoutMs:120000})
   const output=normalizePayload(cleanJson(response.text),{title,subject,objective,variant:targetVariant})
