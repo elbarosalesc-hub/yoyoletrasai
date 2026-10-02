@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 40
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -24,7 +24,7 @@ jobs:
         run: npm run verify:approved-surfaces
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -150,7 +150,7 @@ jobs:
 
       - name: Upload visual regression evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-regression-evidence
           path: test-results/
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload Lighthouse evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lighthouse-accessibility
           path: /tmp/yoyo-lighthouse/*.json
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload preview evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vista-previa-aprobada
           path: /tmp/yoyo-preview/*.png
