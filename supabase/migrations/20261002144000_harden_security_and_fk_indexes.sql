@@ -71,4 +71,34 @@ create index if not exists resource_candidates_created_by_idx
   on public.resource_candidates(created_by)
   where created_by is not null;
 
+
+drop policy if exists "users read own ai entitlement" on public.ai_entitlements;
+create policy "users read own ai entitlement"
+on public.ai_entitlements
+for select
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  or private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+);
+
+drop policy if exists "users read own ai usage" on public.ai_usage_events;
+create policy "users read own ai usage"
+on public.ai_usage_events
+for select
+to authenticated
+using (
+  (select auth.uid()) = user_id
+  or private.has_organization_role(
+    organization_id,
+    array['platform_admin']::public.app_role[]
+  )
+);
+
+revoke all on function public.is_platform_admin() from public, anon, authenticated;
+grant execute on function public.is_platform_admin() to service_role;
+
 notify pgrst, 'reload schema';
