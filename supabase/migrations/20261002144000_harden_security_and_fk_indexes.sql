@@ -1,11 +1,13 @@
 -- Security and performance hardening based on live Supabase advisors.
--- Safe, additive changes only. Apply first in preview.
+-- Validated only in a reversible transaction before any production application.
 
 alter function public.enforce_premium_resource_quality_gate()
   set search_path = '';
 
 drop policy if exists "public read active ai plans" on public.ai_plans;
 drop policy if exists "users read entitled ai plan" on public.ai_plans;
+drop policy if exists "anon read active public ai plans" on public.ai_plans;
+drop policy if exists "authenticated read available ai plans" on public.ai_plans;
 
 create policy "anon read active public ai plans"
 on public.ai_plans
@@ -68,7 +70,6 @@ create index if not exists resource_candidates_created_by_idx
   on public.resource_candidates(created_by)
   where created_by is not null;
 
-
 drop policy if exists "users read own ai entitlement" on public.ai_entitlements;
 create policy "users read own ai entitlement"
 on public.ai_entitlements
@@ -111,9 +112,7 @@ grant execute on function public.set_ai_entitlement(
   timestamptz
 ) to service_role;
 
-
--- Retire legacy Supabase Cron jobs that still target the discontinued Vercel runtime.
-do $
+do $$
 declare
   v_jobname text;
 begin
@@ -124,17 +123,15 @@ begin
     ]
     loop
       if exists (select 1 from cron.job where jobname = v_jobname) then
-        execute format('select cron.unschedule(%L)', v_jobname);
+        perform cron.unschedule(v_jobname);
       end if;
     end loop;
   end if;
 end
-$;
+$$;
 
 drop function if exists private.invoke_yoyo_automation(text);
 
-
--- Strengthen AI source isolation by active organization membership.
 drop policy if exists "users read own ai source files" on public.ai_source_files;
 create policy "users read own ai source files"
 on public.ai_source_files
@@ -248,7 +245,6 @@ using (
   )
 );
 
-
 revoke select on table public.billing_subscriptions from authenticated;
 grant select (
   id,
@@ -273,8 +269,6 @@ using (
   and private.is_organization_member(organization_id)
 );
 
-
--- Prevent role escalation through organization membership management.
 drop policy if exists "authorized staff can manage memberships" on public.organization_memberships;
 drop policy if exists "authorized staff can create memberships" on public.organization_memberships;
 drop policy if exists "authorized staff can update memberships" on public.organization_memberships;
@@ -297,9 +291,7 @@ with check (
     )
   )
   or (
-    role = any(array[
-      'student','guardian','teacher','pie','utp'
-    ]::public.app_role[])
+    role = any(array['student','guardian','teacher','pie','utp']::public.app_role[])
     and private.has_organization_role(
       organization_id,
       array['principal']::public.app_role[]
@@ -324,9 +316,7 @@ using (
     )
   )
   or (
-    role = any(array[
-      'student','guardian','teacher','pie','utp'
-    ]::public.app_role[])
+    role = any(array['student','guardian','teacher','pie','utp']::public.app_role[])
     and private.has_organization_role(
       organization_id,
       array['principal']::public.app_role[]
@@ -346,9 +336,7 @@ with check (
     )
   )
   or (
-    role = any(array[
-      'student','guardian','teacher','pie','utp'
-    ]::public.app_role[])
+    role = any(array['student','guardian','teacher','pie','utp']::public.app_role[])
     and private.has_organization_role(
       organization_id,
       array['principal']::public.app_role[]
@@ -373,9 +361,7 @@ using (
     )
   )
   or (
-    role = any(array[
-      'student','guardian','teacher','pie','utp'
-    ]::public.app_role[])
+    role = any(array['student','guardian','teacher','pie','utp']::public.app_role[])
     and private.has_organization_role(
       organization_id,
       array['principal']::public.app_role[]
@@ -383,8 +369,6 @@ using (
   )
 );
 
-
--- Replace ambiguous per-user AI authorization with an organization-scoped RPC.
 create or replace function public.authorize_ai_request_for_org(
   p_organization_id uuid,
   p_mode text,
@@ -532,267 +516,19 @@ begin
     v_token_limit := -1;
   else
     v_request_limit := case
-      when (v_ent.quota_overrides->>'monthlyAiRequests') ~ '^[0-9]+        then (v_ent.quota_overrides->>'monthlyAiRequests')::integer
-      else v_ent.monthly_ai_requests
-    end;
-
-    v_research_limit := case
-      when (v_ent.quota_overrides->>'monthlyResearchRequests') ~ '^[0-9]+
-        then (v_ent.quota_overrides->>'monthlyResearchRequests')::integer
-      else v_ent.monthly_research_requests
-    end;
-
-    v_token_limit := case
-      when (v_ent.quota_overrides->>'monthlyTokenLimit') ~ '^-?[0-9]+        then (v_ent.quota_overrides->>'monthlyTokenLimit')::bigint
-      else v_ent.monthly_token_limit
-    end;
-  end if;
-
-  if v_request_limit <> -1 and v_total_requests >= v_request_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'MONTHLY_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_total_requests,
-      'limit', v_request_limit
-    );
-  end if;
-
-  if p_mode = 'research'
-     and v_research_limit <> -1
-     and v_research_requests >= v_research_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'RESEARCH_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_research_requests,
-      'limit', v_research_limit
-    );
-  end if;
-
-  if v_token_limit <> -1
-     and v_token_used + v_reserved_tokens > v_token_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'TOKEN_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_token_used,
-      'requested', v_reserved_tokens,
-      'limit', v_token_limit
-    );
-  end if;
-
-  insert into public.ai_usage_events (
-    user_id,
-    organization_id,
-    plan_id,
-    credential_id,
-    mode,
-    file_count,
-    file_bytes,
-    reserved_tokens
-  )
-  values (
-    v_user_id,
-    p_organization_id,
-    v_ent.plan_id,
-    v_ent.credential_id,
-    p_mode,
-    p_file_count,
-    p_total_file_bytes,
-    v_reserved_tokens
-  )
-  returning id into v_event_id;
-
-  return jsonb_build_object(
-    'allowed', true,
-    'eventId', v_event_id,
-    'userId', v_user_id,
-    'organizationId', p_organization_id,
-    'credentialId', v_ent.credential_id,
-    'planId', v_ent.plan_id,
-    'planName', v_ent.plan_name,
-    'modelTier', v_ent.model_tier,
-    'ownerUnlimited', v_owner_unlimited,
-    'usage', jsonb_build_object(
-      'monthlyUsed', v_total_requests + 1,
-      'monthlyLimit', v_request_limit,
-      'researchUsed', v_research_requests + case when p_mode='research' then 1 else 0 end,
-      'researchLimit', v_research_limit,
-      'monthlyTokenUsed', v_token_used + v_reserved_tokens,
-      'monthlyTokenLimit', v_token_limit,
-      'tokenRemaining',
-        case
-          when v_token_limit = -1 then null
-          else greatest(0, v_token_limit - v_token_used - v_reserved_tokens)
-        end
-    ),
-    'limits', jsonb_build_object(
-      'maxFiles', v_ent.max_files_per_request,
-      'maxFileBytes', v_ent.max_file_bytes,
-      'maxTotalFileBytes', v_ent.max_total_file_bytes,
-      'maxOutputTokens', v_ent.max_output_tokens,
-      'unlimitedFiles', v_ent.unlimited_file_analysis,
-      'unlimitedUsage', v_owner_unlimited
-    )
-  );
-end;
-$function$;
-
-revoke all on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon;
-
-grant execute on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) to authenticated, service_role;
-
-revoke execute on function public.authorize_ai_request(
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon, authenticated;
-
-
--- Make AI entitlements truly multi-tenant: one entitlement per user and organization.
-alter table public.ai_entitlements
-  drop constraint if exists ai_entitlements_pkey;
-
-alter table public.ai_entitlements
-  add primary key (user_id, organization_id);
-
-create index if not exists ai_entitlements_org_status_idx
-  on public.ai_entitlements(organization_id, status, period_end desc);
-
-create or replace function public.set_ai_entitlement_for_org(
-  p_user_id uuid,
-  p_organization_id uuid,
-  p_plan_id text,
-  p_status text default 'active',
-  p_period_end timestamptz default (date_trunc('month', now()) + interval '1 month'),
-  p_assigned_by uuid default null
-)
-returns text
-language plpgsql
-security definer
-set search_path = ''
-as $function$
-declare
-  v_credential text;
-begin
-  if p_user_id is null or p_organization_id is null then
-    raise exception 'user and organization are required';
-  end if;
-
-  if p_status not in ('active','trialing','past_due','suspended','cancelled') then
-    raise exception 'invalid status';
-  end if;
-
-  if p_period_end <= now() then
-    raise exception 'period end must be in the future';
-  end if;
-
-  if not exists (
-    select 1
-    from public.ai_plans
-    where id = p_plan_id
-      and active
-  ) then
-    raise exception 'invalid plan';
-  end if;
-
-  if not exists (
-    select 1
-    from public.organization_memberships m
-    where m.user_id = p_user_id
-      and m.organization_id = p_organization_id
-      and m.is_active = true
-  ) then
-    raise exception 'user has no active membership in organization';
-  end if;
-
-  insert into public.ai_entitlements (
-    user_id,
-    organization_id,
-    plan_id,
-    status,
-    period_start,
-    period_end,
-    assigned_by
-  )
-  values (
-    p_user_id,
-    p_organization_id,
-    p_plan_id,
-    p_status,
-    now(),
-    p_period_end,
-    p_assigned_by
-  )
-  on conflict (user_id, organization_id) do update
-  set plan_id = excluded.plan_id,
-      status = excluded.status,
-      period_start = excluded.period_start,
-      period_end = excluded.period_end,
-      assigned_by = excluded.assigned_by,
-      updated_at = now()
-  returning credential_id into v_credential;
-
-  return v_credential;
-end;
-$function$;
-
-revoke all on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) from public, anon, authenticated;
-
-grant execute on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) to service_role;
-
-revoke all on function public.set_ai_entitlement(
-  uuid,
-  text,
-  text,
-  timestamptz
-) from public, anon, authenticated, service_role;
-
-notify pgrst, 'reload schema';
-
+      when (v_ent.quota_overrides->>'monthlyAiRequests') ~ '^[0-9]+$'
         then (v_ent.quota_overrides->>'monthlyAiRequests')::integer
       else v_ent.monthly_ai_requests
     end;
 
     v_research_limit := case
-      when (v_ent.quota_overrides->>'monthlyResearchRequests') ~ '^[0-9]+
+      when (v_ent.quota_overrides->>'monthlyResearchRequests') ~ '^[0-9]+$'
         then (v_ent.quota_overrides->>'monthlyResearchRequests')::integer
       else v_ent.monthly_research_requests
     end;
 
     v_token_limit := case
-      when (v_ent.quota_overrides->>'monthlyTokenLimit') ~ '^-?[0-9]+
+      when (v_ent.quota_overrides->>'monthlyTokenLimit') ~ '^-?[0-9]+$'
         then (v_ent.quota_overrides->>'monthlyTokenLimit')::bigint
       else v_ent.monthly_token_limit
     end;
@@ -915,496 +651,6 @@ revoke execute on function public.authorize_ai_request(
   bigint
 ) from public, anon, authenticated;
 
-
--- Make AI entitlements truly multi-tenant: one entitlement per user and organization.
-alter table public.ai_entitlements
-  drop constraint if exists ai_entitlements_pkey;
-
-alter table public.ai_entitlements
-  add primary key (user_id, organization_id);
-
-create index if not exists ai_entitlements_org_status_idx
-  on public.ai_entitlements(organization_id, status, period_end desc);
-
-create or replace function public.set_ai_entitlement_for_org(
-  p_user_id uuid,
-  p_organization_id uuid,
-  p_plan_id text,
-  p_status text default 'active',
-  p_period_end timestamptz default (date_trunc('month', now()) + interval '1 month'),
-  p_assigned_by uuid default null
-)
-returns text
-language plpgsql
-security definer
-set search_path = ''
-as $function$
-declare
-  v_credential text;
-begin
-  if p_user_id is null or p_organization_id is null then
-    raise exception 'user and organization are required';
-  end if;
-
-  if p_status not in ('active','trialing','past_due','suspended','cancelled') then
-    raise exception 'invalid status';
-  end if;
-
-  if p_period_end <= now() then
-    raise exception 'period end must be in the future';
-  end if;
-
-  if not exists (
-    select 1
-    from public.ai_plans
-    where id = p_plan_id
-      and active
-  ) then
-    raise exception 'invalid plan';
-  end if;
-
-  if not exists (
-    select 1
-    from public.organization_memberships m
-    where m.user_id = p_user_id
-      and m.organization_id = p_organization_id
-      and m.is_active = true
-  ) then
-    raise exception 'user has no active membership in organization';
-  end if;
-
-  insert into public.ai_entitlements (
-    user_id,
-    organization_id,
-    plan_id,
-    status,
-    period_start,
-    period_end,
-    assigned_by
-  )
-  values (
-    p_user_id,
-    p_organization_id,
-    p_plan_id,
-    p_status,
-    now(),
-    p_period_end,
-    p_assigned_by
-  )
-  on conflict (user_id, organization_id) do update
-  set plan_id = excluded.plan_id,
-      status = excluded.status,
-      period_start = excluded.period_start,
-      period_end = excluded.period_end,
-      assigned_by = excluded.assigned_by,
-      updated_at = now()
-  returning credential_id into v_credential;
-
-  return v_credential;
-end;
-$function$;
-
-revoke all on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) from public, anon, authenticated;
-
-grant execute on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) to service_role;
-
-revoke all on function public.set_ai_entitlement(
-  uuid,
-  text,
-  text,
-  timestamptz
-) from public, anon, authenticated, service_role;
-
-notify pgrst, 'reload schema';
-
-        then (v_ent.quota_overrides->>'monthlyTokenLimit')::bigint
-      else v_ent.monthly_token_limit
-    end;
-  end if;
-
-  if v_request_limit <> -1 and v_total_requests >= v_request_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'MONTHLY_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_total_requests,
-      'limit', v_request_limit
-    );
-  end if;
-
-  if p_mode = 'research'
-     and v_research_limit <> -1
-     and v_research_requests >= v_research_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'RESEARCH_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_research_requests,
-      'limit', v_research_limit
-    );
-  end if;
-
-  if v_token_limit <> -1
-     and v_token_used + v_reserved_tokens > v_token_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'TOKEN_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_token_used,
-      'requested', v_reserved_tokens,
-      'limit', v_token_limit
-    );
-  end if;
-
-  insert into public.ai_usage_events (
-    user_id,
-    organization_id,
-    plan_id,
-    credential_id,
-    mode,
-    file_count,
-    file_bytes,
-    reserved_tokens
-  )
-  values (
-    v_user_id,
-    p_organization_id,
-    v_ent.plan_id,
-    v_ent.credential_id,
-    p_mode,
-    p_file_count,
-    p_total_file_bytes,
-    v_reserved_tokens
-  )
-  returning id into v_event_id;
-
-  return jsonb_build_object(
-    'allowed', true,
-    'eventId', v_event_id,
-    'userId', v_user_id,
-    'organizationId', p_organization_id,
-    'credentialId', v_ent.credential_id,
-    'planId', v_ent.plan_id,
-    'planName', v_ent.plan_name,
-    'modelTier', v_ent.model_tier,
-    'ownerUnlimited', v_owner_unlimited,
-    'usage', jsonb_build_object(
-      'monthlyUsed', v_total_requests + 1,
-      'monthlyLimit', v_request_limit,
-      'researchUsed', v_research_requests + case when p_mode='research' then 1 else 0 end,
-      'researchLimit', v_research_limit,
-      'monthlyTokenUsed', v_token_used + v_reserved_tokens,
-      'monthlyTokenLimit', v_token_limit,
-      'tokenRemaining',
-        case
-          when v_token_limit = -1 then null
-          else greatest(0, v_token_limit - v_token_used - v_reserved_tokens)
-        end
-    ),
-    'limits', jsonb_build_object(
-      'maxFiles', v_ent.max_files_per_request,
-      'maxFileBytes', v_ent.max_file_bytes,
-      'maxTotalFileBytes', v_ent.max_total_file_bytes,
-      'maxOutputTokens', v_ent.max_output_tokens,
-      'unlimitedFiles', v_ent.unlimited_file_analysis,
-      'unlimitedUsage', v_owner_unlimited
-    )
-  );
-end;
-$function$;
-
-revoke all on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon;
-
-grant execute on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) to authenticated, service_role;
-
-revoke execute on function public.authorize_ai_request(
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon, authenticated;
-
-
--- Make AI entitlements truly multi-tenant: one entitlement per user and organization.
-alter table public.ai_entitlements
-  drop constraint if exists ai_entitlements_pkey;
-
-alter table public.ai_entitlements
-  add primary key (user_id, organization_id);
-
-create index if not exists ai_entitlements_org_status_idx
-  on public.ai_entitlements(organization_id, status, period_end desc);
-
-create or replace function public.set_ai_entitlement_for_org(
-  p_user_id uuid,
-  p_organization_id uuid,
-  p_plan_id text,
-  p_status text default 'active',
-  p_period_end timestamptz default (date_trunc('month', now()) + interval '1 month'),
-  p_assigned_by uuid default null
-)
-returns text
-language plpgsql
-security definer
-set search_path = ''
-as $function$
-declare
-  v_credential text;
-begin
-  if p_user_id is null or p_organization_id is null then
-    raise exception 'user and organization are required';
-  end if;
-
-  if p_status not in ('active','trialing','past_due','suspended','cancelled') then
-    raise exception 'invalid status';
-  end if;
-
-  if p_period_end <= now() then
-    raise exception 'period end must be in the future';
-  end if;
-
-  if not exists (
-    select 1
-    from public.ai_plans
-    where id = p_plan_id
-      and active
-  ) then
-    raise exception 'invalid plan';
-  end if;
-
-  if not exists (
-    select 1
-    from public.organization_memberships m
-    where m.user_id = p_user_id
-      and m.organization_id = p_organization_id
-      and m.is_active = true
-  ) then
-    raise exception 'user has no active membership in organization';
-  end if;
-
-  insert into public.ai_entitlements (
-    user_id,
-    organization_id,
-    plan_id,
-    status,
-    period_start,
-    period_end,
-    assigned_by
-  )
-  values (
-    p_user_id,
-    p_organization_id,
-    p_plan_id,
-    p_status,
-    now(),
-    p_period_end,
-    p_assigned_by
-  )
-  on conflict (user_id, organization_id) do update
-  set plan_id = excluded.plan_id,
-      status = excluded.status,
-      period_start = excluded.period_start,
-      period_end = excluded.period_end,
-      assigned_by = excluded.assigned_by,
-      updated_at = now()
-  returning credential_id into v_credential;
-
-  return v_credential;
-end;
-$function$;
-
-revoke all on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) from public, anon, authenticated;
-
-grant execute on function public.set_ai_entitlement_for_org(
-  uuid,
-  uuid,
-  text,
-  text,
-  timestamptz,
-  uuid
-) to service_role;
-
-revoke all on function public.set_ai_entitlement(
-  uuid,
-  text,
-  text,
-  timestamptz
-) from public, anon, authenticated, service_role;
-
-notify pgrst, 'reload schema';
-
-        then (v_ent.quota_overrides->>'monthlyAiRequests')::integer
-      else v_ent.monthly_ai_requests
-    end;
-
-    v_research_limit := case
-      when (v_ent.quota_overrides->>'monthlyResearchRequests') ~ '^[0-9]+
-        then (v_ent.quota_overrides->>'monthlyResearchRequests')::integer
-      else v_ent.monthly_research_requests
-    end;
-
-    v_token_limit := case
-      when (v_ent.quota_overrides->>'monthlyTokenLimit') ~ '^-?[0-9]+
-        then (v_ent.quota_overrides->>'monthlyTokenLimit')::bigint
-      else v_ent.monthly_token_limit
-    end;
-  end if;
-
-  if v_request_limit <> -1 and v_total_requests >= v_request_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'MONTHLY_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_total_requests,
-      'limit', v_request_limit
-    );
-  end if;
-
-  if p_mode = 'research'
-     and v_research_limit <> -1
-     and v_research_requests >= v_research_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'RESEARCH_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_research_requests,
-      'limit', v_research_limit
-    );
-  end if;
-
-  if v_token_limit <> -1
-     and v_token_used + v_reserved_tokens > v_token_limit then
-    return jsonb_build_object(
-      'allowed', false,
-      'code', 'TOKEN_QUOTA_EXCEEDED',
-      'planId', v_ent.plan_id,
-      'used', v_token_used,
-      'requested', v_reserved_tokens,
-      'limit', v_token_limit
-    );
-  end if;
-
-  insert into public.ai_usage_events (
-    user_id,
-    organization_id,
-    plan_id,
-    credential_id,
-    mode,
-    file_count,
-    file_bytes,
-    reserved_tokens
-  )
-  values (
-    v_user_id,
-    p_organization_id,
-    v_ent.plan_id,
-    v_ent.credential_id,
-    p_mode,
-    p_file_count,
-    p_total_file_bytes,
-    v_reserved_tokens
-  )
-  returning id into v_event_id;
-
-  return jsonb_build_object(
-    'allowed', true,
-    'eventId', v_event_id,
-    'userId', v_user_id,
-    'organizationId', p_organization_id,
-    'credentialId', v_ent.credential_id,
-    'planId', v_ent.plan_id,
-    'planName', v_ent.plan_name,
-    'modelTier', v_ent.model_tier,
-    'ownerUnlimited', v_owner_unlimited,
-    'usage', jsonb_build_object(
-      'monthlyUsed', v_total_requests + 1,
-      'monthlyLimit', v_request_limit,
-      'researchUsed', v_research_requests + case when p_mode='research' then 1 else 0 end,
-      'researchLimit', v_research_limit,
-      'monthlyTokenUsed', v_token_used + v_reserved_tokens,
-      'monthlyTokenLimit', v_token_limit,
-      'tokenRemaining',
-        case
-          when v_token_limit = -1 then null
-          else greatest(0, v_token_limit - v_token_used - v_reserved_tokens)
-        end
-    ),
-    'limits', jsonb_build_object(
-      'maxFiles', v_ent.max_files_per_request,
-      'maxFileBytes', v_ent.max_file_bytes,
-      'maxTotalFileBytes', v_ent.max_total_file_bytes,
-      'maxOutputTokens', v_ent.max_output_tokens,
-      'unlimitedFiles', v_ent.unlimited_file_analysis,
-      'unlimitedUsage', v_owner_unlimited
-    )
-  );
-end;
-$function$;
-
-revoke all on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon;
-
-grant execute on function public.authorize_ai_request_for_org(
-  uuid,
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) to authenticated, service_role;
-
-revoke execute on function public.authorize_ai_request(
-  text,
-  integer,
-  bigint,
-  bigint,
-  bigint
-) from public, anon, authenticated;
-
-
--- Make AI entitlements truly multi-tenant: one entitlement per user and organization.
 alter table public.ai_entitlements
   drop constraint if exists ai_entitlements_pkey;
 
