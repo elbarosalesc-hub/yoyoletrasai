@@ -28,6 +28,11 @@ const checks = [
     reason: 'PIE/inclusion institutional content must not persist in localStorage.',
   },
   {
+    path: 'apps/web/app/crear/page.tsx',
+    forbidden: [/localStorage/i, /yoyo-resource-draft/i, /yoyo-resource-history/i],
+    reason: 'Resource drafts and history must persist institutionally, not in localStorage.',
+  },
+  {
     path: 'apps/web/app/profesor-virtual/VirtualTeacherClient.tsx',
     forbidden: [/localStorage/i, /yoyo-virtual-teacher-history/i, /yoyo-profesor-virtual-transfer/i],
     reason: 'Virtual Teacher institutional content must not persist in localStorage.',
@@ -129,6 +134,7 @@ const guardedRoutes = [
   ['apps/web/app/api/misiones/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/misiones/evidencia/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/profile/preferences/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/resource-drafts/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/profesor-virtual/chat/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/profesor-virtual/context/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/profesor-virtual/history/route.ts', /auth\.getClaims\(/],
@@ -155,6 +161,7 @@ const organizationScopedRoutes = [
   'apps/web/app/api/misiones/route.ts',
   'apps/web/app/api/misiones/evidencia/route.ts',
   'apps/web/app/api/profile/preferences/route.ts',
+  'apps/web/app/api/resource-drafts/route.ts',
   'apps/web/app/api/profesor-virtual/chat/route.ts',
   'apps/web/app/api/profesor-virtual/context/route.ts',
   'apps/web/app/api/profesor-virtual/history/route.ts',
