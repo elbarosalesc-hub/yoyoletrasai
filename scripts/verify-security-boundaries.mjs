@@ -206,6 +206,32 @@ const publicApiRoutes = new Set([
   'apps/web/app/api/health/route.ts',
 ])
 
+function collectSourceFiles(dir) {
+  const files = []
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...collectSourceFiles(full))
+    else if (entry.isFile() && /\.(ts|tsx|js|mjs|env|example|yml|yaml)$/.test(entry.name)) files.push(full)
+  }
+  return files
+}
+
+for (const sourcePath of collectSourceFiles('apps/web')) {
+  const source = fs.readFileSync(sourcePath, 'utf8')
+  for (const forbidden of [
+    'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY',
+    'NEXT_PUBLIC_MERCADOPAGO_ACCESS_TOKEN',
+    'NEXT_PUBLIC_MERCADOPAGO_WEBHOOK_SECRET',
+    'NEXT_PUBLIC_CLOUDFLARE_API_TOKEN',
+    'NEXT_PUBLIC_CRON_SECRET',
+  ]) {
+    if (source.includes(forbidden)) {
+      console.error(`::error::Server secret must never be exposed to the browser: ${forbidden} in ${sourcePath}`)
+      failed = true
+    }
+  }
+}
+
 for (const routePath of collectApiRoutes('apps/web/app/api')) {
   if (publicApiRoutes.has(routePath)) continue
   const source = fs.readFileSync(routePath, 'utf8')
