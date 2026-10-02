@@ -87,6 +87,8 @@ const guardedRoutes = [
   ['apps/web/app/api/billing/subscription/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/audit/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/evolution/ai-eval/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/prompts-chat/search/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/integrations/status/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/billing/webhooks/mercadopago/route.ts', /verifyMercadoPagoWebhookSignature/],
   ['apps/web/app/api/cron/evolution/route.ts', /CRON_SECRET/],
 ]
