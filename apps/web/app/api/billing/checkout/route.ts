@@ -62,6 +62,17 @@ export async function POST(request: NextRequest) {
     if (!supabaseUrl || !serviceRole) return NextResponse.json({ error: 'Backend de facturación no configurado.' }, { status: 503 })
     const admin = createServiceClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
 
+    const aiPlanId = payload.planKey === 'institution' ? 'institucion' : 'premium'
+    const aiPlan = await admin.from('ai_plans').select('id,active').eq('id', aiPlanId).eq('active', true).maybeSingle()
+    if (aiPlan.error || !aiPlan.data) {
+      return NextResponse.json({
+        error: payload.planKey === 'institution'
+          ? 'El plan Institución todavía no está habilitado para activación real.'
+          : 'El plan Premium todavía no está habilitado para activación real.',
+        code: 'PLAN_BACKEND_NOT_READY',
+      }, { status: 503 })
+    }
+
     let existingQuery = admin.from('billing_subscriptions')
       .select('id,status,plan_key')
       .eq('organization_id', organizationId)
