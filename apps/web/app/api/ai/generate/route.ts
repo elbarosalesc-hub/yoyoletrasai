@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { cloudflareChatCompletion, getCloudflareAIConfig } from '@/lib/ai/cloudflare-gateway'
 import { loadVerifiedSourceContext } from '@/lib/ai/source-context'
+import { createAIUsageServiceClient } from '@/lib/ai/usage-service'
 import { createClient } from '@/lib/supabase/server'
 
 type LooseClient = {
@@ -44,6 +45,8 @@ export async function POST(request:Request){
   const sourceIds=[...new Set((Array.isArray(body.sourceIds)?body.sourceIds:[]).filter(id=>typeof id==='string'&&id.length>10))].slice(0,200)
   if(!resourceType||!title||!subject||!level||!objective)return NextResponse.json({error:'Faltan datos pedagógicos obligatorios.'},{status:400})
   if(!getCloudflareAIConfig().configured)return NextResponse.json({error:'YOYO IA requiere la configuración de Cloudflare AI en este entorno.',code:'CLOUDFLARE_AI_NOT_CONFIGURED'},{status:503})
+  const usageDb=createAIUsageServiceClient()
+  if(!usageDb)return NextResponse.json({error:'YOYO IA requiere el backend seguro de consumo en este entorno.',code:'AI_USAGE_BACKEND_NOT_CONFIGURED'},{status:503})
 
   let sourceMetadata:SourceMetadata[]=[]
   if(sourceIds.length){const lookup=await (supabase as any).from('ai_source_files').select('id,file_name,actual_bytes,status').in('id',sourceIds).eq('user_id',userId).eq('organization_id',organizationId).eq('status','ready');if(lookup.error)return NextResponse.json({error:'No fue posible verificar las fuentes.'},{status:503});sourceMetadata=(lookup.data||[]) as SourceMetadata[];if(sourceMetadata.length!==sourceIds.length)return NextResponse.json({error:'Una o más fuentes todavía no están listas.'},{status:409})}
@@ -54,11 +57,11 @@ export async function POST(request:Request){
   const auth=(authorization.data??{}) as AuthResult
   if(!auth.allowed||!auth.eventId||!auth.organizationId||!auth.userId)return NextResponse.json({error:'Solicitud no autorizada por el plan.',code:auth.code||'NOT_ALLOWED'},{status:403})
   const maxFiles=Number(auth.limits?.maxFiles??-1),maxFileBytes=Number(auth.limits?.maxFileBytes??0),maxTotalFileBytes=Number(auth.limits?.maxTotalFileBytes??0)
-  if((maxFiles!==-1&&fileCount>maxFiles)||(fileCount>0&&(largestFileBytes>maxFileBytes||totalFileBytes>maxTotalFileBytes))){await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'blocked',p_model_route:'not-routed',p_error_code:'FILE_LIMIT_EXCEEDED'});return NextResponse.json({error:'Las fuentes superan los límites del plan activo.',code:'FILE_LIMIT_EXCEEDED'},{status:413})}
+  if((maxFiles!==-1&&fileCount>maxFiles)||(fileCount>0&&(largestFileBytes>maxFileBytes||totalFileBytes>maxTotalFileBytes))){await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'blocked',p_model_route:'not-routed',p_error_code:'FILE_LIMIT_EXCEEDED'});return NextResponse.json({error:'Las fuentes superan los límites del plan activo.',code:'FILE_LIMIT_EXCEEDED'},{status:413})}
 
   const model=modelByTier[auth.modelTier||'essential']||modelByTier.essential
   let sourceContext
-  try{sourceContext=await loadVerifiedSourceContext(supabase,userId,organizationId,sourceIds)}catch{await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'SOURCE_CONTEXT_FAILED'});return NextResponse.json({error:'No fue posible cargar una o más fuentes verificadas.',code:'SOURCE_CONTEXT_FAILED'},{status:502})}
+  try{sourceContext=await loadVerifiedSourceContext(supabase,userId,organizationId,sourceIds)}catch{await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:model,p_error_code:'SOURCE_CONTEXT_FAILED'});return NextResponse.json({error:'No fue posible cargar una o más fuentes verificadas.',code:'SOURCE_CONTEXT_FAILED'},{status:502})}
   const pendingNames=sourceContext.pendingSources.map(item=>item.fileName)
   const prompt=buildPrompt({resourceType,title,subject,level,objective,supportProfile,visualStyle},sourceContext.textContext,pendingNames)
   const generationKey=createHash('sha256').update(JSON.stringify({mode,resourceType,title,subject,level,objective,supportProfile,visualStyle,sourceIds})).digest('hex')
@@ -72,12 +75,12 @@ export async function POST(request:Request){
     const response=await cloudflareChatCompletion({model,messages:[{role:'system',content:'Responde únicamente JSON válido. No incluyas markdown ni explicación fuera del JSON.'},{role:'user',content:userContent}],maxTokens:maxOutputTokens,temperature:0.35,timeoutMs:120000})
     const output=extractJson(response.text),usage=response.usage||{}
     const inputTokens=Number((usage as any).prompt_tokens||(usage as any).input_tokens||0),outputTokens=Number((usage as any).completion_tokens||(usage as any).output_tokens||0),totalTokens=Number((usage as any).total_tokens||inputTokens+outputTokens)
-    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_token_usage:usage,p_input_tokens:inputTokens,p_output_tokens:outputTokens,p_total_tokens:totalTokens})
+    await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'complete',p_model_route:`cloudflare:${model}`,p_token_usage:usage,p_input_tokens:inputTokens,p_output_tokens:outputTokens,p_total_tokens:totalTokens})
     if(generationId)await db.from('ai_generations').update({status:'complete',output_payload:output,token_usage:usage,provider_metadata:{gateway:'cloudflare-ai-rest',planId:auth.planId,modelTier:auth.modelTier,analyzedSourceIds:sourceContext.analyzedSourceIds,pendingSources:sourceContext.pendingSources},completed_at:new Date().toISOString()}).eq('id',generationId)
     return NextResponse.json({output,modelTier:auth.modelTier,planName:auth.planName,ownerUnlimited:auth.ownerUnlimited,usage,generationId,provider:response.provider,sources:{verified:sourceMetadata.length,analyzedSourceIds:sourceContext.analyzedSourceIds,pending:sourceContext.pendingSources}})
   }catch(error){
     const message=error instanceof Error?error.message.slice(0,500):'GENERATION_FAILED'
-    await db.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:'GENERATION_FAILED'})
+    await usageDb.rpc('complete_ai_request',{p_event_id:auth.eventId,p_status:'error',p_model_route:`cloudflare:${model}`,p_error_code:'GENERATION_FAILED'})
     if(generationId)await db.from('ai_generations').update({status:'error',error_message:message,completed_at:new Date().toISOString()}).eq('id',generationId)
     return NextResponse.json({error:'YOYO IA no pudo completar esta generación.',code:'GENERATION_FAILED'},{status:502})
   }
