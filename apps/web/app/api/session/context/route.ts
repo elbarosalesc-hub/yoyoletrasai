@@ -75,10 +75,10 @@ export async function GET() {
         .maybeSingle(),
       (supabase as any)
         .from('billing_subscriptions')
-        .select('plan_key,status')
+        .select('plan_key,status,user_id')
         .eq('organization_id', organizationId)
-        .eq('user_id', userId)
         .eq('status', 'authorized')
+        .or(`user_id.eq.${userId},plan_key.eq.institution`)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
