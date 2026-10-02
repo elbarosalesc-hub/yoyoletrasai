@@ -38,7 +38,7 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error:'Backend de facturación no configurado.' }, { status:503 })
 
   const result = await admin.from('billing_subscriptions')
-    .select('id,provider,plan_key,status,external_subscription_id,next_payment_at,created_at,updated_at')
+    .select('id,provider,plan_key,status,next_payment_at,created_at,updated_at')
     .eq('organization_id', ctx.organizationId)
     .eq('user_id', ctx.userId)
     .order('created_at', { ascending:false })
