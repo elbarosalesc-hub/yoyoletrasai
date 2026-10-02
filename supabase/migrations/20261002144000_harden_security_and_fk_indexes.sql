@@ -248,4 +248,16 @@ using (
   )
 );
 
+
+drop policy if exists "members read authorized institution subscriptions" on public.billing_subscriptions;
+create policy "members read authorized institution subscriptions"
+on public.billing_subscriptions
+for select
+to authenticated
+using (
+  plan_key = 'institution'
+  and status = 'authorized'
+  and private.is_organization_member(organization_id)
+);
+
 notify pgrst, 'reload schema';
