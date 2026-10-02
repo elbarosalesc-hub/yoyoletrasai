@@ -419,8 +419,27 @@ with check (
   ))
   and (objective_id is null or exists (
     select 1 from public.learning_objectives o
-    where o.id = objective_id and o.organization_id = organization_id
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (course_id is null or o.course_id is null or o.course_id = course_id)
   ))
+  and (report_id is null or exists (
+    select 1 from public.reports r
+    where r.id = report_id
+      and r.organization_id = organization_id
+      and (student_id is null or r.student_id is null or r.student_id = student_id)
+  ))
+  and (
+    course_id is null
+    or student_id is null
+    or exists (
+      select 1 from public.course_enrollments e
+      where e.organization_id = organization_id
+        and e.course_id = course_id
+        and e.student_id = student_id
+        and e.enrollment_status = 'active'
+    )
+  )
   and status <> 'sent'
   and (
     (status = 'approved' and reviewed_by = (select auth.uid()) and reviewed_at is not null)
@@ -452,8 +471,27 @@ with check (
   ))
   and (objective_id is null or exists (
     select 1 from public.learning_objectives o
-    where o.id = objective_id and o.organization_id = organization_id
+    where o.id = objective_id
+      and o.organization_id = organization_id
+      and (course_id is null or o.course_id is null or o.course_id = course_id)
   ))
+  and (report_id is null or exists (
+    select 1 from public.reports r
+    where r.id = report_id
+      and r.organization_id = organization_id
+      and (student_id is null or r.student_id is null or r.student_id = student_id)
+  ))
+  and (
+    course_id is null
+    or student_id is null
+    or exists (
+      select 1 from public.course_enrollments e
+      where e.organization_id = organization_id
+        and e.course_id = course_id
+        and e.student_id = student_id
+        and e.enrollment_status = 'active'
+    )
+  )
   and status <> 'sent'
   and (
     (status = 'approved' and reviewed_by = (select auth.uid()) and reviewed_at is not null)
