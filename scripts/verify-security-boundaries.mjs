@@ -76,11 +76,39 @@ const deprecatedFiles = [
   'apps/web/app/profesor-virtual/actions.ts',
 ]
 
+const guardedRoutes = [
+  ['apps/web/app/api/ai/generate/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/ai/sources/prepare/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/ai/sources/finalize/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/inclusion/board/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profesor-virtual/chat/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/profesor-virtual/history/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/billing/checkout/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/billing/subscription/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/evolution/audit/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/evolution/ai-eval/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/billing/webhooks/mercadopago/route.ts', /verifyMercadoPagoWebhookSignature/],
+  ['apps/web/app/api/cron/evolution/route.ts', /CRON_SECRET/],
+]
+
 let failed = false
 
 for (const deprecatedFile of deprecatedFiles) {
   if (fs.existsSync(deprecatedFile)) {
     console.error(`::error::Deprecated unsafe implementation must remain removed: ${deprecatedFile}`)
+    failed = true
+  }
+}
+
+for (const [routePath, guardPattern] of guardedRoutes) {
+  if (!fs.existsSync(routePath)) {
+    console.error(`::error::Missing guarded route: ${routePath}`)
+    failed = true
+    continue
+  }
+  const source = fs.readFileSync(routePath, 'utf8')
+  if (!guardPattern.test(source)) {
+    console.error(`::error::Sensitive route lost its required guard: ${routePath}`)
     failed = true
   }
 }
