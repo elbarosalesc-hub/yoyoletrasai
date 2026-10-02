@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       if (reconciled.error) throw new Error(reconciled.error.message)
 
       const normalizedStatus = normalizeMercadoPagoStatus(remote.status)
-      if (lookup.data.plan_key === 'premium') {
+      if (lookup.data.plan_key === 'premium' && normalizedStatus !== 'pending') {
         const entitlementStatus = normalizedStatus === 'authorized'
           ? 'active'
           : normalizedStatus === 'paused'
