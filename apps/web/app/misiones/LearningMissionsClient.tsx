@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, BookOpenCheck, CalendarDays, CheckCircle2, ClipboardList, Gamepad2, Gauge, PencilLine, Plus, RefreshCw, Save, Sparkles, Target, UsersRound, X } from 'lucide-react'
 import { MissionEvidenceControls } from '@/components/missions/MissionEvidenceControls'
+import { gameExperiences } from '@/lib/games/catalog'
 
 type Course={id:string;name:string;level:string;academic_year:number}
 type Objective={id:string;subject:string;code:string;title:string;description?:string}
@@ -12,8 +14,6 @@ type Mission={
  progressSummary:{assigned:number;completed:number;needsSupport:number;averageProgress:number}
 }
 type StudentProgress={studentId:string;status:string;progress:number;supportUsed:string;evidenceNote:string;lastActivityAt:string|null;student:{firstName:string;lastName:string;preferredName:string|null}|null}
-type Draft={title?:string;description?:string;experienceType?:string;sourceHref?:string;supportProfile?:string;courseId?:string;objectiveId?:string;dueAt?:string}
-
 type ContextResponse={objectives?:Objective[];error?:string}
 
 const experienceOptions=[
@@ -24,6 +24,7 @@ function statusLabel(value:string){return value==='assigned'?'Asignada':value===
 function studentStatusLabel(value:string){return value==='completed'?'Completada':value==='needs_support'?'Requiere apoyo':value==='in_progress'?'En progreso':'Asignada'}
 
 export function LearningMissionsClient({organizationName}:{organizationName:string}){
+ const searchParams=useSearchParams()
  const[courses,setCourses]=useState<Course[]>([])
  const[objectives,setObjectives]=useState<Objective[]>([])
  const[missions,setMissions]=useState<Mission[]>([])
@@ -68,20 +69,18 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
  }
 
  useEffect(()=>{
-  try{
-   const raw=localStorage.getItem('yoyo-mission-draft')
-   if(raw){
-    const draft=JSON.parse(raw) as Draft
-    if(draft.title)setTitle(draft.title)
-    if(draft.description)setDescription(draft.description)
-    if(draft.experienceType)setExperienceType(draft.experienceType)
-    if(draft.sourceHref)setSourceHref(draft.sourceHref)
-    if(draft.supportProfile)setSupportProfile(draft.supportProfile)
-    if(draft.courseId)setCourseId(draft.courseId)
-    if(draft.objectiveId)setObjectiveId(draft.objectiveId)
-    if(draft.dueAt)setDueAt(draft.dueAt)
+  const gameId=searchParams.get('game')
+  if(gameId){
+   const game=gameExperiences.find(item=>item.id===gameId&&item.status==='playable')
+   if(game){
+    setTitle(game.title)
+    setDescription(`${game.mission}\n\nHabilidad: ${game.skill}\nAsignatura: ${game.subject}\nNivel sugerido: ${game.levels}`)
+    setExperienceType('game')
+    setSourceHref(game.route?(game.route.startsWith('#')?`/juegos${game.route}`:game.route):'/juegos')
+    setSupportProfile(`Accesibilidad disponible: ${game.accessibility.join(', ')}. Revisar y ajustar apoyos DUA/PIE antes de asignar.`)
+    setMessage('Borrador preparado desde el catálogo de juegos. Selecciona curso y OA antes de guardar o asignar.')
    }
-  }catch{}
+  }
   load()
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[])
@@ -114,7 +113,6 @@ export function LearningMissionsClient({organizationName}:{organizationName:stri
    const response=await fetch('/api/misiones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({courseId,objectiveId:objectiveId||null,title,description,experienceType,sourceHref,supportProfile,dueAt:dueAt?new Date(`${dueAt}T23:59:00`).toISOString():null,status:assignNow?'assigned':'draft',differentiation:{dua:true,pie:true,allowMultipleResponseModes:true,teacherReview:true}})})
    const data=await response.json()
    if(!response.ok)throw new Error(data.error||'No fue posible crear la misión.')
-   localStorage.removeItem('yoyo-mission-draft')
    setTitle('');setDescription('');setSourceHref('');setDueAt('');setObjectiveId('')
    setMessage(assignNow?'Misión asignada al curso y seguimiento creado.':'Misión guardada como borrador.')
    await load()
