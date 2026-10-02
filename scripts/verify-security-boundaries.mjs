@@ -140,6 +140,7 @@ for (const requiredPrefix of ['/inclusion', '/profesor-virtual', '/seguimiento',
 for (const migration of [
   'supabase/migrations/20261002141000_add_inclusion_boards.sql',
   'supabase/migrations/20261002142500_harden_user_platform_preferences_rls.sql',
+  'supabase/migrations/20261002144000_harden_security_and_fk_indexes.sql',
 ]) {
   if (!fs.existsSync(migration)) {
     console.error(`::error::Required security migration missing: ${migration}`)
