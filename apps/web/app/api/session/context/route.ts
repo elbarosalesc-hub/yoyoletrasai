@@ -56,7 +56,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Institución no seleccionada' }, { status: 409 })
     }
 
-    const [membershipsResult, organizationResult, profileResult] = await Promise.all([
+    const [membershipsResult, organizationResult, profileResult, subscriptionResult] = await Promise.all([
       supabase
         .from('organization_memberships')
         .select('role')
@@ -73,6 +73,15 @@ export async function GET() {
         .select('first_name, last_name, display_name, avatar_url')
         .eq('id', userId)
         .maybeSingle(),
+      (supabase as any)
+        .from('billing_subscriptions')
+        .select('plan_key,status')
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId)
+        .eq('status', 'authorized')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ])
 
     const roles = (membershipsResult.data ?? []).map((membership) => membership.role)
@@ -87,7 +96,10 @@ export async function GET() {
     const email = typeof claims?.email === 'string' ? claims.email : ''
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
     const displayName = profile?.display_name?.trim() || fullName || email.split('@')[0] || 'Usuario'
-    const access = resolveProductAccess(email, role, undefined, userId)
+    const subscriptionPlan = subscriptionResult.data && ['premium','institution'].includes(String(subscriptionResult.data.plan_key))
+      ? 'premium'
+      : 'basic'
+    const access = resolveProductAccess(email, role, subscriptionPlan, userId)
 
     return NextResponse.json({
       displayName,
