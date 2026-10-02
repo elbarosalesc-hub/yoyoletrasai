@@ -11,7 +11,6 @@ const requiredTables = [
   'learning_evidence',
   'virtual_teacher_history',
   'billing_subscriptions',
-  'billing_events',
   'inclusion_boards',
 ] as const
 
@@ -36,7 +35,7 @@ export async function GET() {
     for (const table of requiredTables) {
       const { error } = await (supabase as any)
         .from(table)
-        .select('*', { head: true, count: 'exact' })
+        .select('id', { head: true, count: 'exact' })
         .limit(1)
 
       checks.push({
