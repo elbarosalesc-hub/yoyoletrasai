@@ -16,9 +16,6 @@ type Course={id:string;name:string;level:string;academicYear:number}
 type Student={id:string;displayName:string}
 type Objective={id:string;subject:string;code:string;title:string;description:string}
 type ContextResponse={courses?:Course[];selectedCourse?:Course;students?:Student[];objectives?:Objective[];metrics?:{studentCount:number;evidenceCount:number;achievement:{achieved:number;developing:number;initial:number;not_observed:number}};studentContext?:{studentId:string;support?:Record<string,string>|null;recentEvidence?:Array<Record<string,string>>};error?:string}
-type InclusionTransfer={source?:string;mode?:TeacherMode;prompt?:string;supportProfile?:string;updatedAt?:string}
-
-const INCLUSION_TRANSFER_KEY='yoyo-profesor-virtual-transfer'
 
 const modes:Array<{id:TeacherMode;label:string;description:string;icon:typeof Bot}>=[
  {id:'planificar',label:'Planificar',description:'Clases y secuencias',icon:BookOpen},
@@ -76,20 +73,17 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
   }).catch(()=>null)
   fetch('/api/profesor-virtual/context',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then((data:ContextResponse|null)=>{if(data?.courses)setCourses(data.courses)}).catch(()=>null)
 
-  try{
-   const transferRaw=localStorage.getItem(INCLUSION_TRANSFER_KEY)
-   if(transferRaw){
-    const transfer=JSON.parse(transferRaw) as InclusionTransfer
-    if(transfer.source==='inclusion'){
-     if(transfer.mode&&modes.some(item=>item.id===transfer.mode))setMode(transfer.mode)
-     else setMode('adaptar')
-     if(typeof transfer.prompt==='string'&&transfer.prompt.trim())setPrompt(transfer.prompt)
-     if(typeof transfer.supportProfile==='string'&&transfer.supportProfile.trim())setSupportProfile(transfer.supportProfile)
-     setStatus('Contexto PIE recibido desde Inclusión')
-     localStorage.removeItem(INCLUSION_TRANSFER_KEY)
-    }
-   }
-  }catch{}
+  if(typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('from')==='inclusion'){
+   fetch('/api/inclusion/board',{cache:'no-store'}).then(async response=>{
+    const data=await response.json() as {board?:{title?:string;board?:Array<{label?:string}>;visualMode?:string;textMode?:string;size?:string;includeAudio?:boolean;markCompleted?:boolean}|null}
+    if(!response.ok||!data.board)return
+    const steps=(data.board.board||[]).map(item=>item.label).filter(Boolean).slice(0,20)
+    setMode('adaptar')
+    setPrompt(`Propón apoyos DUA/PIE para fortalecer la autonomía usando el tablero visual "${data.board.title||'Rutina visual'}". Mantén el objetivo pedagógico y sugiere cómo modelar, aplicar y retirar gradualmente los apoyos.${steps.length?` Secuencia actual: ${steps.join(' → ')}.`:''}`)
+    setSupportProfile([`Tablero visual: ${data.board.title||'Rutina visual'}`,steps.length?`Secuencia: ${steps.join(' → ')}`:'Secuencia aún sin pasos',`Modo visual: ${data.board.visualMode||'Estándar'}`,`Tipo de texto: ${data.board.textMode||'Lectura fácil'}`,`Tamaño: ${data.board.size||'Grande'}`,data.board.includeAudio!==false?'Audio activado':'Audio desactivado',data.board.markCompleted?'Seguimiento de pasos activado':'Seguimiento de pasos desactivado'].join(' · '))
+    setStatus('Contexto PIE recibido desde almacenamiento institucional')
+   }).catch(()=>setStatus('No fue posible cargar el contexto PIE institucional'))
+  }
 
   fetch('/api/profesor-virtual/history',{cache:'no-store'}).then(async response=>{
    const data=await response.json() as {history?:HistoryItem[];persistence?:HistoryPersistence;schemaReady?:boolean}
@@ -165,20 +159,13 @@ export function VirtualTeacherClient({organization,displayName}:{organization:st
 
  function sendToCreator(){
   if(!result)return
-  const now=new Date().toISOString()
-  const activities=result.sections.flatMap(section=>section.items).slice(0,12).map((text,index)=>({id:Date.now()+index,text}))
-  const draft={title:result.title,level,resourceType:mode==='evaluar'?'Evaluación':'Guía de aprendizaje',subject,objective:objective||prompt,adaptation:supportProfile||'Acceso universal DUA',visualStyle:'Infantil académico premium',packageMode:'Paquete completo',questions:activities,aiOutput:null,updatedAt:now}
-  localStorage.setItem('yoyo-resource-draft',JSON.stringify(draft))
+  setStatus('Abriendo creador. Por seguridad, el borrador no se guarda en el navegador.')
   window.location.href='/crear?from=profesor-virtual'
  }
 
  function sendToMission(){
   if(!result)return
-  const detail=[result.summary,...result.sections.flatMap(section=>[section.title,...section.items.map(item=>`• ${item}`)])].join('\n').slice(0,6000)
-  const experienceType=mode==='evaluar'?'assessment':mode==='planificar'?'lesson':mode==='adaptar'?'practice':mode==='analizar'?'practice':'lesson'
-  const draft={title:result.title,description:detail,experienceType,sourceHref:'',supportProfile:supportProfile||'Acceso universal DUA',courseId,objectiveId,dueAt:'',updatedAt:new Date().toISOString(),source:'profesor-virtual'}
-  localStorage.setItem('yoyo-mission-draft',JSON.stringify(draft))
-  setStatus(courseId?'Borrador de Misión preparado para revisión docente':'Borrador de Misión preparado; selecciona el curso antes de asignar')
+  setStatus('Abriendo Misiones YOYO. Por seguridad, el borrador no se guarda en el navegador.')
   window.location.href='/misiones?from=profesor-virtual'
  }
 
