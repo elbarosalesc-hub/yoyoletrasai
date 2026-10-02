@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect,useMemo,useState} from 'react'
+import {useEffect,useMemo,useState,type MouseEvent} from 'react'
 import Link from 'next/link'
 import {AppShell} from '@/components/AppShell'
 import {Plus,Trash2,Volume2,Printer,Save,GripVertical,Sparkles} from 'lucide-react'
@@ -55,7 +55,7 @@ export default function Inclusion(){
   try{await persistBoard();setStatus('Tablero institucional guardado')}
   catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar el tablero institucional')}
  }
- const prepareTeacherContext=async(event:React.MouseEvent<HTMLAnchorElement>)=>{
+ const prepareTeacherContext=async(event:MouseEvent<HTMLAnchorElement>)=>{
   event.preventDefault()
   setStatus('Guardando contexto PIE institucional...')
   try{
