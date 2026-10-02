@@ -3,9 +3,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { YOYO_SOURCE_BUCKET } from '@/lib/ai/source-files'
 
+type SelectQuery = {
+  eq: (column: string, value: string) => SelectQuery
+  maybeSingle: () => Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }>
+}
+
 type LooseClient = {
   from: (table: string) => {
-    select: (columns: string) => { eq: (column: string, value: string) => { maybeSingle: () => Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }> } }
+    select: (columns: string) => SelectQuery
     update: (values: Record<string, unknown>) => { eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }> }
   }
 }
