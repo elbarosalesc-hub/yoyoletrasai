@@ -19,23 +19,36 @@ export async function GET() {
   const useMercadoPago = requestedProvider === 'mercadopago' || mercadoPago.apiConfigured || mercadoPago.webhookConfigured
 
   if (useMercadoPago) {
+    const plansResult = await supabase
+      .from('ai_plans')
+      .select('id')
+      .in('id', ['premium', 'institucion'])
+      .eq('active', true)
+
+    const activePlanIds = new Set((plansResult.data || []).map((row) => String(row.id)))
     const planConfigured = {
-      premium: Boolean(mercadoPago.plans.premium),
-      institution: Boolean(mercadoPago.plans.institution),
+      premium: Boolean(mercadoPago.plans.premium) && activePlanIds.has('premium'),
+      institution: Boolean(mercadoPago.plans.institution) && activePlanIds.has('institucion'),
     }
+    const checkoutAvailable = Boolean(
+      mercadoPago.apiConfigured &&
+      mercadoPago.productionUrl &&
+      (planConfigured.premium || planConfigured.institution)
+    )
+
     return NextResponse.json({
       configured: mercadoPago.apiConfigured,
       provider: 'mercadopago',
-      checkoutAvailable: mercadoPago.checkoutConfigured,
+      checkoutAvailable,
       checkoutUrl: null,
       checkoutMode: 'dynamic',
       planConfigured,
-      recurringBillingConfigured: mercadoPago.apiConfigured && (planConfigured.premium || planConfigured.institution),
+      recurringBillingConfigured: checkoutAvailable,
       recurringBillingVerified: false,
       webhookConfigured: mercadoPago.webhookConfigured,
       webhookVerified: false,
       productionUrlConfigured: Boolean(mercadoPago.productionUrl),
-      status: mercadoPago.checkoutConfigured && mercadoPago.webhookConfigured
+      status: checkoutAvailable && mercadoPago.webhookConfigured
         ? 'mercadopago_configured_pending_live_verification'
         : 'mercadopago_partial_configuration',
     }, { headers: { 'Cache-Control': 'private, no-store' } })
