@@ -15,7 +15,8 @@
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:reset": "npx supabase db reset",
-    "supabase:types": "npx supabase gen types typescript --local > apps/web/lib/supabase/database.types.ts"
+    "supabase:types": "npx supabase gen types typescript --local > apps/web/lib/supabase/database.types.ts",
+    "verify:security-boundaries": "node scripts/verify-security-boundaries.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
