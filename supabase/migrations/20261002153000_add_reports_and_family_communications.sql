@@ -89,7 +89,7 @@ revoke all on table public.student_guardians, public.reports, public.report_vers
 
 grant select, insert, update, delete on table public.student_guardians to authenticated;
 grant select, insert, update, delete on table public.reports to authenticated;
-grant select, insert on table public.report_versions to authenticated;
+grant select on table public.report_versions to authenticated;
 grant select, insert, update, delete on table public.family_communications to authenticated;
 
 grant all on table public.student_guardians, public.reports, public.report_versions, public.family_communications to service_role;
@@ -104,8 +104,23 @@ using (
   or guardian_user_id = (select auth.uid())
 );
 
-create policy "authorized staff manage guardian links"
-on public.student_guardians for all to authenticated
+create policy "authorized staff create guardian links"
+on public.student_guardians for insert to authenticated
+with check (
+  private.has_organization_role(
+    organization_id,
+    array['principal','institution_admin','platform_admin']::public.app_role[]
+  )
+  and created_by = (select auth.uid())
+  and exists (
+    select 1 from public.students s
+    where s.id = student_id
+      and s.organization_id = organization_id
+  )
+);
+
+create policy "authorized staff update guardian links"
+on public.student_guardians for update to authenticated
 using (
   private.has_organization_role(
     organization_id,
@@ -117,11 +132,19 @@ with check (
     organization_id,
     array['principal','institution_admin','platform_admin']::public.app_role[]
   )
-  and created_by = (select auth.uid())
   and exists (
     select 1 from public.students s
     where s.id = student_id
       and s.organization_id = organization_id
+  )
+);
+
+create policy "authorized staff delete guardian links"
+on public.student_guardians for delete to authenticated
+using (
+  private.has_organization_role(
+    organization_id,
+    array['principal','institution_admin','platform_admin']::public.app_role[]
   )
 );
 
@@ -166,6 +189,11 @@ with check (
     select 1 from public.learning_objectives o
     where o.id = objective_id and o.organization_id = organization_id
   ))
+  and (
+    (status = 'approved' and approved_by = (select auth.uid()) and approved_at is not null)
+    or (status = 'draft' and approved_by is null and approved_at is null)
+    or status = 'archived'
+  )
 );
 
 create policy "staff update reports"
@@ -193,6 +221,11 @@ with check (
     select 1 from public.learning_objectives o
     where o.id = objective_id and o.organization_id = organization_id
   ))
+  and (
+    (status = 'approved' and approved_by = (select auth.uid()) and approved_at is not null)
+    or (status = 'draft' and approved_by is null and approved_at is null)
+    or status = 'archived'
+  )
 );
 
 create policy "leadership delete draft reports"
@@ -291,6 +324,12 @@ with check (
     select 1 from public.learning_objectives o
     where o.id = objective_id and o.organization_id = organization_id
   ))
+  and status <> 'sent'
+  and (
+    (status = 'approved' and reviewed_by = (select auth.uid()) and reviewed_at is not null)
+    or (status = 'draft' and reviewed_by is null and reviewed_at is null)
+    or status = 'archived'
+  )
 );
 
 create policy "staff update family communications"
@@ -318,6 +357,12 @@ with check (
     select 1 from public.learning_objectives o
     where o.id = objective_id and o.organization_id = organization_id
   ))
+  and status <> 'sent'
+  and (
+    (status = 'approved' and reviewed_by = (select auth.uid()) and reviewed_at is not null)
+    or (status = 'draft' and reviewed_by is null and reviewed_at is null)
+    or status = 'archived'
+  )
 );
 
 create policy "leadership delete draft family communications"
@@ -329,6 +374,85 @@ using (
     array['utp','principal','institution_admin','platform_admin']::public.app_role[]
   )
 );
+
+create or replace function private.enforce_report_integrity()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if new.organization_id <> old.organization_id or new.created_by <> old.created_by then
+    raise exception 'REPORT_IDENTITY_IMMUTABLE';
+  end if;
+  if new.version <> old.version + 1 then
+    raise exception 'REPORT_VERSION_MUST_INCREMENT';
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.enforce_report_integrity() from public, anon;
+grant execute on function private.enforce_report_integrity() to authenticated, service_role;
+
+drop trigger if exists reports_enforce_integrity on public.reports;
+create trigger reports_enforce_integrity
+before update on public.reports
+for each row execute function private.enforce_report_integrity();
+
+create or replace function private.capture_report_version()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  insert into public.report_versions (
+    report_id,
+    organization_id,
+    version,
+    body,
+    status_snapshot,
+    created_by
+  )
+  values (
+    new.id,
+    new.organization_id,
+    new.version,
+    new.body,
+    new.status,
+    coalesce(auth.uid(), new.created_by)
+  );
+  return new;
+end;
+$function$;
+
+revoke all on function private.capture_report_version() from public, anon, authenticated;
+
+drop trigger if exists reports_capture_version on public.reports;
+create trigger reports_capture_version
+after insert or update on public.reports
+for each row execute function private.capture_report_version();
+
+create or replace function private.enforce_family_communication_integrity()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if new.organization_id <> old.organization_id or new.created_by <> old.created_by then
+    raise exception 'COMMUNICATION_IDENTITY_IMMUTABLE';
+  end if;
+  return new;
+end;
+$function$;
+
+revoke all on function private.enforce_family_communication_integrity() from public, anon;
+grant execute on function private.enforce_family_communication_integrity() to authenticated, service_role;
+
+drop trigger if exists family_communications_enforce_integrity on public.family_communications;
+create trigger family_communications_enforce_integrity
+before update on public.family_communications
+for each row execute function private.enforce_family_communication_integrity();
 
 drop trigger if exists reports_set_updated_at on public.reports;
 create trigger reports_set_updated_at
@@ -453,23 +577,6 @@ begin
     where id = p_report_id
     returning * into v_report;
   end if;
-
-  insert into public.report_versions (
-    report_id,
-    organization_id,
-    version,
-    body,
-    status_snapshot,
-    created_by
-  )
-  values (
-    v_report.id,
-    v_organization_id,
-    v_version,
-    p_body,
-    p_status,
-    v_user_id
-  );
 
   return jsonb_build_object(
     'id', v_report.id,
