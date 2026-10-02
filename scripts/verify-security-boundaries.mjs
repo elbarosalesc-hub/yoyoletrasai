@@ -8,8 +8,18 @@ const checks = [
   },
   {
     path: 'apps/web/app/api/profesor-virtual/chat/route.ts',
-    forbidden: [/teacher-fallback/i, /fallback\s*:\s*true/i],
-    reason: 'Virtual Teacher must not present fixed templates as real AI output.',
+    forbidden: [/teacher-fallback/i, /fallback\s*:\s*true/i, /sensitive_notes/i],
+    reason: 'Virtual Teacher must not present fixed templates as real AI output or transmit sensitive PIE notes.',
+  },
+  {
+    path: 'apps/web/app/api/profesor-virtual/context/route.ts',
+    forbidden: [/sensitive_notes/i],
+    reason: 'Virtual Teacher context must not expose sensitive PIE notes.',
+  },
+  {
+    path: 'apps/web/app/api/ai/generate/route.ts',
+    forbidden: [/sensitive_notes/i],
+    reason: 'Generic YOYO AI generation must not expose sensitive PIE notes.',
   },
   {
     path: 'apps/web/app/inclusion/page.tsx',
