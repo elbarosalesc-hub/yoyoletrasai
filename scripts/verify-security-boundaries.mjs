@@ -27,6 +27,16 @@ const checks = [
     reason: 'Owner authorization must not depend on a hardcoded personal email.',
   },
   {
+    path: 'apps/web/app/api/billing/checkout/route.ts',
+    forbidden: [/resolveProductAccess\(email,\s*role\)/],
+    reason: 'Billing checkout must bind owner access to the authenticated user id.',
+  },
+  {
+    path: 'apps/web/app/api/evolution/audit/route.ts',
+    forbidden: [/rpc\(['"]is_platform_admin['"]\)/],
+    reason: 'Evolution authorization must use active organization membership instead of the exposed admin RPC.',
+  },
+  {
     path: 'supabase/config.toml',
     forbidden: [/vercel\.app/i],
     reason: 'Supabase auth config must not contain legacy Vercel redirects.',
