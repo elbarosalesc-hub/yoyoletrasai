@@ -26,10 +26,12 @@ export default function Biblioteca(){
  const[view,setView]=useState<ViewMode>('grid')
 
  useEffect(()=>{
-  try{
-   setFavorites(JSON.parse(localStorage.getItem('yoyo-favorites')||'[]'))
-   setView((localStorage.getItem('yoyo-library-view') as ViewMode)||'grid')
-  }catch{setFavorites([])}
+  fetch('/api/library/preferences',{cache:'no-store'}).then(async response=>{
+   const data=await response.json() as {favorites?:string[];view?:ViewMode;error?:string}
+   if(!response.ok)throw new Error(data.error||'No fue posible cargar preferencias de Biblioteca.')
+   setFavorites(Array.isArray(data.favorites)?data.favorites:[])
+   setView(data.view==='list'?'list':'grid')
+  }).catch(()=>{setFavorites([]);setView('grid')})
   fetch('/api/misiones',{cache:'no-store'}).then(async response=>response.ok?response.json():null).then(data=>{
    if(data?.missions)setServerMissions((data.missions as MissionSummary[]).filter(item=>item.status==='assigned'||item.status==='draft'))
   }).catch(()=>setServerMissions([]))
@@ -48,11 +50,20 @@ export default function Biblioteca(){
  }),[q,subject,level,format,onlyFavorites,favorites])
 
  const toggleFavorite=(slug:string)=>{
+  const previous=favorites
   const next=favorites.includes(slug)?favorites.filter(item=>item!==slug):[...favorites,slug]
   setFavorites(next)
-  localStorage.setItem('yoyo-favorites',JSON.stringify(next))
+  void fetch('/api/library/preferences',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({favorites:next})})
+   .then(async response=>{if(!response.ok){const data=await response.json().catch(()=>({})) as {error?:string};throw new Error(data.error||'No fue posible guardar favoritos.')}})
+   .catch(()=>setFavorites(previous))
  }
- const changeView=(next:ViewMode)=>{setView(next);localStorage.setItem('yoyo-library-view',next)}
+ const changeView=(next:ViewMode)=>{
+  const previous=view
+  setView(next)
+  void fetch('/api/library/preferences',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({view:next})})
+   .then(async response=>{if(!response.ok){const data=await response.json().catch(()=>({})) as {error?:string};throw new Error(data.error||'No fue posible guardar la vista.')}})
+   .catch(()=>setView(previous))
+ }
  const assignedSlugs=new Set([
   ...serverMissions.map(item=>item.source_href?.match(/^\/biblioteca\/(.+)$/)?.[1]).filter((value):value is string=>Boolean(value)),
   ...assignments.map(item=>item.activitySlug),
