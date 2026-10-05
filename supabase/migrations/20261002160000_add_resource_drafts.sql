@@ -5,6 +5,12 @@ create table if not exists public.resource_drafts (
   payload jsonb not null default '{}'::jsonb,
   history jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
+  constraint resource_drafts_payload_check check (
+    jsonb_typeof(payload) = 'object'
+    and jsonb_typeof(history) = 'array'
+    and jsonb_array_length(history) <= 10
+    and octet_length(payload::text) + octet_length(history::text) <= 1000000
+  ),
   updated_at timestamptz not null default now(),
   unique (organization_id, user_id)
 );
