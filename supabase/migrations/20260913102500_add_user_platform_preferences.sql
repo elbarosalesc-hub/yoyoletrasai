@@ -17,6 +17,10 @@ create table if not exists public.user_platform_preferences (
   ai_approval_required boolean not null default true,
   virtual_teacher_tone text not null default 'profesional_claro',
   virtual_teacher_depth text not null default 'completo',
+  library_favorites text[] not null default '{}'::text[]
+    check (cardinality(library_favorites) <= 200),
+  library_view text not null default 'grid'
+    check (library_view in ('grid','list')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, organization_id)
