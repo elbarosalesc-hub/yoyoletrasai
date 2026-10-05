@@ -36,6 +36,15 @@ const requiredFunctions = [
   'save_report',
 ]
 
+const requiredColumns = [
+  ['user_platform_preferences', 'library_favorites'],
+  ['user_platform_preferences', 'library_view'],
+  ['resource_progress', 'resource_key'],
+  ['resource_progress', 'payload'],
+  ['reports', 'version'],
+  ['family_communications', 'reviewed_at'],
+]
+
 let failed = false
 
 for (const table of requiredTables) {
@@ -61,6 +70,17 @@ for (const table of requiredTables) {
   }
   if (!authenticatedGrantPattern.test(sql) && table !== 'billing_events') {
     console.error(`::error::Missing explicit authenticated grant contract for required table: ${table}`)
+    failed = true
+  }
+}
+
+for (const [table, column] of requiredColumns) {
+  const pattern = new RegExp(
+    `create\\s+table[\\s\\S]{0,5000}(?:public\\.)?${table}\\b[\\s\\S]{0,5000}\\b${column}\\b`,
+    'i',
+  )
+  if (!pattern.test(sql)) {
+    console.error(`::error::Missing required schema column: ${table}.${column}`)
     failed = true
   }
 }
