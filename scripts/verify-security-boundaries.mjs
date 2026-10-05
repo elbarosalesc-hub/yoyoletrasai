@@ -33,6 +33,11 @@ const checks = [
     reason: 'Library progress and evidence must persist institutionally, not in localStorage.',
   },
   {
+    path: 'apps/web/app/biblioteca/page.tsx',
+    forbidden: [/localStorage/i, /yoyo-favorites/i, /yoyo-library-view/i],
+    reason: 'Library favorites and view preferences must persist institutionally.',
+  },
+  {
     path: 'apps/web/app/crear/page.tsx',
     forbidden: [/localStorage/i, /yoyo-resource-draft/i, /yoyo-resource-history/i],
     reason: 'Resource drafts and history must persist institutionally, not in localStorage.',
@@ -155,6 +160,7 @@ const guardedRoutes = [
   ['apps/web/app/api/health/supabase/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/inclusion/board/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/integrations/status/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/library/preferences/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/misiones/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/misiones/evidencia/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/planner/route.ts', /auth\.getClaims\(/],
