@@ -8,6 +8,17 @@ function text(value: unknown, max = 240) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
 
+function normalizePicto(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const row = value as Record<string, unknown>
+  const id = Number(row.id)
+  const icon = text(row.icon, 24)
+  const label = text(row.label, 80)
+  const color = text(row.color, 20)
+  if (!Number.isSafeInteger(id) || id <= 0 || !icon || !label || !/^#[0-9a-f]{6}$/i.test(color)) return null
+  return { id, icon, label, color }
+}
+
 async function context() {
   const supabase = await createClient()
   const claims = (await supabase.auth.getClaims()).data?.claims
@@ -42,16 +53,31 @@ export async function PUT(request: Request) {
 
   const body = await request.json().catch(() => ({})) as Record<string, unknown>
   const title = text(body.title, 160) || 'Mi rutina de trabajo autónomo'
-  const board = Array.isArray(body.board) ? body.board.slice(0, 40) : []
+  if (!Array.isArray(body.board) || body.board.length > 40) {
+    return NextResponse.json({ error: 'Tablero inválido.' }, { status: 400 })
+  }
+  const board = body.board.map(normalizePicto)
+  if (board.some((item) => item === null)) {
+    return NextResponse.json({ error: 'Uno o más pictogramas son inválidos.' }, { status: 400 })
+  }
+
+  const size = text(body.size, 40)
+  const visualMode = text(body.visualMode, 60)
+  const textMode = text(body.textMode, 60)
+  if (!['Pequeño','Mediano','Grande'].includes(size) ||
+      !['Estándar','Alto contraste','Blanco y negro'].includes(visualMode) ||
+      !['Lectura fácil','Texto completo','Solo imagen'].includes(textMode)) {
+    return NextResponse.json({ error: 'Configuración de tablero inválida.' }, { status: 400 })
+  }
 
   const payload = {
     board,
     showNumbers: body.showNumbers !== false,
     includeAudio: body.includeAudio !== false,
     markCompleted: body.markCompleted === true,
-    size: text(body.size, 40) || 'Grande',
-    visualMode: text(body.visualMode, 60) || 'Alto contraste',
-    textMode: text(body.textMode, 60) || 'Lectura fácil',
+    size,
+    visualMode,
+    textMode,
   }
 
   const { error } = await (supabase as any)
