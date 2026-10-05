@@ -57,6 +57,9 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Fetch approved visual baseline
+        run: git fetch --no-tags --depth=1 origin a90e94dbb561e8e0b03032f6db5fafc25bf2d8e0
+
       - name: Protect approved surfaces
         run: npm run verify:approved-surfaces
 
