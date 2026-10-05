@@ -19,6 +19,7 @@ const requiredTables=[
   'report_versions',
   'family_communications',
   'resource_drafts',
+  'resource_progress',
   'weekly_planners',
 ]
 
