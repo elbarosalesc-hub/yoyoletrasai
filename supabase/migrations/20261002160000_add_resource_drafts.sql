@@ -70,4 +70,77 @@ create trigger resource_drafts_set_updated_at
 before update on public.resource_drafts
 for each row execute function private.set_updated_at();
 
+
+create table if not exists public.resource_progress (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  resource_key text not null check (
+    char_length(resource_key) between 1 and 160
+    and resource_key ~ '^[a-z0-9][a-z0-9-]*
+  ),
+  payload jsonb not null default '{}'::jsonb check (
+    jsonb_typeof(payload) = 'object'
+    and octet_length(payload::text) <= 100000
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, user_id, resource_key)
+);
+
+create index if not exists resource_progress_org_user_idx
+  on public.resource_progress (organization_id, user_id, updated_at desc);
+
+alter table public.resource_progress enable row level security;
+
+revoke all on table public.resource_progress from anon;
+revoke all on table public.resource_progress from authenticated;
+grant select, insert, update, delete on table public.resource_progress to authenticated;
+grant all on table public.resource_progress to service_role;
+
+create policy "users read own resource progress"
+on public.resource_progress
+for select
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+create policy "users create own resource progress"
+on public.resource_progress
+for insert
+to authenticated
+with check (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+create policy "users update own resource progress"
+on public.resource_progress
+for update
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+)
+with check (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+create policy "users delete own resource progress"
+on public.resource_progress
+for delete
+to authenticated
+using (
+  user_id = (select auth.uid())
+  and private.is_organization_member(organization_id)
+);
+
+drop trigger if exists resource_progress_set_updated_at on public.resource_progress;
+create trigger resource_progress_set_updated_at
+before update on public.resource_progress
+for each row execute function private.set_updated_at();
+
 notify pgrst, 'reload schema';
