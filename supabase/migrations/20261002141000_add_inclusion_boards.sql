@@ -2,8 +2,13 @@ create table if not exists public.inclusion_boards (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
-  title text not null default 'Mi rutina de trabajo autónomo',
-  payload jsonb not null default '{}'::jsonb,
+  title text not null default 'Mi rutina de trabajo autónomo'
+    check (char_length(title) between 1 and 160),
+  payload jsonb not null default '{}'::jsonb
+    check (
+      jsonb_typeof(payload) = 'object'
+      and octet_length(payload::text) <= 100000
+    ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (organization_id, user_id)
