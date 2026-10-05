@@ -28,6 +28,11 @@ const checks = [
     reason: 'PIE/inclusion institutional content must not persist in localStorage.',
   },
   {
+    path: 'apps/web/app/biblioteca/[slug]/page.tsx',
+    forbidden: [/localStorage/i, /yoyo-evidence-/i],
+    reason: 'Library progress and evidence must persist institutionally, not in localStorage.',
+  },
+  {
     path: 'apps/web/app/crear/page.tsx',
     forbidden: [/localStorage/i, /yoyo-resource-draft/i, /yoyo-resource-history/i],
     reason: 'Resource drafts and history must persist institutionally, not in localStorage.',
@@ -160,6 +165,7 @@ const guardedRoutes = [
   ['apps/web/app/api/prompts-chat/search/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/reports/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/resource-drafts/route.ts', /auth\.getClaims\(/],
+  ['apps/web/app/api/resource-progress/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/session/context/route.ts', /auth\.getClaims\(/],
   ['apps/web/app/api/session/organization/route.ts', /auth\.getUser\(/],
   ['apps/web/app/api/billing/webhooks/mercadopago/route.ts', /verifyMercadoPagoWebhookSignature/],
