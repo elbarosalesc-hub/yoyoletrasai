@@ -17,9 +17,9 @@ create table if not exists public.reports (
   student_id uuid references public.students(id) on delete set null,
   objective_id uuid references public.learning_objectives(id) on delete set null,
   report_type text not null check (report_type in ('familia','avance','pie','curso')),
-  title text not null,
-  period text,
-  body text not null default '',
+  title text not null check (char_length(trim(title)) between 1 and 240),
+  period text check (period is null or char_length(period) <= 240),
+  body text not null default '' check (char_length(trim(body)) between 1 and 40000),
   status text not null default 'draft' check (status in ('draft','approved','archived')),
   version integer not null default 1 check (version > 0),
   created_by uuid not null references auth.users(id),
@@ -32,6 +32,13 @@ create table if not exists public.reports (
     (report_type = 'curso' and course_id is not null)
     or
     (report_type in ('familia','avance','pie') and student_id is not null)
+  ),
+  constraint reports_state_metadata_check check (
+    (status = 'draft' and approved_by is null and approved_at is null and archived_at is null)
+    or
+    (status = 'approved' and approved_by is not null and approved_at is not null and archived_at is null)
+    or
+    (status = 'archived' and archived_at is not null)
   )
 );
 
@@ -54,8 +61,8 @@ create table if not exists public.family_communications (
   student_id uuid references public.students(id) on delete set null,
   objective_id uuid references public.learning_objectives(id) on delete set null,
   report_id uuid references public.reports(id) on delete set null,
-  title text not null,
-  body text not null,
+  title text not null check (char_length(trim(title)) between 1 and 240),
+  body text not null check (char_length(trim(body)) between 1 and 30000),
   status text not null default 'draft' check (status in ('draft','approved','sent','archived')),
   channel text not null default 'manual' check (channel in ('manual','email','other')),
   created_by uuid not null references auth.users(id),
@@ -64,7 +71,16 @@ create table if not exists public.family_communications (
   sent_at timestamptz,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint family_communications_state_metadata_check check (
+    (status = 'draft' and reviewed_by is null and reviewed_at is null and sent_at is null and archived_at is null)
+    or
+    (status = 'approved' and reviewed_by is not null and reviewed_at is not null and sent_at is null and archived_at is null)
+    or
+    (status = 'sent' and reviewed_by is not null and reviewed_at is not null and sent_at is not null and archived_at is null)
+    or
+    (status = 'archived' and archived_at is not null)
+  )
 );
 
 create index if not exists student_guardians_guardian_idx
