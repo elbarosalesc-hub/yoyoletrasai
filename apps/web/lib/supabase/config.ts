@@ -1,7 +1,6 @@
-export const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ??
-  'https://xpcywpvrveweynqvudcr.supabase.co'
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || ''
+export const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() || ''
 
-export const SUPABASE_PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  'sb_publishable_9FJ4V6Z58NAOaFQw6cJLKg_JnDjj9_9'
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  throw new Error('SUPABASE_PUBLIC_CONFIG_REQUIRED')
+}

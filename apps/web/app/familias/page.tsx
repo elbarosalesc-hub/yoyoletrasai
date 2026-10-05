@@ -27,7 +27,9 @@ export default function Familias(){
  const[purpose,setPurpose]=useState('Preparar una comunicación breve, positiva y concreta para la familia sobre avances, apoyos y siguiente paso pedagógico. Evita tecnicismos y no incluyas diagnósticos ni información sensible.')
  const[result,setResult]=useState<TeacherResult|null>(null)
  const[reviewed,setReviewed]=useState(false)
+ const[communicationId,setCommunicationId]=useState('')
  const[loading,setLoading]=useState(false)
+ const[saving,setSaving]=useState(false)
  const[status,setStatus]=useState('Selecciona un curso para preparar una comunicación basada en contexto institucional real.')
 
  useEffect(()=>{
@@ -44,7 +46,7 @@ export default function Familias(){
    setStudents(data.students||[])
    setObjectives(data.objectives||[])
    setMetrics(data.metrics||null)
-   setStudentId('');setObjectiveId('');setResult(null);setReviewed(false)
+   setStudentId('');setObjectiveId('');setResult(null);setReviewed(false);setCommunicationId('')
    setStatus('Contexto del curso disponible. Puedes trabajar con el curso completo o seleccionar un estudiante.')
   }).catch(error=>setStatus(error instanceof Error?error.message:'No fue posible cargar el contexto del curso.'))
  },[courseId])
@@ -74,17 +76,43 @@ export default function Familias(){
    })})
    const data=await response.json() as {result?:TeacherResult;error?:string;fallback?:boolean;contextUsed?:boolean}
    if(!response.ok||!data.result)throw new Error(data.error||'No fue posible generar el borrador.')
-   setResult(data.result)
-   setStatus(data.contextUsed?'Borrador listo con contexto institucional protegido. Revísalo antes de copiarlo.':'Borrador listo. Revísalo antes de copiarlo.')
+   setResult(data.result);setCommunicationId('')
+   setStatus(data.contextUsed?'Borrador listo con contexto institucional protegido. Revísalo y guárdalo institucionalmente.':'Borrador listo. Revísalo y guárdalo institucionalmente.')
   }catch(error){setStatus(error instanceof Error?error.message:'No fue posible preparar el borrador.')}
   finally{setLoading(false)}
+ }
+
+ async function persistCommunication(nextStatus:'draft'|'approved'='draft'){
+  if(!result||!courseId||saving)return false
+  setSaving(true)
+  try{
+   const response=await fetch('/api/family-communications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    id:communicationId||null,
+    title:result.title,
+    body:resultAsText(result),
+    status:nextStatus,
+    courseId,
+    studentId:studentId||null,
+    objectiveId:objectiveId||null
+   })})
+   const data=await response.json() as {communication?:{id?:string;status?:string};error?:string}
+   if(!response.ok||!data.communication)throw new Error(data.error||'No fue posible guardar la comunicación.')
+   if(data.communication.id)setCommunicationId(data.communication.id)
+   const approved=data.communication.status==='approved'
+   setReviewed(approved)
+   setStatus(approved?'Comunicación revisada y aprobada, guardada institucionalmente. Aún no ha sido enviada.':'Borrador de comunicación guardado institucionalmente.')
+   return true
+  }catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar la comunicación.');return false}
+  finally{setSaving(false)}
  }
 
  async function copyDraft(){
   if(!result)return
   if(!reviewed){setStatus('Marca la revisión docente antes de copiar una comunicación destinada a la familia.');return}
-  try{await navigator.clipboard.writeText(resultAsText(result));setStatus('Borrador revisado copiado. YOYO no lo envió automáticamente.')}
-  catch{setStatus('No fue posible copiar desde este navegador.')}
+  const saved=await persistCommunication('approved')
+  if(!saved)return
+  try{await navigator.clipboard.writeText(resultAsText(result));setStatus('Comunicación aprobada y persistida copiada. YOYO no la envió automáticamente.')}
+  catch{setStatus('La comunicación quedó guardada, pero no fue posible copiar desde este navegador.')}
  }
 
  return <AppShell active="Familias">
@@ -104,7 +132,7 @@ export default function Familias(){
    </section>
 
    <section className="family-message premium-card"><h2>Preparar borrador</h2><label>Propósito y énfasis<textarea rows={7} value={purpose} onChange={event=>setPurpose(event.target.value)}/></label><button className="btn btn-primary" onClick={generate} disabled={!courseId||loading}><Sparkles size={18}/>{loading?'Preparando...':'Crear borrador con YOYO'}</button><p className="save-status" role="status" aria-live="polite">{status}</p>
-    {result&&<div className="family-draft"><span className="eyebrow">Borrador · no enviado</span><h3>{result.title}</h3><p>{result.summary}</p>{result.sections.map(section=><section key={section.title}><b>{section.title}</b><ul>{section.items.map(item=><li key={item}>{item}</li>)}</ul></section>)}<label className="authorization-check"><input type="checkbox" checked={reviewed} onChange={event=>setReviewed(event.target.checked)}/><span>Revisé este contenido y confirmo que es apropiado para compartir con la familia.</span></label><button className="btn btn-primary" onClick={copyDraft}><ClipboardCopy size={18}/>Copiar borrador revisado</button></div>}
+    {result&&<div className="family-draft"><span className="eyebrow">Borrador · no enviado</span><h3>{result.title}</h3><p>{result.summary}</p>{result.sections.map(section=><section key={section.title}><b>{section.title}</b><ul>{section.items.map(item=><li key={item}>{item}</li>)}</ul></section>)}<button className="btn btn-soft" onClick={()=>persistCommunication('draft')} disabled={saving}><ClipboardCopy size={18}/>{saving?'Guardando...':'Guardar borrador institucional'}</button><label className="authorization-check"><input type="checkbox" checked={reviewed} onChange={event=>setReviewed(event.target.checked)}/><span>Revisé este contenido y confirmo que es apropiado para compartir con la familia.</span></label><button className="btn btn-primary" onClick={copyDraft} disabled={saving}><ClipboardCopy size={18}/>Aprobar, guardar y copiar</button></div>}
    </section>
 
    <aside className="family-history premium-card"><HeartHandshake size={28}/><h2>Entrega controlada</h2><p>Este módulo no simula correos, mensajes ni historiales. La comunicación permanece como borrador hasta que exista un canal institucional realmente conectado.</p><div className="insight"><MessageCircle size={18}/><div><b>Canal de envío</b><p>Configura una integración autorizada antes de automatizar cualquier entrega.</p></div></div><Link href="/integraciones" className="btn btn-soft"><PlugZap size={17}/>Revisar integraciones</Link><Link href="/profesor-virtual" className="btn btn-soft"><Sparkles size={17}/>Abrir Profesor Virtual</Link><div className="insight"><CheckCircle2 size={18}/><div><b>Regla de seguridad</b><p>Copiar un borrador requiere revisión docente; YOYO no publica ni envía de forma autónoma.</p></div></div></aside>

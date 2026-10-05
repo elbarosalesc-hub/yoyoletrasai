@@ -5,8 +5,6 @@ import {createClient} from '@/lib/supabase/server'
 export const dynamic='force-dynamic'
 
 const allowedModes=new Set(['planificar','adaptar','evaluar','analizar','comunicar'])
-const fallbackCodes=new Set(['42P01','42501','PGRST205'])
-
 function text(value:unknown,max:number){return typeof value==='string'?value.trim().slice(0,max):''}
 function stringArray(value:unknown,maxItems=12,maxLength=700){return Array.isArray(value)?value.filter(item=>typeof item==='string').slice(0,maxItems).map(item=>String(item).slice(0,maxLength)):[]}
 function sections(value:unknown){
@@ -33,8 +31,7 @@ export async function GET(){
   .select('id,mode,prompt,level,subject,title,summary,sections,pedagogical_checks,next_steps,created_at')
   .eq('user_id',userId).eq('organization_id',organizationId).order('created_at',{ascending:false}).limit(12)
  if(error){
-  if(fallbackCodes.has(error.code))return NextResponse.json({history:[],persistence:'local-fallback',schemaReady:false},{headers:{'Cache-Control':'private, no-store'}})
-  return NextResponse.json({error:'No fue posible cargar el historial institucional.'},{status:503})
+  return NextResponse.json({error:'No fue posible cargar el historial institucional.',code:error.code||'HISTORY_UNAVAILABLE'},{status:503})
  }
  const history=(data||[]).map((row:Record<string,unknown>)=>({
   id:String(row.id),mode:String(row.mode),prompt:String(row.prompt||''),level:String(row.level||''),subject:String(row.subject||''),title:String(row.title||''),summary:String(row.summary||''),
@@ -57,8 +54,7 @@ export async function POST(request:Request){
  }
  const {data,error}=await (supabase as any).from('virtual_teacher_history').insert(values).select('id,created_at').single()
  if(error){
-  if(fallbackCodes.has(error.code))return NextResponse.json({saved:false,persistence:'local-fallback',schemaReady:false},{status:503})
-  return NextResponse.json({error:'No fue posible guardar el historial institucional.'},{status:503})
+  return NextResponse.json({error:'No fue posible guardar el historial institucional.',code:error.code||'HISTORY_SAVE_FAILED'},{status:503})
  }
  return NextResponse.json({saved:true,persistence:'institutional',id:data.id,generatedAt:data.created_at},{status:201})
 }

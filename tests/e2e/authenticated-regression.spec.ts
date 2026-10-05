@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
+import { gameExperiences } from '../../apps/web/lib/games/catalog'
 
 const baseUrl = 'http://127.0.0.1:3000'
 const email = process.env.E2E_TEST_EMAIL?.trim() || ''
@@ -45,6 +46,14 @@ test.describe('regresión autenticada', () => {
       expect(focusable).toBeTruthy()
     }
 
+    for (const game of gameExperiences.filter((item) => item.status === 'playable' && item.route)) {
+      const route = game.route!.startsWith('#') ? `/juegos${game.route}` : game.route!
+      const response = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' })
+      expect(response?.ok(), `${game.title} debe abrir con sesión válida`).toBeTruthy()
+      await expect(page.locator('body')).not.toContainText('Application error')
+      await expect(page.locator('body')).not.toContainText('Internal Server Error')
+    }
+
     expect(browserErrors).toEqual([])
   })
 
@@ -73,12 +82,176 @@ test.describe('regresión autenticada', () => {
     await page.getByRole('button', { name: /Guardar tablero/i }).click()
     await expect(page.getByRole('status')).toContainText(/guardado/i)
 
-    const saved = await page.evaluate(() => localStorage.getItem('yoyo-inclusion-board'))
-    expect(saved).toContain('Respirar')
+    const localCopy = await page.evaluate(() => localStorage.getItem('yoyo-inclusion-board'))
+    expect(localCopy).toBeNull()
 
     await page.reload({ waitUntil: 'networkidle' })
-    await expect(page.getByRole('status')).toContainText(/recuperado/i)
+    await expect(page.getByRole('status')).toContainText(/institucional recuperado/i)
     await expect(page.getByRole('checkbox', { name: /Marcar paso completado/i })).toBeChecked()
+  })
+
+  test('Informes y Familias persisten borradores y aprobaciones en el backend E2E', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/informes`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(informes|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/informes`, { waitUntil: 'networkidle' })
+    }
+
+    const localReport = await page.evaluate(() => localStorage.getItem('yoyo-report-draft'))
+    expect(localReport).toBeNull()
+
+    const contextResponse = await page.request.get(`${baseUrl}/api/profesor-virtual/context`)
+    expect(contextResponse.ok()).toBeTruthy()
+    const context = await contextResponse.json() as { courses?: Array<{ id?: string }> }
+    const courseId = context.courses?.find((item) => typeof item.id === 'string')?.id
+    expect(courseId).toBeTruthy()
+
+    const stamp = Date.now()
+    const draftResponse = await page.request.post(`${baseUrl}/api/reports`, {
+      data: {
+        reportType: 'curso',
+        courseId,
+        title: `E2E informe ${stamp}`,
+        period: 'Validación E2E',
+        body: 'Contenido de prueba E2E sin datos personales reales.',
+        status: 'draft',
+      },
+    })
+    expect(draftResponse.ok()).toBeTruthy()
+    const draft = await draftResponse.json() as { report?: { id?: string; version?: number; status?: string } }
+    expect(draft.report?.id).toBeTruthy()
+    expect(draft.report?.version).toBe(1)
+    expect(draft.report?.status).toBe('draft')
+
+    const approvedResponse = await page.request.post(`${baseUrl}/api/reports`, {
+      data: {
+        id: draft.report?.id,
+        reportType: 'curso',
+        courseId,
+        title: `E2E informe ${stamp}`,
+        period: 'Validación E2E',
+        body: 'Contenido de prueba E2E revisado y aprobado.',
+        status: 'approved',
+      },
+    })
+    expect(approvedResponse.ok()).toBeTruthy()
+    const approved = await approvedResponse.json() as { report?: { version?: number; status?: string } }
+    expect(approved.report?.version).toBe(2)
+    expect(approved.report?.status).toBe('approved')
+
+    const historyResponse = await page.request.get(`${baseUrl}/api/reports?id=${draft.report?.id}`)
+    expect(historyResponse.ok()).toBeTruthy()
+    const history = await historyResponse.json() as { report?: { status?: string; version?: number }; versions?: Array<{ version?: number }> }
+    expect(history.report?.status).toBe('approved')
+    expect(history.report?.version).toBe(2)
+    expect(history.versions?.map((item) => item.version)).toEqual(expect.arrayContaining([1, 2]))
+
+    const familyDraftResponse = await page.request.post(`${baseUrl}/api/family-communications`, {
+      data: {
+        title: `E2E comunicación ${stamp}`,
+        body: 'Borrador E2E sin datos personales reales.',
+        status: 'draft',
+      },
+    })
+    expect(familyDraftResponse.ok()).toBeTruthy()
+    const familyDraft = await familyDraftResponse.json() as { communication?: { id?: string; status?: string } }
+    expect(familyDraft.communication?.id).toBeTruthy()
+    expect(familyDraft.communication?.status).toBe('draft')
+
+    const familyApprovedResponse = await page.request.post(`${baseUrl}/api/family-communications`, {
+      data: {
+        id: familyDraft.communication?.id,
+        title: `E2E comunicación ${stamp}`,
+        body: 'Comunicación E2E revisada y aprobada.',
+        status: 'approved',
+      },
+    })
+    expect(familyApprovedResponse.ok()).toBeTruthy()
+    const familyApproved = await familyApprovedResponse.json() as { communication?: { status?: string } }
+    expect(familyApproved.communication?.status).toBe('approved')
+  })
+
+  test('Planificador persiste la semana institucionalmente sin localStorage', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/planificador`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(planificador|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/planificador`, { waitUntil: 'networkidle' })
+    }
+
+    const stamp=String(Date.now())
+    const blocks=[{id:stamp,day:'Lunes',period:'08:00',subject:'E2E',objective:'Validar persistencia institucional',activity:'Prueba E2E',support:'Acceso universal DUA',done:false}]
+    const saved=await page.request.put(`${baseUrl}/api/planner`,{data:{blocks}})
+    expect(saved.ok()).toBeTruthy()
+
+    const loaded=await page.request.get(`${baseUrl}/api/planner`)
+    expect(loaded.ok()).toBeTruthy()
+    const data=await loaded.json() as {blocks?:Array<{id?:string;subject?:string}>}
+    expect(data.blocks?.[0]?.id).toBe(stamp)
+    expect(data.blocks?.[0]?.subject).toBe('E2E')
+
+    const localCopy=await page.evaluate(()=>localStorage.getItem('yoyo-weekly-planner'))
+    expect(localCopy).toBeNull()
+  })
+
+  test('Crear persiste borrador e historial institucional sin localStorage', async ({ page }) => {
+    await page.goto(`${baseUrl}/acceso?next=/crear`, { waitUntil: 'networkidle' })
+    await page.getByRole('textbox', { name: /Correo electrónico/i }).fill(email)
+    await page.locator('input[type="password"]').fill(password)
+    await page.getByRole('button', { name: /Ingresar/i }).click()
+    await page.waitForURL(/\/(crear|seleccionar-institucion)(?:[/?#]|$)/, { timeout: 20_000 })
+
+    if (page.url().includes('/seleccionar-institucion')) {
+      const firstChoice = page.locator('button, a').filter({ hasText: /Ingresar|Seleccionar|Continuar|Abrir/i }).first()
+      await expect(firstChoice).toBeVisible()
+      await firstChoice.click()
+      await page.goto(`${baseUrl}/crear`, { waitUntil: 'networkidle' })
+    }
+
+    const stamp = Date.now()
+    const draft = {
+      title: `E2E recurso ${stamp}`,
+      level: '3° básico',
+      resourceType: 'Guía de aprendizaje',
+      subject: 'Lenguaje y Comunicación',
+      objective: 'Validar persistencia institucional del creador.',
+      adaptation: 'Acceso universal DUA',
+      visualStyle: 'Infantil académico premium',
+      packageMode: 'Paquete completo',
+      questions: [{ id: stamp, text: 'Actividad E2E.' }],
+      aiOutput: null,
+      origin: 'manual',
+      updatedAt: new Date().toISOString(),
+    }
+    const history = [{ ...draft, id: String(stamp) }]
+
+    const saved = await page.request.put(`${baseUrl}/api/resource-drafts`, { data: { draft, history } })
+    expect(saved.ok()).toBeTruthy()
+
+    const loaded = await page.request.get(`${baseUrl}/api/resource-drafts`)
+    expect(loaded.ok()).toBeTruthy()
+    const data = await loaded.json() as { draft?: { title?: string }; history?: Array<{ id?: string }> }
+    expect(data.draft?.title).toBe(draft.title)
+    expect(data.history?.[0]?.id).toBe(String(stamp))
+
+    const localCopies = await page.evaluate(() => ({
+      draft: localStorage.getItem('yoyo-resource-draft'),
+      history: localStorage.getItem('yoyo-resource-history'),
+    }))
+    expect(localCopies).toEqual({ draft: null, history: null })
   })
 
   test('Inclusión y PIE transfiere su contexto al Profesor Virtual sin rediseñar el flujo', async ({ page }) => {

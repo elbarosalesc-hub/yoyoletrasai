@@ -21,7 +21,7 @@ async function context() {
   const memberships = await supabase.from('organization_memberships').select('role').eq('organization_id', organizationId).eq('user_id', userId).eq('is_active', true)
   if (memberships.error || !memberships.data?.length) return null
   const role = memberships.data.map((item) => item.role as AppRole).sort((a,b)=>rolePriority[b]-rolePriority[a])[0]
-  return { userId, email, organizationId, role, access: resolveProductAccess(email, role) }
+  return { userId, email, organizationId, role, access: resolveProductAccess(email, role, undefined, userId) }
 }
 
 function adminClient() {
@@ -38,9 +38,9 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error:'Backend de facturación no configurado.' }, { status:503 })
 
   const result = await admin.from('billing_subscriptions')
-    .select('id,provider,plan_key,status,external_subscription_id,next_payment_at,created_at,updated_at')
+    .select('id,provider,plan_key,status,next_payment_at,created_at,updated_at')
     .eq('organization_id', ctx.organizationId)
-    .eq('user_id', ctx.userId)
+    .or(`user_id.eq.${ctx.userId},plan_key.eq.institution`)
     .order('created_at', { ascending:false })
     .limit(1)
     .maybeSingle()
@@ -62,9 +62,9 @@ export async function PATCH(request: NextRequest) {
   const admin = adminClient()
   if (!admin) return NextResponse.json({ error:'Backend de facturación no configurado.' }, { status:503 })
   const current = await admin.from('billing_subscriptions')
-    .select('id,status,external_subscription_id')
+    .select('id,status,external_subscription_id,user_id,plan_key')
     .eq('organization_id', ctx.organizationId)
-    .eq('user_id', ctx.userId)
+    .or(`user_id.eq.${ctx.userId},plan_key.eq.institution`)
     .order('created_at', { ascending:false })
     .limit(1)
     .maybeSingle()

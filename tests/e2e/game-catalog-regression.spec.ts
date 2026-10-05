@@ -31,22 +31,16 @@ test.describe('integridad del catálogo de juegos', () => {
 
     const response = await page.goto(`${baseUrl}/juegos`, { waitUntil: 'domcontentloaded' })
     expect(response?.ok()).toBeTruthy()
-
-    for (const title of titles) {
-      const matchingHeadings = page.getByRole('heading', { name: title, exact: true })
-      expect(await matchingHeadings.count()).toBeGreaterThan(0)
-      await expect(matchingHeadings.first()).toBeVisible()
-    }
+    await expect(page).toHaveURL(/\/acceso\?next=%2Fjuegos|\/acceso\?next=\/juegos/)
   })
 
   for (const game of gameExperiences.filter(item => item.status === 'playable')) {
-    test(`${game.title} abre su experiencia`, async ({ page }) => {
+    test(`${game.title} exige sesión antes de abrir su experiencia`, async ({ page }) => {
       const route = routeFor(game)
       expect(route).toBeTruthy()
       const response = await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' })
       expect(response?.ok()).toBeTruthy()
-      await expect(page.locator('body')).not.toContainText('Application error')
-      await expect(page.locator('body')).not.toContainText('Internal Server Error')
+      await expect(page).toHaveURL(/\/acceso\?next=/)
     })
   }
 })

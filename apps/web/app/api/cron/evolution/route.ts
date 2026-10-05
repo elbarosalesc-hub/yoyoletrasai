@@ -48,6 +48,11 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .maybeSingle()
 
+    if (latest.error) {
+      results.push({ organizationId, status: 'failed' })
+      continue
+    }
+
     const lastAt = latest.data?.created_at ? new Date(latest.data.created_at).getTime() : 0
     if (lastAt && Date.now() - lastAt < CADENCE_MS) {
       results.push({ organizationId, status: 'skipped' })

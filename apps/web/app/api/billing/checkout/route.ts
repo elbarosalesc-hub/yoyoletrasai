@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     if (memberships.error || !memberships.data?.length) return NextResponse.json({ error: 'Contexto institucional no autorizado.' }, { status: 403 })
 
     const role = memberships.data.map((item) => item.role as AppRole).sort((a, b) => rolePriority[b] - rolePriority[a])[0]
-    const access = resolveProductAccess(email, role)
+    const access = resolveProductAccess(email, role, undefined, userId)
     if (!access.canManagePayments && !['institution_admin', 'platform_admin'].includes(role)) {
       return NextResponse.json({ error: 'Tu rol no puede iniciar suscripciones institucionales.' }, { status: 403 })
     }
@@ -61,6 +61,36 @@ export async function POST(request: NextRequest) {
     const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || ''
     if (!supabaseUrl || !serviceRole) return NextResponse.json({ error: 'Backend de facturación no configurado.' }, { status: 503 })
     const admin = createServiceClient(supabaseUrl, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } })
+
+    const aiPlanId = payload.planKey === 'institution' ? 'institucion' : 'premium'
+    const aiPlan = await admin.from('ai_plans').select('id,active').eq('id', aiPlanId).eq('active', true).maybeSingle()
+    if (aiPlan.error || !aiPlan.data) {
+      return NextResponse.json({
+        error: payload.planKey === 'institution'
+          ? 'El plan Institución todavía no está habilitado para activación real.'
+          : 'El plan Premium todavía no está habilitado para activación real.',
+        code: 'PLAN_BACKEND_NOT_READY',
+      }, { status: 503 })
+    }
+
+    let existingQuery = admin.from('billing_subscriptions')
+      .select('id,status,plan_key')
+      .eq('organization_id', organizationId)
+      .eq('plan_key', payload.planKey)
+      .in('status', ['pending','authorized','paused'])
+
+    if (payload.planKey === 'premium') existingQuery = existingQuery.eq('user_id', userId)
+
+    const existing = await existingQuery.order('created_at', { ascending: false }).limit(1).maybeSingle()
+    if (existing.error) return NextResponse.json({ error: 'No fue posible verificar suscripciones existentes.' }, { status: 503 })
+    if (existing.data) {
+      return NextResponse.json({
+        error: payload.planKey === 'institution'
+          ? 'La institución ya tiene una suscripción activa o pendiente.'
+          : 'Ya existe una suscripción Premium activa o pendiente para esta cuenta.',
+        code: 'SUBSCRIPTION_ALREADY_EXISTS',
+      }, { status: 409 })
+    }
 
     const externalReference = `yoyo:${organizationId}:${userId}:${payload.planKey}:${crypto.randomUUID()}`
     const checkout = await createMercadoPagoSubscription({
@@ -92,7 +122,6 @@ export async function POST(request: NextRequest) {
       provider: 'mercadopago',
       planKey: payload.planKey,
       checkoutUrl: checkout.checkoutUrl,
-      subscriptionId: checkout.id,
       status: checkout.status,
     }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {

@@ -13,11 +13,21 @@ export async function POST() {
   const userId = typeof claims?.sub === 'string' ? claims.sub : null
   if (!userId) return NextResponse.json({ error: 'No autenticado.' }, { status: 401 })
 
-  const admin = await db.rpc('is_platform_admin')
-  if (admin.error || admin.data !== true) return NextResponse.json({ error: 'Sólo el perfil propietario puede ejecutar esta auditoría.' }, { status: 403 })
-
   const organizationId = (await cookies()).get('yoyo-organization-id')?.value
   if (!organizationId) return NextResponse.json({ error: 'No hay institución activa.' }, { status: 400 })
+
+  const membership = await supabase
+    .from('organization_memberships')
+    .select('role')
+    .eq('organization_id', organizationId)
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .eq('role', 'platform_admin')
+    .maybeSingle()
+
+  if (membership.error || !membership.data) {
+    return NextResponse.json({ error: 'Sólo el perfil propietario puede ejecutar esta auditoría.' }, { status: 403 })
+  }
 
   try {
     const result = await runEvolutionAudit(db, organizationId, 'owner_manual')

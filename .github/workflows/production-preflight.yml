@@ -18,9 +18,15 @@ jobs:
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      YOYO_OWNER_USER_ID: ${{ secrets.YOYO_OWNER_USER_ID }}
       YOYO_OWNER_EMAIL: ${{ secrets.YOYO_OWNER_EMAIL }}
       YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID }}
       YOYO_RUNTIME_CLOUDFLARE_API_TOKEN: ${{ secrets.YOYO_RUNTIME_CLOUDFLARE_API_TOKEN }}
+      YOYO_AI_GATEWAY_URL: ${{ secrets.YOYO_AI_GATEWAY_URL }}
+      YOYO_AI_MODEL_ESSENTIAL: ${{ vars.YOYO_AI_MODEL_ESSENTIAL }}
+      YOYO_AI_MODEL_ADVANCED: ${{ vars.YOYO_AI_MODEL_ADVANCED }}
+      YOYO_AI_MODEL_INSTITUTION: ${{ vars.YOYO_AI_MODEL_INSTITUTION }}
+      YOYO_AI_MODEL_OWNER: ${{ vars.YOYO_AI_MODEL_OWNER }}
       YOYO_PRODUCTION_URL: ${{ vars.YOYO_PRODUCTION_URL }}
       YOYO_BILLING_PROVIDER: ${{ vars.YOYO_BILLING_PROVIDER }}
       MERCADOPAGO_ACCESS_TOKEN: ${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
@@ -28,12 +34,35 @@ jobs:
       MERCADOPAGO_PREMIUM_PLAN_ID: ${{ secrets.MERCADOPAGO_PREMIUM_PLAN_ID }}
       MERCADOPAGO_INSTITUTION_PLAN_ID: ${{ secrets.MERCADOPAGO_INSTITUTION_PLAN_ID }}
     steps:
+      - name: Checkout main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Protect approved surfaces
+        run: npm run verify:approved-surfaces
+
+      - name: Verify security and architecture boundaries
+        run: npm run verify:security-boundaries
+
+      - name: Verify migration schema contract
+        run: npm run verify:schema-contract
+
+      - name: Verify live Supabase schema
+        run: npm run verify:live-schema
+
       - name: Validate required production configuration
         shell: bash
         run: |
           set -euo pipefail
           missing=0
-          for key in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY SUPABASE_SERVICE_ROLE_KEY CRON_SECRET YOYO_OWNER_EMAIL YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID YOYO_RUNTIME_CLOUDFLARE_API_TOKEN; do
+          for key in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY SUPABASE_SERVICE_ROLE_KEY CRON_SECRET YOYO_OWNER_USER_ID YOYO_RUNTIME_CLOUDFLARE_ACCOUNT_ID YOYO_RUNTIME_CLOUDFLARE_API_TOKEN YOYO_AI_GATEWAY_URL YOYO_AI_MODEL_ESSENTIAL YOYO_AI_MODEL_ADVANCED YOYO_AI_MODEL_INSTITUTION YOYO_AI_MODEL_OWNER; do
             if [ -z "${!key:-}" ]; then
               echo "::error::Falta configurar $key en GitHub environment production."
               missing=1

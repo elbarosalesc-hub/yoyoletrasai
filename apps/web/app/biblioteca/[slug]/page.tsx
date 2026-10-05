@@ -1,6 +1,6 @@
 'use client'
 
-import {useMemo,useState} from 'react'
+import {useEffect,useMemo,useState} from 'react'
 import {useParams} from 'next/navigation'
 import {AppShell} from '@/components/AppShell'
 import {getPremiumActivity,premiumActivities} from '@/lib/resourceCatalog'
@@ -10,12 +10,33 @@ import {BookOpen,CheckCircle2,ClipboardCheck,Download,Eye,Headphones,HeartHandsh
 const choiceArt=['🔑','🗺️','🧰','🎵']
 const choiceTone=['violet','green','orange','blue']
 
+async function loadResourceProgress(key:string){
+ const response=await fetch(`/api/resource-progress?key=${encodeURIComponent(key)}`,{cache:'no-store'})
+ const data=await response.json() as {progress?:Record<string,unknown>|null;error?:string}
+ if(!response.ok)throw new Error(data.error||'No fue posible cargar el progreso.')
+ return data.progress||null
+}
+
+async function saveResourceProgress(key:string,payload:Record<string,unknown>){
+ const response=await fetch('/api/resource-progress',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,payload})})
+ const data=await response.json() as {ok?:boolean;error?:string}
+ if(!response.ok||!data.ok)throw new Error(data.error||'No fue posible guardar el progreso.')
+}
+
 function GrafomotricidadPremium(){
  const[tab,setTab]=useState<PremiumResourceTab>('actividad')
  const[selectedLevel,setSelectedLevel]=useState(1)
  const[saved,setSaved]=useState(false)
  const[assigned,setAssigned]=useState(false)
  const[spoken,setSpoken]=useState(false)
+ useEffect(()=>{
+  loadResourceProgress('grafomotricidad-premium').then(progress=>{
+   if(!progress)return
+   if(Number.isInteger(progress.level))setSelectedLevel(Math.max(0,Math.min(grafomotricidadPremium.versions.length-1,Number(progress.level))))
+   if(typeof progress.tab==='string'&&['actividad','guia','diversificacion','evaluacion'].includes(progress.tab))setTab(progress.tab as PremiumResourceTab)
+   setSaved(true)
+  }).catch(()=>{})
+ },[])
  const speak=()=>{
   if(typeof window==='undefined'||!('speechSynthesis'in window))return
   window.speechSynthesis.cancel()
@@ -23,9 +44,13 @@ function GrafomotricidadPremium(){
   message.lang='es-CL';message.rate=.82
   window.speechSynthesis.speak(message);setSpoken(true)
  }
- const save=()=>{
-  setSaved(true)
-  localStorage.setItem('yoyo-evidence-trazos-animales',JSON.stringify({level:selectedLevel,tab,updatedAt:new Date().toISOString()}))
+ const save=async()=>{
+  try{
+   await saveResourceProgress('grafomotricidad-premium',{level:selectedLevel,tab})
+   setSaved(true)
+  }catch{
+   setSaved(false)
+  }
  }
  return <AppShell active="Biblioteca"><div className="approved-activity-page">
   <header className="approved-activity-status"><div><span>🦌</span><b>Aventuras de grafomotricidad</b></div><div><Star size={16}/><b>Recurso premium</b><span className="approved-mini-progress"><i style={{width:'100%'}}/></span><strong>8 láminas</strong></div></header>
@@ -72,7 +97,22 @@ function GenericResource(){
  const[answer,setAnswer]=useState('')
  const[saved,setSaved]=useState(false)
  const[assigned,setAssigned]=useState(false)
- const save=()=>{setSaved(true);localStorage.setItem(`yoyo-evidence-${activity.slug}`,JSON.stringify({selected,answer,updatedAt:new Date().toISOString()}))}
+ useEffect(()=>{
+  loadResourceProgress(activity.slug).then(progress=>{
+   if(!progress)return
+   if(typeof progress.selected==='number'&&Number.isInteger(progress.selected))setSelected(progress.selected)
+   if(typeof progress.answer==='string')setAnswer(progress.answer.slice(0,4000))
+   setSaved(true)
+  }).catch(()=>{})
+ },[activity.slug])
+ const save=async()=>{
+  try{
+   await saveResourceProgress(activity.slug,{selected,answer:answer.slice(0,4000)})
+   setSaved(true)
+  }catch{
+   setSaved(false)
+  }
+ }
  return <AppShell active="Biblioteca"><div className="approved-activity-page">
   <header className="approved-activity-status"><div><span>🌳</span><b>{activity.title}</b></div><div><Star size={16}/><b>120 pts</b><span className="approved-mini-progress"><i/></span><strong>2 / 4</strong></div></header>
   <section className="approved-activity-hero"><div className="approved-hero-copy"><span>{activity.subject}</span><h1>{activity.content.title||activity.title}</h1><p>{activity.goal}</p><div><Star size={16}/> Recurso adaptable <b>{activity.level}</b></div></div><div className="approved-hero-scene" aria-hidden="true"><span className="approved-glow-book">📖</span><span className="approved-hero-girl">👧🏻</span><span className="approved-hero-owl">🦉</span></div></section>

@@ -56,7 +56,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Institución no seleccionada' }, { status: 409 })
     }
 
-    const [membershipsResult, organizationResult, profileResult] = await Promise.all([
+    const [membershipsResult, organizationResult, profileResult, subscriptionResult, entitlementResult, institutionPlanResult] = await Promise.all([
       supabase
         .from('organization_memberships')
         .select('role')
@@ -73,6 +73,27 @@ export async function GET() {
         .select('first_name, last_name, display_name, avatar_url')
         .eq('id', userId)
         .maybeSingle(),
+      (supabase as any)
+        .from('billing_subscriptions')
+        .select('plan_key,status,user_id,next_payment_at')
+        .eq('organization_id', organizationId)
+        .eq('status', 'authorized')
+        .or(`user_id.eq.${userId},plan_key.eq.institution`)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      (supabase as any)
+        .from('ai_entitlements')
+        .select('plan_id,status,period_start,period_end')
+        .eq('organization_id', organizationId)
+        .eq('user_id', userId)
+        .maybeSingle(),
+      (supabase as any)
+        .from('ai_plans')
+        .select('id')
+        .eq('id', 'institucion')
+        .eq('active', true)
+        .maybeSingle(),
     ])
 
     const roles = (membershipsResult.data ?? []).map((membership) => membership.role)
@@ -83,11 +104,49 @@ export async function GET() {
       return NextResponse.json({ error: 'Contexto institucional no autorizado' }, { status: 403 })
     }
 
+    if (subscriptionResult.error || entitlementResult.error || institutionPlanResult.error) {
+      return NextResponse.json({ error: 'No fue posible verificar el estado del plan.' }, { status: 503 })
+    }
+
     const profile = profileResult.data
     const email = typeof claims?.email === 'string' ? claims.email : ''
     const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim()
     const displayName = profile?.display_name?.trim() || fullName || email.split('@')[0] || 'Usuario'
-    const access = resolveProductAccess(email, role)
+    const now = Date.now()
+    const entitlementStatus = String(entitlementResult.data?.status ?? '')
+    const entitlementStart = Date.parse(String(entitlementResult.data?.period_start ?? ''))
+    const entitlementEnd = Date.parse(String(entitlementResult.data?.period_end ?? ''))
+    const entitlementCurrent =
+      ['active','trialing'].includes(entitlementStatus) &&
+      Number.isFinite(entitlementStart) &&
+      Number.isFinite(entitlementEnd) &&
+      now >= entitlementStart &&
+      now < entitlementEnd
+
+    const billingPlanKey = String(subscriptionResult.data?.plan_key ?? '')
+    const nextPaymentAt = Date.parse(String(subscriptionResult.data?.next_payment_at ?? ''))
+    const billingCurrent =
+      Boolean(subscriptionResult.data) &&
+      (!Number.isFinite(nextPaymentAt) || nextPaymentAt > now)
+
+    const premiumTrial =
+      entitlementCurrent &&
+      entitlementStatus === 'trialing' &&
+      String(entitlementResult.data?.plan_id ?? '') === 'premium'
+
+    const premiumPaid =
+      entitlementCurrent &&
+      String(entitlementResult.data?.plan_id ?? '') === 'premium' &&
+      billingCurrent &&
+      billingPlanKey === 'premium'
+
+    const institutionPaid =
+      billingCurrent &&
+      billingPlanKey === 'institution' &&
+      Boolean(institutionPlanResult.data)
+
+    const subscriptionPlan = premiumTrial || premiumPaid || institutionPaid ? 'premium' : 'basic'
+    const access = resolveProductAccess(email, role, subscriptionPlan, userId)
 
     return NextResponse.json({
       displayName,
@@ -107,7 +166,7 @@ export async function GET() {
         managePlans: access.canManagePlans,
         manageModules: access.canManageModules,
         manageThemes: access.canManageThemes,
-        managePayments: access.canManagePayments,
+        managePayments: access.canManagePayments || ['institution_admin','platform_admin'].includes(role),
       },
     }, {
       headers: {

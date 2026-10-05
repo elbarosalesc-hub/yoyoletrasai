@@ -22,18 +22,25 @@ export default function Planificador() {
   const [status, setStatus] = useState('Plan semanal activo')
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('yoyo-weekly-planner')
-      if (stored) setBlocks(JSON.parse(stored))
-    } catch {}
+    fetch('/api/planner',{cache:'no-store'}).then(async response=>{
+      const data=await response.json() as {blocks?:Block[]|null;updatedAt?:string|null;error?:string}
+      if(!response.ok)throw new Error(data.error||'No fue posible cargar el planificador institucional.')
+      if(Array.isArray(data.blocks))setBlocks(data.blocks)
+      if(data.updatedAt)setStatus(`Planificador institucional recuperado · ${new Date(data.updatedAt).toLocaleString('es-CL')}`)
+    }).catch(error=>setStatus(error instanceof Error?error.message:'No fue posible cargar el planificador institucional.'))
   }, [])
 
   const visible = useMemo(() => selectedDay === 'Todos' ? blocks : blocks.filter((block) => block.day === selectedDay), [blocks, selectedDay])
   const completed = blocks.filter((block) => block.done).length
 
-  function save(next = blocks) {
-    localStorage.setItem('yoyo-weekly-planner', JSON.stringify(next))
-    setStatus(`Guardado · ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`)
+  async function save(next = blocks) {
+    setStatus('Guardando planificador institucional...')
+    try{
+      const response=await fetch('/api/planner',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({blocks:next})})
+      const data=await response.json() as {ok?:boolean;updatedAt?:string|null;error?:string}
+      if(!response.ok||!data.ok)throw new Error(data.error||'No fue posible guardar el planificador institucional.')
+      setStatus(`Guardado institucionalmente · ${new Date(data.updatedAt||Date.now()).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'})}`)
+    }catch(error){setStatus(error instanceof Error?error.message:'No fue posible guardar el planificador institucional.')}
   }
 
   function addBlock() {
@@ -62,7 +69,7 @@ export default function Planificador() {
 
       <section className="planner-toolbar premium-card">
         <div className="planner-day-tabs"><button className={selectedDay === 'Todos' ? 'active' : ''} onClick={() => setSelectedDay('Todos')}>Todos</button>{days.map((day) => <button key={day} className={selectedDay === day ? 'active' : ''} onClick={() => setSelectedDay(day)}>{day}</button>)}</div>
-        <div><span>{status}</span><button className="btn btn-soft" onClick={addBlock}><Plus size={16}/>Agregar bloque</button><button className="btn btn-primary" onClick={() => save()}><Save size={16}/>Guardar semana</button></div>
+        <div><span>{status}</span><button className="btn btn-soft" onClick={addBlock}><Plus size={16}/>Agregar bloque</button><button className="btn btn-primary" onClick={() => void save()}><Save size={16}/>Guardar semana</button></div>
       </section>
 
       <section className="planner-grid">
